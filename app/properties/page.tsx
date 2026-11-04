@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Footer, Header, PropertyCard, SectionLabel } from "../site-components";
 
 const previewProperties = [
@@ -67,7 +66,7 @@ export default function PropertiesPage() {
           <h2>Not sure which opportunity fits?</h2>
           <p>Share your preferred location, intended use and budget range. We’ll help narrow the search responsibly.</p>
         </div>
-        <div><Link className="button button-green" href="/contact">Speak with our team</Link><Link className="text-link" href="/">Return home →</Link></div>
+        <div><a className="button button-green" href="/contact">Speak with our team</a><a className="text-link" href="/">Return home →</a></div>
       </section>
       <Footer />
     </main>

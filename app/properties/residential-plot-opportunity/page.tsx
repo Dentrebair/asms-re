@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Footer, Header, SectionLabel } from "../../site-components";
 
 const gallery = [
@@ -17,7 +16,7 @@ export default function PropertyDetailPage() {
     <main className="property-detail-page">
       <Header />
       <section className="detail-top page-shell">
-        <nav className="breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><Link href="/properties">Properties</Link><span>/</span><b>ASMS-PREVIEW-01</b></nav>
+        <nav className="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/properties">Properties</a><span>/</span><b>ASMS-PREVIEW-01</b></nav>
         <div className="detail-heading">
           <div>
             <div className="detail-kicker"><span>Sample listing</span><small>Reference ASMS-PREVIEW-01</small></div>
@@ -91,8 +90,8 @@ export default function PropertyDetailPage() {
           <span className="detail-card-label">Interested in this property?</span>
           <h2>Get the verified details.</h2>
           <p>Quote reference <strong>ASMS-PREVIEW-01</strong> when you contact the team.</p>
-          <Link className="button button-gold" href="/contact">Enquire about property <span>→</span></Link>
-          <Link className="button button-green-outline" href="/contact">Request a site visit</Link>
+          <a className="button button-gold" href="/contact">Enquire about property <span>→</span></a>
+          <a className="button button-green-outline" href="/contact">Request a site visit</a>
           <div className="detail-card-note"><span>Before you enquire</span><p>Prepare your preferred location, intended use, budget range and timeline.</p></div>
         </aside>
       </section>
@@ -100,7 +99,7 @@ export default function PropertyDetailPage() {
       <section className="detail-bottom-cta">
         <div className="page-shell">
           <div><SectionLabel light>Continue exploring</SectionLabel><h2>Compare other property opportunities.</h2></div>
-          <Link className="button button-ivory" href="/properties">View all properties <span>→</span></Link>
+          <a className="button button-ivory" href="/properties">View all properties <span>→</span></a>
         </div>
       </section>
       <Footer />

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Footer, Header, PropertyCard, SectionLabel } from "./site-components";
 
 const properties = [
@@ -56,9 +55,9 @@ export default function Home() {
               direct guidance.
             </p>
             <div className="hero-actions">
-              <Link className="button button-gold" href="/properties">
+              <a className="button button-gold" href="/properties">
                 Explore properties <span aria-hidden="true">↗</span>
-              </Link>
+              </a>
               <a className="button button-glass" href="#divisions">
                 View our capabilities
               </a>
@@ -106,9 +105,9 @@ export default function Home() {
             <p>For buyers &amp; investors</p>
             <h3>Real Estate</h3>
             <span>Curated land and property opportunities with details that help you evaluate confidently.</span>
-            <Link href="/properties" aria-label="Explore real estate">
+            <a href="/properties" aria-label="Explore real estate">
               Explore <b aria-hidden="true">↗</b>
-            </Link>
+            </a>
           </div>
         </article>
         <article className="division-card division-products">
@@ -144,9 +143,9 @@ export default function Home() {
             </div>
             <div className="heading-side">
               <p>Every live listing will present price, dimensions, location and document status clearly.</p>
-              <Link className="text-link" href="/properties">
+              <a className="text-link" href="/properties">
                 View all properties <span aria-hidden="true">→</span>
-              </Link>
+              </a>
             </div>
           </div>
           <div className="preview-notice">
@@ -199,8 +198,8 @@ export default function Home() {
           <h2>Looking to buy property or source construction products?</h2>
           <p>Explore available properties or tell us which building materials and product specifications you need.</p>
           <div>
-            <Link className="button button-gold" href="/properties">Explore properties</Link>
-            <Link className="button button-outline-light" href="/contact">Enquire about products</Link>
+            <a className="button button-gold" href="/properties">Explore properties</a>
+            <a className="button button-outline-light" href="/contact">Enquire about products</a>
           </div>
           <small>Contact details shown in this preview are placeholders pending verification.</small>
         </div>
