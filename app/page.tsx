@@ -200,7 +200,7 @@ export default function Home() {
           <p>Explore available properties or tell us which building materials and product specifications you need.</p>
           <div>
             <Link className="button button-gold" href="/properties">Explore properties</Link>
-            <a className="button button-outline-light" href="#products">Enquire about products</a>
+            <Link className="button button-outline-light" href="/contact">Enquire about products</Link>
           </div>
           <small>Contact details shown in this preview are placeholders pending verification.</small>
         </div>

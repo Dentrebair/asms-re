@@ -67,7 +67,7 @@ export default function PropertiesPage() {
           <h2>Not sure which opportunity fits?</h2>
           <p>Share your preferred location, intended use and budget range. We’ll help narrow the search responsibly.</p>
         </div>
-        <div><a className="button button-green" href="/#contact">Speak with our team</a><Link className="text-link" href="/">Return home →</Link></div>
+        <div><Link className="button button-green" href="/contact">Speak with our team</Link><Link className="text-link" href="/">Return home →</Link></div>
       </section>
       <Footer />
     </main>
