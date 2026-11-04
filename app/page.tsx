@@ -195,12 +195,12 @@ export default function Home() {
 
       <section className="contact-band" id="contact">
         <div className="page-shell contact-inner">
-          <SectionLabel light>Start a conversation</SectionLabel>
-          <h2>Have a property, product or construction requirement?</h2>
-          <p>Tell us what you are considering. We’ll help you understand the practical next step.</p>
+          <SectionLabel light>Buy with confidence</SectionLabel>
+          <h2>Looking to buy property or source construction products?</h2>
+          <p>Explore available properties or tell us which building materials and product specifications you need.</p>
           <div>
-            <a className="button button-gold" href="mailto:hello@example.com">Contact our team</a>
-            <a className="button button-outline-light" href="tel:+910000000000">Call us</a>
+            <Link className="button button-gold" href="/properties">Explore properties</Link>
+            <a className="button button-outline-light" href="#products">Enquire about products</a>
           </div>
           <small>Contact details shown in this preview are placeholders pending verification.</small>
         </div>
