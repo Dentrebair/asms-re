@@ -1,0 +1,114 @@
+#!/usr/bin/env node
+// Pulls published content from Supabase into content/content.json and copies
+// every referenced photo into public/media/, so the built site never depends on
+// Supabase at runtime (free projects pause when idle).
+//
+// Env: NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY.
+// Without them it keeps the committed sample content and exits 0.
+// Any fetch failure exits 1 so a broken pull never gets deployed.
+
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
+const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!url || !key) {
+  console.log("pull-content: Supabase env not set — keeping committed sample content.");
+  process.exit(0);
+}
+
+const headers = { apikey: key, Authorization: `Bearer ${key}` };
+
+async function rows(table, query) {
+  const res = await fetch(`${url}/rest/v1/${table}?${query}`, { headers });
+  if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+// Storage path "properties/abc.webp" has a small variant "properties/abc-sm.webp".
+const smallPath = (path) => path.replace(/(\.[a-z0-9]+)$/i, "-sm$1");
+const downloads = new Set();
+function image(path, alt) {
+  if (!path) return null;
+  downloads.add(path);
+  downloads.add(smallPath(path));
+  return { src: `/media/${path}`, srcSmall: `/media/${smallPath(path)}`, alt: alt ?? "" };
+}
+
+async function download(path) {
+  const res = await fetch(`${url}/storage/v1/object/public/media/${path.split("/").map(encodeURIComponent).join("/")}`);
+  if (res.status === 404 && path.includes("-sm.")) return false; // tolerate a missing small variant
+  if (!res.ok) throw new Error(`media/${path}: HTTP ${res.status}`);
+  const file = join(root, "public", "media", path);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, Buffer.from(await res.arrayBuffer()));
+  return true;
+}
+
+const [categories, products, properties] = await Promise.all([
+  rows("product_categories", "select=id,name,intro,icon&order=sort_order,name"),
+  rows("products", "select=*&published=is.true&order=sort_order,name"),
+  rows("properties", "select=*&published=is.true&order=featured.desc,sort_order,posted_on.desc.nullslast,created_at.desc"),
+]);
+
+const content = {
+  source: "supabase",
+  generatedAt: new Date().toISOString(),
+  categories,
+  products: products.map((p) => ({
+    slug: p.slug,
+    categoryId: p.category_id,
+    name: p.name,
+    summary: p.summary,
+    specs: p.specs ?? [],
+    unit: p.unit,
+    image: image(p.image_path, p.image_alt || p.name),
+  })),
+  properties: properties.map((p) => ({
+    slug: p.slug,
+    reference: p.reference,
+    title: p.title,
+    featured: p.featured,
+    statusLabel: p.status_label,
+    propertyType: p.property_type,
+    transactionType: p.transaction_type,
+    ownership: p.ownership,
+    location: p.location,
+    locality: p.locality,
+    price: p.price === null ? null : Number(p.price),
+    areaSqFt: p.area_sqft === null ? null : Number(p.area_sqft),
+    dimensions: p.dimensions,
+    facing: p.facing,
+    roadWidth: p.road_width,
+    approval: p.approval,
+    rera: p.rera,
+    cornerPlot: p.corner_plot,
+    boundaryWall: p.boundary_wall,
+    gatedLayout: p.gated_layout,
+    floorsAllowed: p.floors_allowed,
+    availability: p.availability,
+    description: p.description,
+    amenities: p.amenities ?? [],
+    nearby: p.nearby ?? [],
+    documents: p.documents ?? [],
+    images: (p.images ?? []).map((img) => image(img.path, img.alt || p.title)).filter(Boolean),
+    postedOn: p.posted_on,
+  })),
+};
+
+// Small variants that are missing fall back to the full image.
+const missing = new Set();
+const paths = [...downloads];
+for (let i = 0; i < paths.length; i += 8) {
+  const results = await Promise.all(paths.slice(i, i + 8).map(download));
+  results.forEach((ok, j) => { if (!ok) missing.add(paths[i + j]); });
+}
+const fix = (img) => img && (missing.has(img.srcSmall.slice("/media/".length)) ? { ...img, srcSmall: img.src } : img);
+content.products.forEach((p) => { p.image = fix(p.image); });
+content.properties.forEach((p) => { p.images = p.images.map(fix); });
+
+await writeFile(join(root, "content", "content.json"), JSON.stringify(content, null, 2) + "\n");
+console.log(`pull-content: ${content.properties.length} properties, ${content.products.length} products, ${content.categories.length} categories, ${paths.length - missing.size} images.`);

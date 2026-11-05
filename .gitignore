@@ -38,3 +38,10 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+*.tsbuildinfo
+
+# pulled from Supabase at build time
+/public/media/
+
+# local admin demo data (npm run demo)
+/.demo/

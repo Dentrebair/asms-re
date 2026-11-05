@@ -1,100 +1,52 @@
-# vinext-starter
+# ASMS–ROUNAQH website
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Marketing site for ASMS–ROUNAQH (real estate, construction products and
+services), built with [vinext](https://github.com/cloudflare/vinext) (Next.js
+App Router on Vite) and deployable to Cloudflare Workers.
 
 ## Prerequisites
 
 - Node.js `>=22.13.0`
 
-## Quick Start
+## Commands
 
 ```bash
 npm install
-npm run dev
-npm run build
+npm run dev     # local dev server
+npm run build   # production build into dist/
+npm test        # build the static site and check every exported page
+npm run lint
+npm run test:db     # check the Supabase schema + security rules (needs local Postgres)
+npm run test:admin  # browser test of /admin against a fake Supabase (needs Chrome)
+npm run content:pull  # fetch published content + photos from Supabase
 ```
 
-This starter does not use `wrangler.jsonc`.
+## Layout
 
-## Included Shape
+- `app/` — pages (`/`, `/properties`, `/properties/[slug]`, `/products`, `/contact`) and shared UI in `app/site-components.tsx`
+- `app/admin/` — staff admin panel (`/admin`): properties, products, photos, staff
+- `content/content.json` — site content. Committed file = sample data; the deploy replaces it with published Supabase content (`scripts/pull-content.mjs`)
+- `supabase/` — database schema, security rules, setup guide ([supabase/README.md](supabase/README.md))
+- `app/globals.css` — styles; design direction in `DESIGN.md`
+- `worker/index.ts` — Cloudflare Worker entry
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+## Deploying to Hostinger
 
-## Workspace Auth Headers
+The site builds to plain static files (`output: "export"` in `next.config.ts`),
+so it runs on any Hostinger plan. `npm run build` writes them to `dist/client/`,
+including `public/.htaccess` (clean URLs, HTTPS redirect, caching, gzip).
 
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
+Content (properties, products, photos) is managed in `/admin` and stored in
+Supabase — set that up first: [supabase/README.md](supabase/README.md).
 
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
+Every push to `main`, every content change in `/admin`, and a twice-weekly schedule run `.github/workflows/deploy-hostinger.yml`, which pulls content,
+builds, tests and uploads `dist/client/` to Hostinger over FTP. One-time setup:
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+1. hPanel → **Files → FTP Accounts**: create a dedicated FTP account whose
+   directory is `public_html` (the deploy uploads to that account's root).
+2. Add its details as GitHub Actions secrets `HOSTINGER_FTP_SERVER`,
+   `HOSTINGER_FTP_USERNAME` and `HOSTINGER_FTP_PASSWORD`
+   (e.g. `gh secret set HOSTINGER_FTP_PASSWORD` prompts without echoing).
+3. Push to `main` or run the workflow from the **Actions** tab.
 
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+The contact form is a front-end demo only; it doesn't send email yet.

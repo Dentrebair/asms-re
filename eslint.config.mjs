@@ -35,6 +35,10 @@ const eslintConfig = defineConfig([
         version: "detect",
       },
     },
+    rules: {
+      // vinext deployments need native <a> navigation (see tests/navigation-links.test.mjs).
+      "@next/next/no-html-link-for-pages": "off",
+    },
   },
 ]);
 

@@ -1,43 +1,13 @@
+import { HERO_IMAGE, featuredProperties, isSample } from "@/lib/content";
 import { Footer, Header, PropertyCard, SectionLabel } from "./site-components";
 
-const properties = [
-  {
-    image: "/asms-hero.png",
-    reference: "ASMS-PREVIEW-01",
-    location: "Chennai, Tamil Nadu",
-    title: "Residential plot opportunity",
-    type: "Plotted land",
-    area: "Area to be verified",
-    price: "Price on request",
-    status: "Sample listing",
-  },
-  {
-    image:
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1400&q=85",
-    reference: "ASMS-PREVIEW-02",
-    location: "Greater Chennai",
-    title: "Well-connected land parcel",
-    type: "Land",
-    area: "Dimensions to be verified",
-    price: "Enquire for details",
-    status: "Sample listing",
-  },
-  {
-    image:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=85",
-    reference: "ASMS-PREVIEW-03",
-    location: "Chennai region",
-    title: "Independent property",
-    type: "Residential",
-    area: "Specification pending",
-    price: "Price on request",
-    status: "Sample listing",
-  },
-];
+
+export const dynamic = "force-static";
 
 export default function Home() {
   return (
     <main>
+      <link rel="preload" as="image" href={HERO_IMAGE} type="image/webp" fetchPriority="high" />
       <section className="hero">
         <Header overlay />
         <div className="hero-shade" />
@@ -116,7 +86,7 @@ export default function Home() {
             <p>For builders &amp; businesses</p>
             <h3>Construction Products</h3>
             <span>Building materials and engineered products supported by clear technical specifications.</span>
-            <a href="#products" aria-label="Explore construction products">
+            <a href="/products" aria-label="Explore construction products">
               Explore <b aria-hidden="true">↗</b>
             </a>
           </div>
@@ -148,12 +118,14 @@ export default function Home() {
               </a>
             </div>
           </div>
-          <div className="preview-notice">
-            Design preview — listing names and details below are placeholders until verified business data is supplied.
-          </div>
+          {isSample && (
+            <div className="preview-notice">
+              Design preview — listing names and details below are placeholders until verified business data is supplied.
+            </div>
+          )}
           <div className="property-grid">
-            {properties.map((property) => (
-              <PropertyCard key={property.reference} {...property} />
+            {featuredProperties.map((property) => (
+              <PropertyCard key={property.reference} property={property} />
             ))}
           </div>
         </div>
@@ -170,11 +142,11 @@ export default function Home() {
             requests straightforward.
           </p>
           <div className="product-links">
-            <a href="#contact"><span>Structural steel &amp; PEB components</span><b>→</b></a>
-            <a href="#contact"><span>Roofing &amp; building materials</span><b>→</b></a>
-            <a href="#contact"><span>Concrete &amp; finishing products</span><b>→</b></a>
+            <a href="/products#steel-peb"><span>Structural steel &amp; PEB components</span><b>→</b></a>
+            <a href="/products#roofing"><span>Roofing &amp; building materials</span><b>→</b></a>
+            <a href="/products#concrete-finishing"><span>Concrete &amp; finishing products</span><b>→</b></a>
           </div>
-          <a className="button button-ivory" href="#contact">Browse product catalogue</a>
+          <a className="button button-ivory" href="/products">Browse product catalogue</a>
         </div>
       </section>
 

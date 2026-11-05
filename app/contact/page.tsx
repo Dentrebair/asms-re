@@ -1,6 +1,8 @@
 import { Footer, Header, SectionLabel } from "../site-components";
 import EnquiryForm from "./enquiry-form";
 
+export const dynamic = "force-static";
+
 export const metadata = {
   title: "Contact | ASMS–ROUNAQH",
   description: "Contact ASMS–ROUNAQH about property opportunities or construction products.",

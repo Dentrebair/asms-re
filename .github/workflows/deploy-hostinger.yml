@@ -1,0 +1,52 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [main]
+  # Sent by Supabase whenever staff change properties/products (see supabase/README.md).
+  repository_dispatch:
+    types: [content-updated]
+  # Twice a week: refreshes the site and keeps the free Supabase project from pausing.
+  schedule:
+    - cron: "30 2 * * 1,4"
+  workflow_dispatch:
+
+# One deploy at a time; a burst of edits collapses into a single queued run.
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Published properties/products + photos from Supabase → content/ and public/media/.
+      - run: npm run content:pull
+
+      # Builds the static site into dist/client and checks every page.
+      - run: npm test
+
+      - name: Upload to Hostinger over FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: ./dist/client/
+          # Use a dedicated FTP account whose directory is public_html, so its
+          # root *is* the website folder. Override with the HOSTINGER_SERVER_DIR
+          # repository variable if your account starts elsewhere (end with "/").
+          server-dir: ${{ vars.HOSTINGER_SERVER_DIR || './' }}

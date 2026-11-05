@@ -1,13 +1,8 @@
+import { isSample, properties } from "@/lib/content";
 import { Footer, Header, PropertyCard, SectionLabel } from "../site-components";
 
-const previewProperties = [
-  { image: "/asms-hero.png", reference: "ASMS-PREVIEW-01", location: "Chennai, Tamil Nadu", title: "Residential plot opportunity", type: "Plotted land", area: "Area to be verified", price: "Price on request", status: "Sample listing" },
-  { image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1400&q=85", reference: "ASMS-PREVIEW-02", location: "Greater Chennai", title: "Well-connected land parcel", type: "Land", area: "Dimensions to be verified", price: "Enquire for details", status: "Sample listing" },
-  { image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=85", reference: "ASMS-PREVIEW-03", location: "Chennai region", title: "Independent property", type: "Residential", area: "Specification pending", price: "Price on request", status: "Sample listing" },
-  { image: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1400&q=85", reference: "ASMS-PREVIEW-04", location: "Tamil Nadu", title: "Residential investment opportunity", type: "Residential", area: "Details to be verified", price: "Enquire for details", status: "Sample listing" },
-  { image: "https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&w=1400&q=85", reference: "ASMS-PREVIEW-05", location: "Chennai outskirts", title: "Open land opportunity", type: "Land", area: "Area to be verified", price: "Price on request", status: "Sample listing" },
-  { image: "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=1400&q=85", reference: "ASMS-PREVIEW-06", location: "Greater Chennai", title: "Independent home opportunity", type: "Residential", area: "Specification pending", price: "Enquire for details", status: "Sample listing" },
-];
+
+export const dynamic = "force-static";
 
 export const metadata = {
   title: "Properties | ASMS–ROUNAQH",
@@ -37,12 +32,13 @@ export default function PropertiesPage() {
 
       <section className="listing-content page-shell section-space">
         <div className="listing-toolbar">
-          <div><strong>Property showcase</strong><span>6 design-preview listings</span></div>
+          <div><strong>Property showcase</strong><span>{properties.length} {isSample ? "design-preview listings" : properties.length === 1 ? "listing" : "listings"}</span></div>
           <label>Sort by <select defaultValue="recommended"><option value="recommended">Recommended</option><option>Newest</option><option>Price: low to high</option></select></label>
         </div>
-        <div className="preview-notice">Design preview — all listing details are placeholders. Only verified ASMS–ROUNAQH inventory will be published.</div>
+        {isSample && <div className="preview-notice">Design preview — all listing details are placeholders. Only verified ASMS–ROUNAQH inventory will be published.</div>}
+        {properties.length === 0 && <p className="empty-state">New listings are being prepared. <a href="/contact">Tell us what you are looking for</a> and we’ll be in touch.</p>}
         <div className="property-grid listing-grid">
-          {previewProperties.map((property) => <PropertyCard key={property.reference} {...property} />)}
+          {properties.map((property, index) => <PropertyCard key={property.slug} property={property} priority={index < 3} />)}
         </div>
       </section>
 

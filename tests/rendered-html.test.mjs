@@ -1,91 +1,57 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
+// Checks the static export (dist/client) that gets uploaded to Hostinger,
+// against whatever content the build used (sample data or Supabase).
+const out = new URL("../dist/client/", import.meta.url);
+const page = (file) => readFile(new URL(file, out), "utf8");
+const content = JSON.parse(await readFile(new URL("../content/content.json", import.meta.url), "utf8"));
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/&/g, "&(amp;)?");
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+const pages = [
+  ["index.html", /Building trust\./],
+  ["properties.html", /Find the right ground/],
+  ["products.html", /Materials specified/],
+  ["contact.html", /Tell us what you are looking for\./],
+  ["404.html", /./],
+  ["admin.html", /<meta name="robots" content="noindex, nofollow"/],
+];
 
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
+for (const [file, expected] of pages) {
+  test(`exports ${file}`, async () => {
+    const html = await page(file);
+    assert.match(html, expected);
+    assert.doesNotMatch(html, /openai|chatgpt|codex/i);
+  });
 }
 
-test("server-renders the starter loading skeleton", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
-  const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Building your site/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(
-    html,
-    /Your first version will appear here automatically when it’s ready\./,
-  );
-  assert.doesNotMatch(html, /Codex/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
+test("exports a page for every property, with its own details", async () => {
+  for (const p of content.properties) {
+    const html = await page(`properties/${p.slug}.html`);
+    assert.match(html, new RegExp(escape(p.title)), p.slug);
+    assert.match(html, new RegExp(escape(p.reference)), p.slug);
+    if (p.amenities.length) assert.match(html, /Amenities &amp; infrastructure/, p.slug);
+    if (p.price) assert.match(html, /Estimate your EMI/, p.slug);
+    else assert.doesNotMatch(html, /Estimate your EMI/, p.slug);
+  }
+  const listing = await page("properties.html");
+  for (const p of content.properties) assert.match(listing, new RegExp(`href="/properties/${p.slug}"`));
 });
 
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
-  ]);
+test("products page lists every product and ships its photos", async () => {
+  const html = await page("products.html");
+  for (const p of content.products) assert.match(html, new RegExp(escape(p.name)), p.name);
+  const local = content.products.map((p) => p.image?.srcSmall).filter((src) => src?.startsWith("/"));
+  await Promise.all(local.map((src) => access(new URL(src.slice(1), out))));
+});
 
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
+test("sample notices appear only with sample content", async () => {
+  const html = await page("properties.html");
+  if (content.source === "sample") assert.match(html, /Design preview/);
+  else assert.doesNotMatch(html, /Design preview/);
+});
 
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
-  );
-
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
-
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
-  );
+test("ships the Hostinger .htaccess", async () => {
+  assert.match(await page(".htaccess"), /RewriteRule \^\(\.\+\)\$ \/\$1\.html/);
 });
