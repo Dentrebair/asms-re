@@ -67,6 +67,8 @@ const content = {
     summary: p.summary,
     specs: p.specs ?? [],
     unit: p.unit,
+    suitableUse: p.suitable_use,
+    availability: p.availability,
     image: image(p.image_path, p.image_alt || p.name),
   })),
   properties: properties.map((p) => ({

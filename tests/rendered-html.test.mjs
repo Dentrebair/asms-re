@@ -47,6 +47,16 @@ test("exports a page for every property, with its own details", async () => {
   }
 });
 
+test("exports a page for every product, linked from the catalogue", async () => {
+  const listing = await page("products.html");
+  for (const p of content.products) {
+    const html = await page(`products/${p.slug}.html`);
+    assert.match(html, new RegExp(escape(p.name)), p.slug);
+    for (const spec of p.specs) assert.match(html, new RegExp(escape(spec.value)), `${p.slug} ${spec.label}`);
+    assert.match(listing, new RegExp(`href="/products/${p.slug}"`), p.slug);
+  }
+});
+
 test("products page lists every product and ships its photos", async () => {
   const html = await page("products.html");
   for (const p of content.products) assert.match(html, new RegExp(escape(p.name)), p.name);

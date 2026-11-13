@@ -58,6 +58,8 @@ create table if not exists public.products (
   summary      text not null default '',
   specs        jsonb not null default '[]' check (jsonb_typeof(specs) = 'array'),
   unit         text not null default '',
+  suitable_use text,
+  availability text,
   image_path   text,
   image_alt    text,
   published    boolean not null default false,

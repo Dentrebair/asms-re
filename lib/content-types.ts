@@ -74,6 +74,10 @@ export type ProductRecord = {
   summary: string;
   specs: Spec[];
   unit: string;
+  /** Where the product is typically used (shown on its page). */
+  suitableUse: string | null;
+  /** Indicative availability, e.g. "Usually in stock" or "Made to order". */
+  availability: string | null;
   image: SiteImage | null;
 };
 

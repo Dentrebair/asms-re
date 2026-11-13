@@ -54,6 +54,8 @@ export type ProductRow = {
   summary: string;
   specs: { label: string; value: string }[];
   unit: string;
+  suitable_use: string | null;
+  availability: string | null;
   image_path: string | null;
   image_alt: string | null;
   published: boolean;
@@ -127,7 +129,7 @@ export const emptyProperty = (): PropertyRow => ({
 });
 
 export const emptyProduct = (categoryId = ""): ProductRow => ({
-  slug: "", category_id: categoryId, name: "", summary: "", specs: [], unit: "", image_path: null, image_alt: null, published: false, sort_order: 0,
+  slug: "", category_id: categoryId, name: "", summary: "", specs: [], unit: "", suitable_use: null, availability: null, image_path: null, image_alt: null, published: false, sort_order: 0,
 });
 
 /** Turns a Supabase/PostgREST error into a sentence staff can act on. */

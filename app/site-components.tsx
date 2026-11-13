@@ -65,10 +65,10 @@ export function propertyCardData(p: PropertyRecord): ListingCardData {
   };
 }
 
-/** Card data for a product, in the same skeleton: the card links to a quote request. */
+/** Card data for a product, in the same skeleton: the card opens the product page with its quote form. */
 export function productCardData(p: ProductRecord, categoryName?: string): ListingCardData {
   return {
-    href: `/contact?category=${encodeURIComponent("Construction products")}&interest=${encodeURIComponent(p.name)}`,
+    href: `/products/${p.slug}`,
     title: p.name,
     image: p.image ? { src: p.image.srcSmall, alt: p.image.alt } : null,
     tag: categoryName,
@@ -76,7 +76,6 @@ export function productCardData(p: ProductRecord, categoryName?: string): Listin
     facts: p.specs.slice(0, 3),
     value: "Quote on request",
     meta: p.unit || null,
-    ariaLabel: `Request a quote for ${p.name}`,
   };
 }
 

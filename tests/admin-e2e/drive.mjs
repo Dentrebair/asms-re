@@ -272,6 +272,19 @@ try {
   b = await backend();
   check("sold page: no enquiry form, no view counted", !(await js(`!!document.querySelector('.rail-form')`)) && !b.log.some((l) => l.op === "track" && l.property_ref === "ASMS-PREVIEW-07"));
 
+  // 9c. product page quote request
+  await cdp("Page.navigate", { url: `${BASE}/products/aac-blocks` });
+  await waitFor(`!!document.querySelector('form.enquiry-form')`, "quote form");
+  check("product page shows specs and suitable use", await js(`document.querySelector('h1').textContent === 'AAC blocks' && document.body.textContent.includes('IS 2185') && document.body.textContent.includes('Suitable for:')`));
+  await fill("Full name", "Arun"); await fill("Organisation", "Arun Builders"); await fill("Phone number", "9884011111");
+  await fill("Quantity", "20 cubic metres"); await fill("Delivery location", "Tambaram");
+  await js(`document.querySelector('.consent input').click()`);
+  await click("Request quote");
+  await waitFor(`!!document.querySelector('.enquiry-sent')`, "quote sent");
+  b = await backend();
+  const quote = b.log.filter((l) => l.op === "insert" && l.table === "enquiries").pop()?.rows[0];
+  check("quote saved as a product enquiry, not a property lead", quote && quote.kind === "product" && quote.source === "product_page" && quote.product_slug === "aac-blocks" && quote.quantity === "20 cubic metres" && quote.delivery_location === "Tambaram" && quote.organisation === "Arun Builders" && !quote.property_ref, JSON.stringify(quote));
+
   // 10. mobile layout of the list
   await cdp("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await cdp("Page.navigate", { url: `${BASE}/admin` });

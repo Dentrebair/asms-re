@@ -582,6 +582,8 @@
         }
       ],
       "unit": "Per tonne",
+      "suitableUse": "Foundations, columns, beams and slabs in residential and commercial RCC work; frames and fabrication for sheds.",
+      "availability": null,
       "image": {
         "src": "/products/tmt.webp",
         "srcSmall": "/products/tmt.webp",
@@ -614,6 +616,8 @@
         }
       ],
       "unit": "Per tonne",
+      "suitableUse": "Foundations, columns, beams and slabs in residential and commercial RCC work; frames and fabrication for sheds.",
+      "availability": null,
       "image": {
         "src": "/products/sections.webp",
         "srcSmall": "/products/sections.webp",
@@ -646,6 +650,8 @@
         }
       ],
       "unit": "Per project",
+      "suitableUse": "Foundations, columns, beams and slabs in residential and commercial RCC work; frames and fabrication for sheds.",
+      "availability": null,
       "image": {
         "src": "/products/peb.webp",
         "srcSmall": "/products/peb.webp",
@@ -678,6 +684,8 @@
         }
       ],
       "unit": "Per running metre",
+      "suitableUse": "Foundations, columns, beams and slabs in residential and commercial RCC work; frames and fabrication for sheds.",
+      "availability": null,
       "image": {
         "src": "/products/purlins.webp",
         "srcSmall": "/products/purlins.webp",
@@ -710,6 +718,8 @@
         }
       ],
       "unit": "Per sq ft",
+      "suitableUse": "Homes, warehouses, factory sheds and covered parking.",
+      "availability": null,
       "image": {
         "src": "/products/roofing.webp",
         "srcSmall": "/products/roofing.webp",
@@ -742,6 +752,8 @@
         }
       ],
       "unit": "Per sq ft",
+      "suitableUse": "Homes, warehouses, factory sheds and covered parking.",
+      "availability": null,
       "image": {
         "src": "/products/polycarbonate.webp",
         "srcSmall": "/products/polycarbonate.webp",
@@ -774,6 +786,8 @@
         }
       ],
       "unit": "Per unit",
+      "suitableUse": "Homes, warehouses, factory sheds and covered parking.",
+      "availability": null,
       "image": {
         "src": "/products/ventilator.webp",
         "srcSmall": "/products/ventilator.webp",
@@ -806,6 +820,8 @@
         }
       ],
       "unit": "Per cubic metre",
+      "suitableUse": "Homes, warehouses, factory sheds and covered parking.",
+      "availability": null,
       "image": {
         "src": "/products/aac.webp",
         "srcSmall": "/products/aac.webp",
@@ -838,6 +854,8 @@
         }
       ],
       "unit": "Per bag",
+      "suitableUse": "From foundation concrete to final wall and floor finishes.",
+      "availability": null,
       "image": {
         "src": "/products/cement.webp",
         "srcSmall": "/products/cement.webp",
@@ -870,6 +888,8 @@
         }
       ],
       "unit": "Per cubic metre",
+      "suitableUse": "From foundation concrete to final wall and floor finishes.",
+      "availability": null,
       "image": {
         "src": "/products/rmc.webp",
         "srcSmall": "/products/rmc.webp",
@@ -902,6 +922,8 @@
         }
       ],
       "unit": "Per sq ft",
+      "suitableUse": "From foundation concrete to final wall and floor finishes.",
+      "availability": null,
       "image": {
         "src": "/products/paver.webp",
         "srcSmall": "/products/paver.webp",
@@ -934,6 +956,8 @@
         }
       ],
       "unit": "Per bag",
+      "suitableUse": "From foundation concrete to final wall and floor finishes.",
+      "availability": null,
       "image": {
         "src": "/products/adhesive.webp",
         "srcSmall": "/products/adhesive.webp",

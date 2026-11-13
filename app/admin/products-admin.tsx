@@ -125,6 +125,8 @@ function ProductForm({ initial, categories, notify, onDone }: { initial: Product
         <Text label="Pricing unit" value={p.unit} onChange={(v) => set("unit", v ?? "")} placeholder="e.g. Per tonne" list={["Per tonne", "Per bag", "Per sq ft", "Per running metre", "Per cubic metre", "Per unit", "Per project"]} />
         <NumberInput label="Sort order" value={p.sort_order} onChange={(v) => set("sort_order", Math.round(v ?? 0))} hint="Lower numbers appear first." />
         <TextArea label="Summary" value={p.summary} onChange={(v) => set("summary", v ?? "")} rows={2} />
+        <TextArea label="Suitable for" value={p.suitable_use} onChange={(v) => set("suitable_use", v)} rows={2} hint="Where it is typically used. No warranties unless confirmed by the manufacturer." />
+        <Text label="Availability" value={p.availability} onChange={(v) => set("availability", v)} list={["Usually in stock", "Made to order", "Lead time 1 to 2 weeks"]} hint="Indicative only." />
         <div className="adm-checks adm-wide"><Check label="Published" hint="Show on the website" checked={p.published} onChange={(v) => set("published", v)} /></div>
       </fieldset>
       <fieldset><legend>Photo</legend>
