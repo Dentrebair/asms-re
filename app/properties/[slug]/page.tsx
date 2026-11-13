@@ -3,7 +3,7 @@ import { getProperty, isSample, priceLabel, pricePerSqFt, properties, similarPro
 import { formatINR, monthlyEmi } from "@/lib/format";
 import { amenityIcon, nearbyIcon } from "@/lib/presets";
 import { Icon, type IconName } from "../../icons";
-import { Footer, Header, PropertyCard, SectionLabel } from "../../site-components";
+import { BRAND, Footer, Header, PropertyCard } from "../../site-components";
 import EmiCalculator from "./emi-calculator";
 
 export const dynamic = "force-static";
@@ -19,8 +19,8 @@ export async function generateMetadata({ params }: { params: Params }) {
   const property = getProperty((await params).slug);
   if (!property) return {};
   return {
-    title: `${property.title} | ASMS–ROUNAQH`,
-    description: [property.propertyType, property.location, priceLabel(property)].filter(Boolean).join(" · "),
+    title: `${property.title} | ${BRAND}`,
+    description: `${property.propertyType} in ${property.location}, ${priceLabel(property)}.`,
   };
 }
 
@@ -80,55 +80,55 @@ export default async function PropertyDetailPage({ params }: { params: Params })
   ] as const;
 
   return (
-    <main className="property-detail-page">
+    <>
       <Header />
-      <section className="detail-top page-shell">
+      <main id="main" className="property-detail-page">
+      <section className="detail-top container">
         <nav className="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/properties">Properties</a><span>/</span><b>{p.reference}</b></nav>
         <div className="detail-heading">
           <div>
-            <div className="detail-kicker"><span>{p.statusLabel}</span><small>Ref. {p.reference}</small>{p.postedOn && <small>Posted: {new Date(p.postedOn).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</small>}</div>
+            <div className="detail-kicker"><span className="tag">{p.statusLabel}</span><span>Ref. {p.reference}</span>{p.postedOn && <span>Posted <time dateTime={p.postedOn}>{new Date(p.postedOn).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</time></span>}</div>
             <h1>{p.title}</h1>
-            <p><span aria-hidden="true">⌖</span> {[p.location, p.locality].filter(Boolean).join(" · ")}</p>
+            <p>{[p.location, p.locality].filter(Boolean).join(", ")}</p>
           </div>
           <div className="detail-price">
             <small>Asking price</small>
             <strong>{priceLabel(p)}</strong>
-            {p.price && <span>{perSqFt ? `${perSqFt} per sq ft · ` : ""}{formatINR(p.price)}</span>}
-            {emiFrom && <a className="emi-link" href="#emi">EMI from {formatINR(emiFrom)}/month →</a>}
+            {p.price && <small className="num">{formatINR(p.price)}</small>}
+            {perSqFt && <small className="num">{perSqFt} per sq ft</small>}
+            {emiFrom && <a className="link" href="#emi">EMI from {formatINR(emiFrom)} a month</a>}
           </div>
         </div>
       </section>
 
       {gallery.length > 0 && (
-        <section className={`detail-gallery page-shell gallery-count-${gallery.length}`} aria-label="Property gallery">
+        <section className={`detail-gallery container gallery-count-${gallery.length}`} aria-label="Property gallery">
           {gallery.map((image, index) => (
             <figure key={image.src} className={index === 0 ? "gallery-main" : ""}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={index === 0 ? image.src : image.srcSmall} alt={image.alt || p.title} loading={index === 0 ? "eager" : "lazy"} decoding="async" />
-              {index === 0 && isSample && <figcaption>Illustrative preview image · replace with actual site photography</figcaption>}
-            </figure>
+                          </figure>
           ))}
-          {p.images.length > 3 && <a className="gallery-more" href="#photos">View all {p.images.length} photos <span aria-hidden="true">↓</span></a>}
+          {p.images.length > 3 && <a className="btn btn--quiet btn--small gallery-more" href="#photos">View all {p.images.length} photos</a>}
         </section>
       )}
 
       {keyFacts.length > 0 && (
-        <section className="page-shell key-highlights" aria-label="Key highlights">
+        <section className="container" aria-label="Key highlights"><div className="key-highlights">
           {keyFacts.map((item) => <div key={item.label}><Icon name={item.icon} /><small>{item.label}</small><strong>{item.value}</strong></div>)}
-        </section>
+        </div></section>
       )}
 
-      {isSample && <div className="page-shell preview-notice detail-notice">Design preview — every figure, amenity and distance on this page is sample data until verified property information and genuine site photography are supplied.</div>}
+      {isSample && <p className="container notice detail-notice">Design preview: every figure, amenity, distance and photograph on this page is sample data until verified property information is supplied.</p>}
 
       <nav className="detail-tabs" aria-label="Property sections">
-        <div className="page-shell">{sections.filter(([, , show]) => show).map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</div>
+        <div className="container">{sections.filter(([, , show]) => show).map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</div>
       </nav>
 
-      <section className="detail-layout page-shell section-space">
+      <section className="detail-layout container">
         <div className="detail-content">
           <section id="overview">
-            <SectionLabel>Property overview</SectionLabel>
-            <h2>About this property.</h2>
+            <h2>About this property</h2>
             {p.description && p.description.split(/\n{2,}/).map((para, i) => <p key={i} className="detail-lead">{para}</p>)}
             {details.length > 0 && (
               <>
@@ -140,16 +140,14 @@ export default async function PropertyDetailPage({ params }: { params: Params })
 
           {p.amenities.length > 0 && (
             <section className="detail-section" id="amenities">
-              <SectionLabel>Amenities</SectionLabel>
-              <h2>Amenities &amp; infrastructure.</h2>
+              <h2>Amenities &amp; infrastructure</h2>
               <ul className="amenity-grid">{p.amenities.map((label) => <li key={label}><Icon name={amenityIcon(label)} /><span>{label}</span></li>)}</ul>
             </section>
           )}
 
           {nearbyGroups.length > 0 && (
             <section className="detail-section" id="nearby">
-              <SectionLabel>Neighbourhood</SectionLabel>
-              <h2>What’s nearby.</h2>
+              <h2>What’s nearby</h2>
               <div className="nearby-grid">
                 {nearbyGroups.map(({ group, places }) => (
                   <article key={group}>
@@ -163,8 +161,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
 
           {p.documents.length > 0 && (
             <section className="detail-section documents-section" id="documents">
-              <SectionLabel>Documents &amp; approvals</SectionLabel>
-              <h2>Transparency before commitment.</h2>
+              <h2>Documents and approvals</h2>
               <p>Available documents are listed by type and verification status. Buyers should arrange an independent legal review before purchase.</p>
               <div className="document-table">{p.documents.map((d) => <div key={d.label}><span>{d.label}</span><strong>{d.status}</strong></div>)}</div>
             </section>
@@ -172,8 +169,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
 
           {p.images.length > 3 && (
             <section className="detail-section" id="photos">
-              <SectionLabel>Photos</SectionLabel>
-              <h2>All photos.</h2>
+              <h2>All photos</h2>
               <div className="photo-grid">
                 {p.images.map((image) => (
                   <a key={image.src} href={image.src} target="_blank" rel="noopener noreferrer">
@@ -187,40 +183,39 @@ export default async function PropertyDetailPage({ params }: { params: Params })
 
           {p.price && (
             <section className="detail-section" id="emi">
-              <SectionLabel>Home loan</SectionLabel>
-              <h2>Estimate your EMI.</h2>
+              <h2>Estimate your EMI</h2>
               <EmiCalculator price={p.price} />
             </section>
           )}
         </div>
 
-        <aside className="detail-enquiry-card">
-          <span className="detail-card-label">Interested in this property?</span>
-          <h2>{priceLabel(p)}</h2>
-          <p>{[perSqFt && `${perSqFt}/sq ft`, keyFacts[0]?.value].filter(Boolean).join(" · ")}{keyFacts[0] || perSqFt ? ". " : ""}Quote reference <strong>{p.reference}</strong> when you contact the team.</p>
-          <a className="button button-gold" href={`/contact?interest=${encodeURIComponent(p.reference)}`}>Enquire about property <span>→</span></a>
-          <a className="button button-green-outline" href={`/contact?interest=${encodeURIComponent(`${p.reference} site visit`)}`}>Request a site visit</a>
-          <div className="detail-card-note"><span>Before you enquire</span><p>Prepare your preferred location, intended use, budget range and timeline.</p></div>
+        <aside className="detail-enquiry-card on-field" aria-labelledby="enquire-title">
+          <h2 id="enquire-title">{priceLabel(p)}</h2>
+          <p>Quote reference <strong>{p.reference}</strong> when you contact the team.</p>
+          <a className="btn" href={`/contact?interest=${encodeURIComponent(p.reference)}`}>Enquire about property</a>
+          <a className="btn btn--quiet" href={`/contact?interest=${encodeURIComponent(`${p.reference} site visit`)}`}>Request a site visit</a>
+          <p className="detail-card-note"><strong>Before you enquire.</strong> Prepare your preferred location, intended use, budget range and timeline.</p>
         </aside>
       </section>
 
       {similar.length > 0 && (
-        <section className="page-shell similar-section" id="similar">
-          <div className="section-heading heading-row">
-            <div><SectionLabel>Similar properties</SectionLabel><h2>You may also consider.</h2></div>
-            <a className="text-link" href="/properties">View all properties <span aria-hidden="true">→</span></a>
+        <section className="container similar-section" id="similar" aria-labelledby="similar-title">
+          <div className="head-split">
+            <h2 id="similar-title">Similar properties</h2>
+            <div><a className="link" href="/properties">View all properties</a></div>
           </div>
-          <div className="property-grid">{similar.map((property) => <PropertyCard key={property.slug} property={property} />)}</div>
+          <ul className="card-grid">{similar.map((property) => <li key={property.slug}><PropertyCard property={property} /></li>)}</ul>
         </section>
       )}
 
-      <section className="detail-bottom-cta">
-        <div className="page-shell">
-          <div><SectionLabel light>Continue exploring</SectionLabel><h2>Compare other property opportunities.</h2></div>
-          <a className="button button-ivory" href="/properties">View all properties <span>→</span></a>
+      <section className="band on-field" aria-labelledby="compare-title">
+        <div className="container close-plain">
+          <div><h2 id="compare-title">Compare other property opportunities</h2></div>
+          <div className="actions"><a className="btn btn--quiet" href="/properties">View all properties</a></div>
         </div>
       </section>
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }

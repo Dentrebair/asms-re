@@ -1,0 +1,29 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "site",
+  "shape": "Photographic",
+  "theme": "brand",
+  "axes": "light/high-contrast-serif/warm",
+  "hero": "Ledge",
+  "nav": "floating pill",
+  "footer": "letter close",
+  "imagery": "photographs: user hero, library 13 (Wikimedia Commons), sample listings",
+  "sections": [
+   "hero",
+   "rail",
+   "rows",
+   "showcase",
+   "pinned",
+   "band",
+   "footer"
+  ],
+  "signature": "listing fact sheet lit row by row as the four promises scroll",
+  "waived": [
+   "59"
+  ],
+  "prompt": "Chennai property, construction products and services business; visitors enquire about listings or request quotes",
+  "date": "2026-11-05"
+ }
+]

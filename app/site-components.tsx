@@ -1,85 +1,126 @@
-import { areaLabel, priceLabel, type PropertyRecord } from "@/lib/content";
+import { areaLabel, priceLabel, type ProductRecord, type PropertyRecord } from "@/lib/content";
+import { ListingCard, type ListingCardData } from "./listing-card";
+
+/** The brand name. A non-breaking hyphen joins the two words (Hallmark gate 19 bars dashes in copy). */
+export const BRAND = "ASMS‑ROUNAQH";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/#why-us", label: "About" },
   { href: "/properties", label: "Properties" },
   { href: "/products", label: "Products" },
   { href: "/#divisions", label: "Services" },
+  { href: "/#why-us", label: "About" },
 ];
 
-export function SectionLabel({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
-  return <div className={`eyebrow${light ? " eyebrow-light" : ""}`}><i />{children}</div>;
-}
-
-function Brand({ label }: { label?: string }) {
+function Wordmark() {
   return (
-    <a className="brand" href="/" aria-label={label}>
-      <span className="brand-mark">AR</span>
-      <span className="brand-type"><strong>ASMS–ROUNAQH</strong><small>Realty · Build · Supply</small></span>
+    <a className="wordmark" href="/" aria-label={`${BRAND} home`}>
+      <span className="wordmark-mark" aria-hidden="true">AR</span>
+      <span className="wordmark-name">{BRAND}</span>
     </a>
   );
 }
 
-function NavLinks() {
-  return NAV_LINKS.map(({ href, label }) => <a key={href} href={href}>{label}</a>);
+export function Header() {
+  return (
+    <>
+      <a className="skip" href="#main">Skip to content</a>
+      <header className="nav">
+        <div className="container">
+          <div className="nav-pill">
+            <Wordmark />
+            <nav className="nav-links" aria-label="Primary">
+              {NAV_LINKS.map(({ href, label }) => <a key={href} href={href}>{label}</a>)}
+            </nav>
+            <a className="btn btn--small" href="/contact">Enquire</a>
+            <details className="nav-menu">
+              <summary aria-label="Open menu"><span aria-hidden="true" /><span aria-hidden="true" /></summary>
+              <nav aria-label="Menu">
+                {NAV_LINKS.map(({ href, label }) => <a key={href} href={href}>{label}</a>)}
+                <a href="/contact">Contact</a>
+              </nav>
+            </details>
+          </div>
+        </div>
+      </header>
+    </>
+  );
 }
 
-export function Header({ overlay = false }: { overlay?: boolean }) {
-  return (
-    <header className={`site-header${overlay ? " header-overlay" : ""}`}>
-      <div className="page-shell nav-wrap">
-        <Brand label="ASMS–ROUNAQH home" />
-        <nav className="desktop-nav" aria-label="Primary navigation"><NavLinks /></nav>
-        <a className="nav-contact" href="/contact">Let’s talk <span aria-hidden="true">↗</span></a>
-        <details className="mobile-menu">
-          <summary aria-label="Open navigation"><span /><span /></summary>
-          <nav aria-label="Mobile navigation">
-            <NavLinks />
-            <a href="/contact">Contact</a>
-          </nav>
-        </details>
-      </div>
-    </header>
-  );
+/** Card data for a property, in the shared listing skeleton. */
+export function propertyCardData(p: PropertyRecord): ListingCardData {
+  return {
+    href: `/properties/${p.slug}`,
+    title: p.title,
+    image: p.images[0] ? { src: p.images[0].srcSmall, alt: p.images[0].alt } : null,
+    tag: p.statusLabel,
+    facts: [
+      { label: "Location", value: p.location },
+      { label: "Type", value: p.propertyType },
+      { label: "Area", value: areaLabel(p) },
+    ],
+    value: priceLabel(p),
+    meta: `Ref. ${p.reference}`,
+  };
+}
+
+/** Card data for a product, in the same skeleton: the card links to a quote request. */
+export function productCardData(p: ProductRecord, categoryName?: string): ListingCardData {
+  return {
+    href: `/contact?category=${encodeURIComponent("Construction products")}&interest=${encodeURIComponent(p.name)}`,
+    title: p.name,
+    image: p.image ? { src: p.image.srcSmall, alt: p.image.alt } : null,
+    tag: categoryName,
+    summary: p.summary,
+    facts: p.specs.slice(0, 3),
+    value: "Quote on request",
+    meta: p.unit || null,
+    ariaLabel: `Request a quote for ${p.name}`,
+  };
+}
+
+export function ListingCardFor({ product, categoryName }: { product: ProductRecord; categoryName?: string }) {
+  return <ListingCard card={productCardData(product, categoryName)} />;
 }
 
 export function PropertyCard({ property, priority = false }: { property: PropertyRecord; priority?: boolean }) {
-  const { slug, images, reference, location, title, propertyType, statusLabel } = property;
-  const image = images[0];
+  return <ListingCard card={propertyCardData(property)} priority={priority} />;
+}
+
+export type Credit = { label: string; artist: string; license: string; licenseUrl: string; source: string };
+
+export function Footer({ credits = [] }: { credits?: Credit[] }) {
   return (
-    <a className="property-card" href={`/properties/${slug}`} aria-label={`View ${title}`}>
-      <div className="property-image">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image.srcSmall} alt={image.alt || title} width={800} height={600} loading={priority ? "eager" : "lazy"} decoding="async" />
-        ) : <div className="image-missing" aria-hidden="true">AR</div>}
-        <span className="status-chip">{statusLabel}</span>
-        <span className="card-arrow" aria-hidden="true">↗</span>
+    <footer className="footer on-field">
+      <div className="container footer-inner">
+        <p className="footer-letter">If a listing or a product fits what you are planning, write to us with its reference. We reply with the verified details.</p>
+        <p className="footer-signoff"><span className="footer-name">{BRAND}</span><span>Chennai, Tamil Nadu</span></p>
+        <nav className="footer-links" aria-label="Footer">
+          <a href="/properties">Properties</a>
+          <a href="/products">Products</a>
+          <a href="/#divisions">Services</a>
+          <a href="/#why-us">About us</a>
+          <a href="/contact">Send an enquiry</a>
+          <a href="/admin" rel="nofollow">Staff login</a>
+        </nav>
+        <p className="footer-legal">© {BRAND}. Address, phone, business email and registration details are being verified. Privacy policy and terms of use are in preparation.</p>
+        {credits.length > 0 && (
+          <p className="footer-credits" data-credits>
+            Photographs: {credits.map((c, i) => (
+              <span key={c.source}>
+                {i > 0 && "; "}
+                {c.label}, <a href={c.source} target="_blank" rel="noopener noreferrer">{c.artist}</a>
+                {c.licenseUrl ? <>, <a href={c.licenseUrl} target="_blank" rel="noopener noreferrer">{c.license}</a></> : `, ${c.license}`}
+              </span>
+            ))}
+          </p>
+        )}
       </div>
-      <div className="property-body">
-        <div className="property-location"><span aria-hidden="true">⌖</span>{location}<small>{reference}</small></div>
-        <h3>{title}</h3>
-        <div className="property-meta"><span>{propertyType}</span><span>{areaLabel(property)}</span></div>
-        <div className="property-price"><small>Asking price</small><strong>{priceLabel(property)}</strong></div>
-      </div>
-    </a>
+    </footer>
   );
 }
 
-export function Footer() {
-  return (
-    <footer className="site-footer">
-      <div className="page-shell footer-grid">
-        <div className="footer-brand">
-          <Brand />
-          <p>A Chennai-based business across real estate, construction products and engineering services.</p>
-        </div>
-        <div><h3>Explore</h3><a href="/properties">Properties</a><a href="/products">Products</a><a href="/#divisions">Services</a><a href="/#why-us">About us</a></div>
-        <div><h3>Contact</h3><a href="/contact">Send an enquiry</a><span>Verified address to be added</span><span>Phone number to be added</span><span>Business email to be added</span></div>
-        <div><h3>Information</h3><span>Privacy policy (coming soon)</span><span>Terms of use (coming soon)</span><span>Registration details pending</span></div>
-      </div>
-      <div className="page-shell footer-bottom"><span>© ASMS–ROUNAQH</span><span>Designed around trust, clarity and evidence. · <a href="/admin" rel="nofollow">Staff login</a></span></div>
-    </footer>
-  );
+/** Credits for library photos shown on a page (the user's own uploads carry none). */
+export function creditsFor(items: { name: string; image: { credit?: Omit<Credit, "label"> | null } | null }[]): Credit[] {
+  return items.flatMap((item) => (item.image?.credit ? [{ label: item.name, ...item.image.credit }] : []));
 }

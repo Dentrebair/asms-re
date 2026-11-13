@@ -45,3 +45,7 @@ yarn-error.log*
 
 # local admin demo data (npm run demo)
 /.demo/
+
+# Hallmark working files (screenshots, records); log.json is kept
+/.hallmark/*
+!/.hallmark/log.json

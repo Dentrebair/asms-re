@@ -1,70 +1,89 @@
 import { isSample, properties } from "@/lib/content";
-import { Footer, Header, PropertyCard, SectionLabel } from "../site-components";
+import Catalog, { type CatalogFilter, type CatalogSort } from "../catalog";
+import { Footer, Header, PropertyCard } from "../site-components";
 
+const BUDGETS = [
+  { value: "0-5000000", label: "Under ₹50 L" },
+  { value: "5000000-10000000", label: "₹50 L to ₹1 Cr" },
+  { value: "10000000-", label: "Above ₹1 Cr" },
+  { value: "empty", label: "Price on request" },
+];
+const AREAS = [
+  { value: "0-2000", label: "Under 2,000 sq ft" },
+  { value: "2000-", label: "2,000 sq ft and above" },
+];
+const SORTS: CatalogSort[] = [
+  { value: "recommended", label: "Recommended", kind: "order" },
+  { value: "newest", label: "Newest", kind: "date", attr: "posted" },
+  { value: "price-asc", label: "Price, low to high", kind: "number", attr: "price", dir: 1 },
+  { value: "price-desc", label: "Price, high to low", kind: "number", attr: "price", dir: -1 },
+];
 
 export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Properties | ASMS–ROUNAQH",
-  description: "Explore property opportunities presented with clear, transparent information.",
+  title: "Properties | ASMS‑ROUNAQH",
+  description: "Plots and homes in and around Chennai, each with price, area, location and document status upfront.",
 };
 
 export default function PropertiesPage() {
+  const locations = [...new Set(properties.map((p) => p.location))].sort();
+  const types = [...new Set(properties.map((p) => p.propertyType))].sort();
+  const filters: CatalogFilter[] = [
+    { name: "location", label: "Location", attr: "location", kind: "equals", options: locations.map((l) => ({ value: l, label: l })) },
+    { name: "type", label: "Property type", attr: "type", kind: "equals", options: types.map((t) => ({ value: t, label: t })) },
+    { name: "budget", label: "Budget", attr: "price", kind: "range", options: BUDGETS },
+    { name: "area", label: "Area", attr: "area", kind: "range", options: AREAS },
+  ];
+
   return (
-    <main className="properties-page">
+    <>
       <Header />
-      <section className="listing-hero">
-        <div className="page-shell listing-title">
-          <div>
-            <SectionLabel>Curated real estate</SectionLabel>
-            <h1>Find the right ground for your <em>next chapter.</em></h1>
+      <main id="main">
+        <section className="page-head" aria-labelledby="page-title">
+          <div className="container page-head-grid">
+            <h1 id="page-title">Plots and homes around Chennai</h1>
+            <p className="lead">Each listing shows price, area, location and document status upfront.</p>
           </div>
-          <p>Explore a considered selection of properties presented with the information you need to evaluate them confidently.</p>
-        </div>
-        <div className="page-shell filter-bar" role="search" aria-label="Property filters">
-          <label><span>Location</span><select defaultValue="all"><option value="all">All Chennai areas</option><option>Chennai city</option><option>Greater Chennai</option></select></label>
-          <label><span>Property type</span><select defaultValue="all"><option value="all">All types</option><option>Plotted land</option><option>Residential</option></select></label>
-          <label><span>Budget</span><select defaultValue="all"><option value="all">Any budget</option><option>Price on request</option></select></label>
-          <label><span>Area</span><select defaultValue="all"><option value="all">Any size</option><option>Under 2,000 sq ft</option><option>2,000+ sq ft</option></select></label>
-          <button type="button">Show properties <span>→</span></button>
-        </div>
-      </section>
+        </section>
 
-      <section className="listing-content page-shell section-space">
-        <div className="listing-toolbar">
-          <div><strong>Property showcase</strong><span>{properties.length} {isSample ? "design-preview listings" : properties.length === 1 ? "listing" : "listings"}</span></div>
-          <label>Sort by <select defaultValue="recommended"><option value="recommended">Recommended</option><option>Newest</option><option>Price: low to high</option></select></label>
-        </div>
-        {isSample && <div className="preview-notice">Design preview — all listing details are placeholders. Only verified ASMS–ROUNAQH inventory will be published.</div>}
-        {properties.length === 0 && <p className="empty-state">New listings are being prepared. <a href="/contact">Tell us what you are looking for</a> and we’ll be in touch.</p>}
-        <div className="property-grid listing-grid">
-          {properties.map((property, index) => <PropertyCard key={property.slug} property={property} priority={index < 3} />)}
-        </div>
-      </section>
-
-      <section className="buyer-guide">
-        <div className="page-shell buyer-guide-inner">
-          <div>
-            <SectionLabel light>Buy with clarity</SectionLabel>
-            <h2>Every property should answer the important questions.</h2>
+        <section className="sec sec--list" aria-label="Listings">
+          <div className="container">
+            {isSample && <p className="notice">Design preview: all listing details are placeholders. Only verified ASMS&#8209;ROUNAQH inventory will be published.</p>}
+            {properties.length === 0 ? (
+              <p className="empty-state">New listings are being prepared. <a className="link" href="/contact">Tell us what you are looking for</a> and we will be in touch.</p>
+            ) : (
+              <Catalog label="Properties" filters={filters} sorts={SORTS} total={properties.length}>
+                {properties.map((p, i) => (
+                  <li key={p.slug} data-order={i} data-location={p.location} data-type={p.propertyType} data-price={p.price ?? ""} data-area={p.areaSqFt ?? ""} data-posted={p.postedOn ?? ""}>
+                    <PropertyCard property={p} priority={i < 3} />
+                  </li>
+                ))}
+              </Catalog>
+            )}
           </div>
-          <div className="guide-points">
-            <article><span>01</span><h3>Know the essentials</h3><p>Location, dimensions, access, utilities and asking price presented upfront.</p></article>
-            <article><span>02</span><h3>Understand documents</h3><p>Available approvals and document status described without misleading guarantees.</p></article>
-            <article><span>03</span><h3>Visit with context</h3><p>Request a site visit using the listing reference, so every conversation stays specific.</p></article>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="listing-cta page-shell section-space">
-        <div>
-          <SectionLabel>Personal property guidance</SectionLabel>
-          <h2>Not sure which opportunity fits?</h2>
-          <p>Share your preferred location, intended use and budget range. We’ll help narrow the search responsibly.</p>
-        </div>
-        <div><a className="button button-green" href="/contact">Speak with our team</a><a className="text-link" href="/">Return home →</a></div>
-      </section>
+        <section className="sec sec--field on-field" aria-labelledby="guide-title">
+          <div className="container rows-layout">
+            <div className="rows-head">
+              <h2 id="guide-title">What to check before you buy</h2>
+              <p>Every property should answer the important questions before a visit. Not sure which plot fits? Share your preferred location, intended use and budget range.</p>
+              <div className="actions">
+                <a className="btn btn--quiet" href="/contact">Speak with our team</a>
+                <a className="link" href="/">Return home</a>
+              </div>
+            </div>
+            <ul className="rows rows--two">
+              <li><h3>Know the essentials</h3><p>Location, dimensions, access, utilities and asking price, presented upfront.</p></li>
+              <li><h3>Understand documents</h3><p>Available approvals and document status, described without misleading guarantees.</p></li>
+              <li><h3>Visit with context</h3><p>Request a site visit with the listing reference, so every conversation stays specific.</p></li>
+            </ul>
+          </div>
+        </section>
+
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }

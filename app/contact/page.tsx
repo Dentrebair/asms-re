@@ -1,53 +1,52 @@
-import { Footer, Header, SectionLabel } from "../site-components";
+import { Footer, Header } from "../site-components";
 import EnquiryForm from "./enquiry-form";
 
 export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Contact | ASMS–ROUNAQH",
-  description: "Contact ASMS–ROUNAQH about property opportunities or construction products.",
+  title: "Contact | ASMS‑ROUNAQH",
+  description: "Contact ASMS‑ROUNAQH about property opportunities or construction products.",
 };
 
 export default function ContactPage() {
   return (
-    <main className="contact-page">
+    <>
       <Header />
-      <section className="contact-hero">
-        <div className="page-shell contact-hero-grid">
-          <div>
-            <SectionLabel light>Contact ASMS–ROUNAQH</SectionLabel>
-            <h1>Let’s discuss what you’re <em>looking to buy.</em></h1>
+      <main id="main">
+        <section className="page-head" aria-labelledby="page-title">
+          <div className="container page-head-grid">
+            <h1 id="page-title">Ask about a property or a product</h1>
+            <p className="lead">Share the essentials and the team will guide the next conversation.</p>
           </div>
-          <p>Whether you are evaluating a property or sourcing construction products, share the essentials and our team will guide the next conversation.</p>
-        </div>
-      </section>
+        </section>
 
-      <section className="contact-main page-shell section-space">
-        <aside className="contact-details">
-          <SectionLabel>Direct assistance</SectionLabel>
-          <h2>Clear answers begin with the right details.</h2>
-          <p>Tell us your intended use, location or product specification. We’ll respond with relevant information—without artificial urgency.</p>
-          <div className="contact-methods">
-            <article><span>01</span><div><small>Call</small><strong>Verified phone number to be added</strong><p>For property and product enquiries</p></div></article>
-            <article><span>02</span><div><small>Email</small><strong>Business email to be added</strong><p>For detailed requirements and documents</p></div></article>
-            <article><span>03</span><div><small>Visit</small><strong>Verified Chennai office address to be added</strong><p>Visits by prior appointment</p></div></article>
+        <section className="sec sec--list" aria-label="Enquiry">
+          <div className="container contact-split">
+            <div className="contact-facts">
+              <h2>Clear answers begin with the right details</h2>
+              <p>Tell us your intended use, location or product specification. We respond with relevant information and no artificial urgency.</p>
+              <dl>
+                <div><dt>Call</dt><dd><span className="fill" data-fill="phone">Phone number to be added</span><small>For property and product enquiries</small></dd></div>
+                <div><dt>Email</dt><dd><span className="fill" data-fill="email">Business email to be added</span><small>For detailed requirements and documents</small></dd></div>
+                <div><dt>Visit</dt><dd>Chennai office<small>Visits by prior appointment</small></dd></div>
+              </dl>
+            </div>
+            <EnquiryForm />
           </div>
-          <div className="contact-hours"><span>Business hours</span><strong>Hours to be confirmed</strong></div>
-        </aside>
-        <div>
-          <div className="preview-notice contact-notice">Design preview — the form currently demonstrates validation and confirmation. Email delivery will be connected after the verified recipient address is supplied.</div>
-          <EnquiryForm />
-        </div>
-      </section>
+        </section>
 
-      <section className="contact-confidence">
-        <div className="page-shell confidence-grid">
-          <div><span>Property enquiries</span><h3>Reference-led conversations</h3><p>Include the property reference so details, documents and site-visit requests stay specific.</p></div>
-          <div><span>Product enquiries</span><h3>Specification-led quotations</h3><p>Share product type, dimensions, quantity and delivery location for a more useful response.</p></div>
-          <div><span>Your privacy</span><h3>Purpose-limited contact</h3><p>Your information is used only to understand and respond to the enquiry you submit.</p></div>
-        </div>
-      </section>
+        <section className="sec sec--field on-field" aria-labelledby="assure-title">
+          <div className="container">
+            <div className="head-split"><h2 id="assure-title">How we handle your enquiry</h2></div>
+            <ul className="assurances">
+              <li><h3>Reference-led conversations</h3><p>Include the property reference so details, documents and site visits stay specific.</p></li>
+              <li><h3>Specification-led quotations</h3><p>Share product type, dimensions, quantity and delivery location for a useful response.</p></li>
+              <li><h3>Purpose-limited contact</h3><p>Your information is used only to understand and respond to the enquiry you submit.</p></li>
+            </ul>
+          </div>
+        </section>
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }
