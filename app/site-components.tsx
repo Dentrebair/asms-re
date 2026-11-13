@@ -5,12 +5,13 @@ import { ListingCard, type ListingCardData } from "./listing-card";
 /** The brand name. A non-breaking hyphen joins the two words (Hallmark gate 19 bars dashes in copy). */
 export const BRAND = "ASMS‑ROUNAQH";
 
+// PRD section 4: Discover properties, Construction products, Services, About, Sell a property.
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
   { href: "/properties", label: "Properties" },
   { href: "/products", label: "Products" },
   { href: "/#divisions", label: "Services" },
   { href: "/#why-us", label: "About" },
+  { href: "/sell", label: "Sell a property" },
 ];
 
 function Wordmark() {
@@ -37,6 +38,7 @@ export function Header() {
             <details className="nav-menu">
               <summary aria-label="Open menu"><span aria-hidden="true" /><span aria-hidden="true" /></summary>
               <nav aria-label="Menu">
+                <a href="/">Home</a>
                 {NAV_LINKS.map(({ href, label }) => <a key={href} href={href}>{label}</a>)}
                 <a href="/contact">Contact</a>
               </nav>
@@ -101,10 +103,13 @@ export function Footer({ credits = [] }: { credits?: Credit[] }) {
           <a href="/#divisions">Services</a>
           <a href="/#why-us">About us</a>
           <a href="/contact">Send an enquiry</a>
+          <a href="/sell">Sell a property</a>
           <a href="/privacy">Privacy notice</a>
+          <a href="/terms">Terms of use</a>
+          <a href="/disclaimer">Disclaimer</a>
           <a href="/admin" rel="nofollow">Staff login</a>
         </nav>
-        <p className="footer-legal">© {BRAND}. Address, phone, business email and registration details are being verified. Terms of use are in preparation.</p>
+        <p className="footer-legal">© {BRAND}. Address, phone, business email and registration details are being verified.</p>
         {credits.length > 0 && (
           <p className="footer-credits" data-credits>
             Photographs: {credits.map((c, i) => (

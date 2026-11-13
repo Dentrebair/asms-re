@@ -185,7 +185,7 @@ create policy "staff delete media" on storage.objects for delete to authenticate
 create table if not exists public.enquiries (
   id           uuid primary key default gen_random_uuid(),
   created_at   timestamptz not null default now(),
-  kind         text not null check (kind in ('property', 'visit', 'product', 'general')),
+  kind         text not null check (kind in ('property', 'visit', 'product', 'sell', 'general')),
   source       text not null default 'contact_page' check (source in ('contact_page', 'property_page', 'product_page')),
   name         text not null check (char_length(btrim(name)) between 1 and 120),
   phone        text not null check (phone ~ '^[0-9+() -]{7,20}$'),
@@ -377,7 +377,7 @@ begin
     body    := jsonb_build_object(
       'from', send_from,
       'to', string_to_array(replace(send_to, ' ', ''), ','),
-      'subject', case new.kind when 'visit' then 'Site visit request' when 'product' then 'Product quote request' when 'property' then 'Property enquiry' else 'New enquiry' end
+      'subject', case new.kind when 'visit' then 'Site visit request' when 'product' then 'Product quote request' when 'property' then 'Property enquiry' when 'sell' then 'Owner wants to sell' else 'New enquiry' end
                  || coalesce(' (' || new.property_ref || ')', '') || ' from ' || new.name,
       'text', concat_ws(E'\n',
         'Name: ' || new.name,

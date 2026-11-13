@@ -21,7 +21,7 @@ export type EnquiryStatus = "new" | "contacted" | "qualified" | "visit_requested
 export type EnquiryRow = {
   id: string;
   created_at: string;
-  kind: "property" | "visit" | "product" | "general";
+  kind: "property" | "visit" | "product" | "sell" | "general";
   source: "contact_page" | "property_page" | "product_page";
   name: string;
   phone: string;

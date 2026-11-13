@@ -14,6 +14,7 @@
 /* Hallmark · dropped 200mm, 250mm, 50kg, 80mm, 40kg · these product specs sit on the catalogue's second page of six, shown by its Next button */
 /* Hallmark · dismissed 42 · the nav is a floating pill over the hero photograph, stamped nav: floating pill, not a full-width bar with a hairline */
 /* Hallmark · dismissed 77 · the contact page is the enquiry form itself; a fifth section would only pad the route */
+/* Hallmark · dismissed 70 · the forms post through sendEnquiry in lib/enquiry.ts, which the linter does not follow; each success state appears only after that request returns ok, and the forms show the not-connected note when Supabase is not configured */
 /* Hallmark · waive 59 · the property detail route keeps its portal layout separated by rules and a sticky tab bar · the buyer asked for the portal pattern and its dense facts read best close together */
 
 @import "tailwindcss";
@@ -117,7 +118,7 @@ small { font-size: var(--text-sm); }
 .catalog-tabs { display: flex; gap: var(--space-xs); overflow-x: auto; scrollbar-width: none; }
 .catalog-tabs button { min-height: 44px; padding-inline: var(--space-md); flex-shrink: 0; border: 1px solid var(--color-rule); border-radius: 999px; background: none; color: var(--color-ink-2); font: inherit; font-weight: 700; cursor: pointer; }
 .catalog-tabs button:hover { border-color: var(--color-muted); color: var(--color-ink); }
-.catalog-tabs button[aria-pressed="true"] { border-color: var(--color-field); background: var(--color-field); color: var(--color-on-field); }
+.catalog-tabs button[aria-pressed="true"] { border-color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-ink); color: var(--color-ink); }
 .catalog-drawer > summary { display: none; }
 .catalog-controls { padding-block: var(--space-lg); display: flex; flex-wrap: wrap; gap: var(--space-md) var(--gap-columns); align-items: flex-end; border-block: 1px solid var(--color-rule); }
 .catalog-controls .field { flex: 1 1 11rem; max-width: 16rem; }
@@ -335,8 +336,8 @@ html:not(.js) .catalog-tabs, html:not(.js) .catalog-drawer, html:not(.js) .catal
 .detail-enquiry-card .field textarea { min-height: 96px; }
 .rail-form, .rail-actions, .rail-sent { display: grid; gap: var(--space-md); }
 .rail-sent .link { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; justify-self: start; }
-.rail-modes { display: grid; grid-template-columns: 1fr 1fr; padding: var(--space-3xs); border: 1px solid var(--color-on-field-rule); border-radius: 999px; }
-.rail-modes button { min-height: 44px; border: 0; border-radius: 999px; background: none; color: var(--color-on-field-2); font: inherit; font-weight: 700; cursor: pointer; }
+.rail-modes { display: grid; grid-template-columns: 1fr 1fr; padding: var(--space-3xs); border: 1px solid var(--color-on-field-rule); border-radius: var(--radius-inner); }
+.rail-modes button { min-height: 44px; border: 0; border-radius: calc(var(--radius-inner) - 2px); background: none; color: var(--color-on-field-2); font: inherit; font-weight: 700; cursor: pointer; }
 .rail-modes button[aria-pressed="true"] { background: var(--color-paper); color: var(--color-ink); }
 .field-row--tight { gap: var(--space-md); }
 .rail-secondary { display: grid; gap: var(--space-sm); justify-items: center; padding-top: var(--space-sm); border-top: 1px solid var(--color-on-field-rule); }

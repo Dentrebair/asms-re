@@ -36,6 +36,7 @@ export const dynamic = "force-static";
 export const metadata = {
   title: "Properties | ASMS‑ROUNAQH",
   description: "Homes, plots, commercial and agricultural property in and around Chennai, each with price, area, location and document status upfront.",
+  alternates: { canonical: "/properties" },
 };
 
 const distinct = <T,>(values: (T | null)[]) => [...new Set(values.filter((v): v is T => v !== null && v !== ""))];

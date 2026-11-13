@@ -12,6 +12,7 @@ export const dynamic = "force-static";
 export const metadata = {
   title: "Construction products | ASMS‑ROUNAQH",
   description: "Structural steel, PEB components, roofing, building materials, concrete and finishing products with clear specifications.",
+  alternates: { canonical: "/products" },
 };
 
 const quoteHref = (product: string) =>

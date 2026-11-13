@@ -102,6 +102,10 @@ insert into public.enquiries (kind, source, name, phone, product_slug, quantity,
 reset role;
 select pg_temp.check('visit request needs no message, starts as visit_requested, flagged as a repeat contact',
   (select status = 'visit_requested' and repeat_contact and preferred_time = 'Morning' from public.enquiries where kind = 'visit'));
+set role anon; set request.jwt.claims = '{}';
+insert into public.enquiries (kind, name, phone, message, consent) values ('sell', 'Owner', '9884033333', 'I want to list my plot in Porur', true);
+reset role;
+select pg_temp.check('owners can ask to list a property', (select count(*) from public.enquiries where kind = 'sell') = 1);
 select pg_temp.check('product quote keeps quantity and delivery', (select quantity = '20 cubic metres' and delivery_location = 'Tambaram' and property_id is null from public.enquiries where kind = 'product'));
 
 set role authenticated; set request.jwt.claims = '{"email":"stranger@gmail.com"}';
@@ -111,7 +115,7 @@ reset role;
 select pg_temp.check('stranger changed nothing on enquiries', (select count(*) from public.enquiries where status = 'closed_won') = 0);
 
 set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
-select pg_temp.check('staff read enquiries', (select count(*) from public.enquiries) = 3);
+select pg_temp.check('staff read enquiries', (select count(*) from public.enquiries) = 4);
 update public.enquiries set status = 'contacted', assigned_to = 'editor@asms.test', follow_up_on = current_date + 2, notes = 'Called, site visit Saturday' where name = 'Priya' and kind = 'property';
 update public.enquiries set message = 'rewritten', repeat_contact = true where kind = 'property';
 reset role;
@@ -133,7 +137,7 @@ select pg_temp.check('fourth enquiry in an hour from one phone is refused', (sel
 set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
 delete from public.enquiries where message = 'three';
 reset role;
-select pg_temp.check('staff delete an enquiry', (select count(*) from public.enquiries) = 3);
+select pg_temp.check('staff delete an enquiry', (select count(*) from public.enquiries) = 4);
 
 -- ---------- events
 truncate net.calls;

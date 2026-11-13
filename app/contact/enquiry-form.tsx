@@ -6,6 +6,7 @@ import { ENQUIRY_ENDPOINT, sendEnquiry, type EnquiryKind } from "@/lib/enquiry";
 const CATEGORIES: { label: string; kind: EnquiryKind }[] = [
   { label: "Property purchase", kind: "property" },
   { label: "Construction products", kind: "product" },
+  { label: "Selling a property", kind: "sell" },
   { label: "General enquiry", kind: "general" },
 ];
 

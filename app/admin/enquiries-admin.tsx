@@ -21,7 +21,7 @@ const statusLabel = (s: string | null) => STATUSES.find((x) => x.value === s)?.l
 export const isFresh = (r: Pick<EnquiryRow, "status">) => r.status === "new" || r.status === "visit_requested";
 const isOpen = (r: EnquiryRow) => STATUSES.find((x) => x.value === r.status)?.open ?? true;
 
-const KIND_LABEL: Record<EnquiryRow["kind"], string> = { property: "Property enquiry", visit: "Site visit request", product: "Product quote", general: "General enquiry" };
+const KIND_LABEL: Record<EnquiryRow["kind"], string> = { property: "Property enquiry", visit: "Site visit request", product: "Product quote", sell: "Owner wants to sell", general: "General enquiry" };
 
 type View = "fresh" | "open" | "due" | "closed" | "all";
 const today = () => new Date().toLocaleDateString("en-CA");

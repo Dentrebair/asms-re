@@ -6,6 +6,7 @@ export const dynamic = "force-static";
 export const metadata = {
   title: "Contact | ASMS‑ROUNAQH",
   description: "Contact ASMS‑ROUNAQH about property opportunities or construction products.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {

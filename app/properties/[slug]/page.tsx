@@ -20,9 +20,17 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Params }) {
   const property = getProperty((await params).slug);
   if (!property) return {};
+  const description = `${property.propertyType} in ${property.location}, ${priceLabel(property)}${property.stage === "sold" ? ", sold" : ""}.`;
   return {
     title: `${property.title} | ${BRAND}`,
-    description: `${property.propertyType} in ${property.location}, ${priceLabel(property)}.`,
+    description,
+    alternates: { canonical: `/properties/${property.slug}` },
+    openGraph: {
+      title: property.title,
+      description,
+      url: `/properties/${property.slug}`,
+      images: property.images[0] ? [{ url: property.images[0].src, alt: property.images[0].alt || property.title }] : undefined,
+    },
   };
 }
 

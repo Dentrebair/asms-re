@@ -15,6 +15,9 @@ const pages = [
   ["products.html", /Steel, roofing and concrete products/],
   ["contact.html", /Tell us what you are looking for\./],
   ["privacy.html", /What we collect/],
+  ["sell.html", /How listing works/],
+  ["terms.html", /Listings and information/],
+  ["disclaimer.html", /Check before you buy/],
   ["404.html", /./],
   ["admin.html", /<meta name="robots" content="noindex, nofollow"/],
 ];
@@ -72,4 +75,17 @@ test("sample notices appear only with sample content", async () => {
 
 test("ships the Hostinger .htaccess", async () => {
   assert.match(await page(".htaccess"), /RewriteRule \^\(\.\+\)\$ \/\$1\.html/);
+});
+
+test("search engines: canonical links, social previews, sitemap and robots", async () => {
+  const p = content.properties[0];
+  const html = await page(`properties/${p.slug}.html`);
+  assert.match(html, new RegExp(`<link rel="canonical" href="https://asmsrounaqh.com/properties/${p.slug}"`));
+  assert.match(html, /<meta property="og:image" content="https:\/\/asmsrounaqh.com\//);
+  assert.match(await page("properties.html"), /<link rel="canonical" href="https:\/\/asmsrounaqh.com\/properties"/);
+  const sitemap = await page("sitemap.xml");
+  for (const q of content.properties) assert.match(sitemap, new RegExp(`/properties/${q.slug}<`));
+  for (const q of content.products) assert.match(sitemap, new RegExp(`/products/${q.slug}<`));
+  assert.doesNotMatch(sitemap, /\/admin/);
+  assert.match(await page("robots.txt"), /Disallow: \/admin/);
 });

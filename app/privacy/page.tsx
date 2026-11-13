@@ -5,6 +5,7 @@ export const dynamic = "force-static";
 export const metadata = {
   title: "Privacy notice | ASMS‑ROUNAQH",
   description: "How ASMS‑ROUNAQH handles the details you send through the website enquiry form.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

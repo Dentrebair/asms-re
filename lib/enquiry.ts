@@ -12,7 +12,7 @@ export const ENQUIRY_ENDPOINT = enquiriesConnected ? `${SUPABASE_URL}/rest/v1/en
 /** WhatsApp click-to-chat number with country code, digits only (e.g. 919840012345). Empty hides the button. */
 export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 
-export type EnquiryKind = "property" | "visit" | "product" | "general";
+export type EnquiryKind = "property" | "visit" | "product" | "sell" | "general";
 
 export type Enquiry = {
   kind: EnquiryKind;

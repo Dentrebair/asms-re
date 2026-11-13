@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Albert_Sans, Manrope } from "next/font/google";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 // Three weights in running use: Albert Sans 600 for display, Manrope 400 and 700.
@@ -7,8 +8,11 @@ const display = Albert_Sans({ variable: "--font-albert", subsets: ["latin"], wei
 const sans = Manrope({ variable: "--font-manrope", subsets: ["latin"], weight: ["400", "700"], display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "ASMS‑ROUNAQH | Property, construction products and services in Chennai",
   description: "Plots and homes in and around Chennai, specified construction products and engineering services from one accountable team.",
+  alternates: { canonical: "/" },
+  openGraph: { siteName: "ASMS‑ROUNAQH", locale: "en_IN", type: "website", images: [{ url: "/asms-hero.webp" }] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

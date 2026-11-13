@@ -18,9 +18,13 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Params }) {
   const found = find((await params).slug);
   if (!found) return {};
+  const { product } = found;
+  const description = `${product.name}: ${product.summary} Request a quote from ${BRAND}, Chennai.`;
   return {
-    title: `${found.product.name} | ${BRAND}`,
-    description: `${found.product.name}: ${found.product.summary} Request a quote from ${BRAND}, Chennai.`,
+    title: `${product.name} | ${BRAND}`,
+    description,
+    alternates: { canonical: `/products/${product.slug}` },
+    openGraph: { title: product.name, description, url: `/products/${product.slug}`, images: product.image ? [{ url: product.image.src, alt: product.image.alt || product.name }] : undefined },
   };
 }
 
