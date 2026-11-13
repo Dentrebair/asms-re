@@ -1,4 +1,5 @@
 import { Footer, Header } from "../site-components";
+import { COMPANY } from "@/lib/company";
 import EnquiryForm from "./enquiry-form";
 
 export const dynamic = "force-static";
@@ -27,9 +28,9 @@ export default function ContactPage() {
               <h2>Clear answers begin with the right details</h2>
               <p>Tell us your intended use, location or product specification. We respond with relevant information and no artificial urgency.</p>
               <dl>
-                <div><dt>Call</dt><dd><span className="fill" data-fill="phone">Phone number to be added</span><small>For property and product enquiries</small></dd></div>
-                <div><dt>Email</dt><dd><span className="fill" data-fill="email">Business email to be added</span><small>For detailed requirements and documents</small></dd></div>
-                <div><dt>Visit</dt><dd>Chennai office<small>Visits by prior appointment</small></dd></div>
+                <div><dt>Call or WhatsApp</dt><dd><a className="link" href={COMPANY.phoneHref}>{COMPANY.phone}</a><small>For property and product enquiries. <a className="link" href={`https://wa.me/${COMPANY.whatsapp}`} target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a></small></dd></div>
+                <div><dt>Email</dt><dd><a className="link" href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a><small>For detailed requirements and documents</small></dd></div>
+                <div><dt>Registered office</dt><dd><address>{COMPANY.address.map((line) => <span key={line}>{line}<br /></span>)}</address><small>Visits by prior appointment. <a className="link" href={COMPANY.mapHref} target="_blank" rel="noopener noreferrer">Open in Maps</a></small></dd></div>
               </dl>
             </div>
             <EnquiryForm />

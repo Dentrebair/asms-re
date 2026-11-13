@@ -1,3 +1,4 @@
+import { COMPANY } from "@/lib/company";
 import { HERO_IMAGE, areaLabel, isSample, priceLabel, properties } from "@/lib/content";
 import PinnedHighlight from "./pinned-highlight";
 import { Footer, Header, PropertyCard, type Credit } from "./site-components";
@@ -57,7 +58,7 @@ export default function Home() {
             <div className="rows-head">
               <h2 id="divisions-title">Land, materials and building, one team</h2>
               <p>ASMS&#8209;ROUNAQH brings property, construction materials and engineering services under one accountable relationship.</p>
-              <a className="link" href="#why-us">Learn how we work</a>
+              <a className="link" href="/about">About the company</a>
             </div>
             <ul className="rows">
               <li>
@@ -73,7 +74,7 @@ export default function Home() {
               <li>
                 <h3>Construction services</h3>
                 <p>For projects of purpose: conventional builds through to specialist engineering work.</p>
-                <a className="link" href="#contact" aria-label="Explore construction services">Explore</a>
+                <a className="link" href="/services" aria-label="Explore construction services">Explore</a>
               </li>
             </ul>
           </div>
@@ -128,7 +129,7 @@ export default function Home() {
               <li><a href="/properties"><small>Buying property</small><span>Explore properties</span></a></li>
               <li><a href="/contact"><small>Sourcing materials</small><span>Enquire about products</span></a></li>
             </ul>
-            <p className="close-note">Phone, email and office address will appear here once verified.</p>
+            <p className="close-note">Call or WhatsApp <a className="link" href={COMPANY.phoneHref}>{COMPANY.phone}</a>, or write to <a className="link" href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>.</p>
           </div>
         </section>
       </main>

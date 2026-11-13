@@ -1,4 +1,5 @@
 import { areaLabel, priceLabel, type ProductRecord, type PropertyRecord } from "@/lib/content";
+import { COMPANY } from "@/lib/company";
 import { listingTag, shortDate } from "@/lib/property";
 import { ListingCard, type ListingCardData } from "./listing-card";
 
@@ -9,8 +10,8 @@ export const BRAND = "ASMS‑ROUNAQH";
 const NAV_LINKS = [
   { href: "/properties", label: "Properties" },
   { href: "/products", label: "Products" },
-  { href: "/#divisions", label: "Services" },
-  { href: "/#why-us", label: "About" },
+  { href: "/services", label: "Services" },
+  { href: "/about", label: "About" },
   { href: "/sell", label: "Sell a property" },
 ];
 
@@ -100,8 +101,8 @@ export function Footer({ credits = [] }: { credits?: Credit[] }) {
         <nav className="footer-links" aria-label="Footer">
           <a href="/properties">Properties</a>
           <a href="/products">Products</a>
-          <a href="/#divisions">Services</a>
-          <a href="/#why-us">About us</a>
+          <a href="/services">Services</a>
+          <a href="/about">About us</a>
           <a href="/contact">Send an enquiry</a>
           <a href="/sell">Sell a property</a>
           <a href="/privacy">Privacy notice</a>
@@ -109,7 +110,8 @@ export function Footer({ credits = [] }: { credits?: Credit[] }) {
           <a href="/disclaimer">Disclaimer</a>
           <a href="/admin" rel="nofollow">Staff login</a>
         </nav>
-        <p className="footer-legal">© {BRAND}. Address, phone, business email and registration details are being verified.</p>
+        <p className="footer-contact"><a href={COMPANY.phoneHref}>{COMPANY.phone}</a><a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a><span>{COMPANY.address.join(", ")}</span></p>
+        <p className="footer-legal">© {BRAND}. Continuing a legacy since {COMPANY.since}.</p>
         {credits.length > 0 && (
           <p className="footer-credits" data-credits>
             Photographs: {credits.map((c, i) => (

@@ -1,3 +1,5 @@
+import { COMPANY } from "./company";
+
 // Sends website enquiries to the Supabase enquiries table (insert only; the
 // database rules stop visitors reading anything back) and records first-party
 // events through the public.track() function. Both are no-ops when Supabase
@@ -9,8 +11,8 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 export const enquiriesConnected = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 export const ENQUIRY_ENDPOINT = enquiriesConnected ? `${SUPABASE_URL}/rest/v1/enquiries` : "";
 
-/** WhatsApp click-to-chat number with country code, digits only (e.g. 919840012345). Empty hides the button. */
-export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
+/** WhatsApp click-to-chat number with country code, digits only. Defaults to the business number in lib/company.ts. */
+export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || COMPANY.whatsapp).replace(/\D/g, "");
 
 export type EnquiryKind = "property" | "visit" | "product" | "sell" | "general";
 

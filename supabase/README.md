@@ -76,6 +76,20 @@ scheduled build keeps the free project from pausing.
    ```
    The "from" address must be on the domain you verified in Resend.
 
+10. **Later, for seller sign-in with Google (Phase 3).** In your own Google account
+    at [console.cloud.google.com](https://console.cloud.google.com):
+    1. Create a project (e.g. "ASMS-ROUNAQH website").
+    2. *APIs & Services → OAuth consent screen*: User type **External**, app name
+       `ASMS-ROUNAQH`, support email `reach@asmsrounaqh.com`, authorised domain
+       `asmsrounaqh.com`. Add the scopes `email`, `profile` and `openid` only.
+    3. *Credentials → Create credentials → OAuth client ID*, type **Web application**.
+       Authorised JavaScript origins: `https://asmsrounaqh.com`. Authorised redirect
+       URI: the callback URL Supabase shows under *Authentication → Sign In /
+       Providers → Google* (it looks like `https://<project>.supabase.co/auth/v1/callback`).
+    4. Copy the Client ID and Client secret straight into that Supabase Google
+       provider form and enable it. Don't send the secret to anyone.
+    5. Back on the consent screen, **Publish app** so any Google user can sign in.
+
 ## Notes
 
 - **Roles:** *editors* manage properties and products; *owners* can also manage staff.

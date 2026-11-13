@@ -202,6 +202,9 @@ html:not(.js) .catalog-tabs, html:not(.js) .catalog-drawer, html:not(.js) .catal
 .footer-links { grid-column: 1 / -1; margin-top: var(--space-lg); padding-top: var(--space-lg); display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); border-top: 1px solid var(--color-on-field-rule); }
 .footer-links a { min-height: 44px; display: inline-flex; align-items: center; color: var(--color-on-field); white-space: nowrap; text-decoration-color: var(--color-on-field-2); }
 .footer-links a:hover { text-decoration-color: var(--color-accent-on-field); }
+.footer-contact { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); color: var(--color-on-field); }
+.footer-contact a { color: inherit; text-decoration: underline; text-decoration-color: var(--color-on-field-2); text-underline-offset: 0.3em; }
+.contact-facts address { font-style: normal; }
 .footer-legal, .footer-credits { grid-column: 1 / -1; max-width: 90ch; color: var(--color-on-field-2); font-size: var(--text-sm); }
 .footer-credits a { color: var(--color-on-field); }
 

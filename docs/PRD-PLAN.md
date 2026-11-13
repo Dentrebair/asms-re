@@ -92,7 +92,17 @@ order the rest gets built. Section numbers (§) refer to the PRD.
 Iteration 1 and 2 items (compare, saved searches, map search, Tamil) wait for real usage,
 as §20 says.
 
-## Open decisions (§20 and setup)
+## Decisions (13 Nov 2026)
+
+1. **Inventory:** all four types (residential, plots, commercial, agricultural) are always offered as tabs; an empty type tells buyers to check again later. Done.
+2. **Sellers:** anyone may list. During seller onboarding they choose who they are: owner, broker or agent, developer or builder, or other. This is stored on the seller profile (Phase 3).
+3. **Buyer OTP:** Supabase phone sign-in with its *Send SMS hook* calling Meta's WhatsApp Cloud API directly. Meta's India authentication rate is roughly ₹0.12 to ₹0.15 per message, while Twilio Verify charges $0.05 per successful verification plus the WhatsApp fee. Needs a Meta Business account, a WhatsApp Business number and an approved authentication template (Phase 2).
+4. **Google sign-in:** the client creates the OAuth client in their own Google Cloud account (steps in `supabase/README.md`); it needs the Supabase project first.
+5. **Seller documents:** sellers may upload any supporting documents (private, reviewers only). Government ID verification comes later, through a government verification service.
+6. **Company facts:** taken from asmsrounaqh.com into `lib/company.ts`. `/about`, `/services` and the contact details are done.
+7. **Legal pages:** the legal team reviews them on the hosted site.
+
+## Original open questions (§20 and setup)
 
 1. Launch inventory: residential, plots, commercial, agricultural?
 2. Seller audience: owners only, or brokers and developers too?

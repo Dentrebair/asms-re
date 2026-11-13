@@ -74,6 +74,10 @@ try {
   check("Clear all", (await js(visible)).length === 6 && (await url()) === "");
   await setSelect("Sort by", "area"); await sleep(300);
   check("sort by area puts the 2.5 acres first", (await js(visible))[0] === "Agricultural land");
+  await go(`${BASE}/properties`);
+  await js(`document.querySelectorAll('.card-grid > li[data-category="commercial"]').forEach((li) => li.remove())`);
+  await tab("Commercial"); await sleep(300);
+  check("an empty type still has its tab and says to check again later", (await js(`document.querySelector('.empty-state')?.textContent ?? ''`)).includes("please check again later"));
   await go(`${BASE}/properties/sold-plot-sample`);
   check("sold page says sold, no enquiry button", await js(`document.body.textContent.includes('This property has been sold') && !document.body.textContent.includes('Enquire about property')`));
 

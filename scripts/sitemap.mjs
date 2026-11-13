@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://asmsrounaqh.com").replace(/\/$/, "");
 const content = JSON.parse(await readFile(join(root, "content", "content.json"), "utf8"));
 
-const pages = ["/", "/properties", "/products", "/sell", "/contact", "/privacy", "/terms", "/disclaimer"].map((path) => ({ path }));
+const pages = ["/", "/properties", "/products", "/sell", "/services", "/about", "/contact", "/privacy", "/terms", "/disclaimer"].map((path) => ({ path }));
 const properties = content.properties.map((p) => ({ path: `/properties/${p.slug}`, lastmod: p.lastConfirmedOn ?? p.postedOn }));
 const products = content.products.map((p) => ({ path: `/products/${p.slug}` }));
 

@@ -50,7 +50,7 @@ export default function EnquiryForm() {
       return;
     }
     if (!form.dataset.endpoint) {
-      setHelp({ text: "Nothing was sent: online enquiries are not connected yet. Please contact us by phone or email once those details are published.", tone: "info" });
+      setHelp({ text: "Nothing was sent: online enquiries are not connected yet. Please call or WhatsApp +91 97897 86467, or email reach@asmsrounaqh.com.", tone: "info" });
       return;
     }
     const data = new FormData(form);

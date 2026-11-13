@@ -68,6 +68,7 @@ export default function Catalog({ label, tabs, search, filters = [], sorts = [],
   }), [filters, sorts]);
   const [state, setState] = useState<State>(defaults);
   const [count, setCount] = useState(total);
+  const [tabTotal, setTabTotal] = useState(total);
   const [ready, setReady] = useState(false);
 
   const visibleFilters = filters.filter((f) => !f.tabs || f.tabs.includes(state.tab));
@@ -153,6 +154,7 @@ export default function Catalog({ label, tabs, search, filters = [], sorts = [],
       if (s.kind === "date") return -(Date.parse(raw || "1970-01-01")) * (s.dir ?? 1);
       return raw.toLowerCase();
     };
+    setTabTotal(tabs && state.tab !== ALL ? items.filter((li) => li.dataset[tabs.attr] === state.tab).length : items.length);
     const shown = items.filter(matches).sort((a, b) => {
       const ka = key(a), kb = key(b);
       const d = typeof ka === "number" && typeof kb === "number" ? ka - kb : String(ka).localeCompare(String(kb));
@@ -245,7 +247,13 @@ export default function Catalog({ label, tabs, search, filters = [], sorts = [],
       </div>
       {note && <p className="catalog-note">{note}</p>}
       <ul className="card-grid" ref={grid} aria-label={label}>{children}</ul>
-      {count === 0 && (
+      {count === 0 && tabTotal === 0 && tabs && (
+        <p className="empty-state">
+          No {tabs.options.find((o) => o.value === state.tab)?.label.toLowerCase()} are listed right now. New listings are added as they are verified, so please check again later,
+          or <a className="link" href="/contact">tell us what you are looking for</a> and we will call you when one fits.
+        </p>
+      )}
+      {count === 0 && tabTotal > 0 && (
         <p className="empty-state">
           Nothing matches these choices. {chips.length > 0 && <><button type="button" className="link" onClick={clearAll}>Clear the filters</button> or </>}
           <a className="link" href="/contact">tell us what you need</a>.

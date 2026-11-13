@@ -64,10 +64,8 @@ function buildFilters(): CatalogFilter[] {
 }
 
 export default function PropertiesPage() {
-  const stocked = CATEGORIES.filter((c) => properties.some((p) => p.category === c.id));
-  const tabs: CatalogTabs | undefined = stocked.length > 1
-    ? { name: "type", attr: "category", label: "Property type", allLabel: "All", options: stocked.map((c) => ({ value: c.id, label: c.tab })) }
-    : undefined;
+  // Every type is always offered; an empty one says to check again later.
+  const tabs: CatalogTabs = { name: "type", attr: "category", label: "Property type", allLabel: "All", options: CATEGORIES.map((c) => ({ value: c.id, label: c.tab })) };
   const filters = buildFilters();
 
   return (

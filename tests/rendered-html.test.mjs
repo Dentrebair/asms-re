@@ -16,6 +16,8 @@ const pages = [
   ["contact.html", /Tell us what you are looking for\./],
   ["privacy.html", /What we collect/],
   ["sell.html", /How listing works/],
+  ["services.html", /3D concrete printing/],
+  ["about.html", /Continuing a legacy since 1885/],
   ["terms.html", /Listings and information/],
   ["disclaimer.html", /Check before you buy/],
   ["404.html", /./],
@@ -88,4 +90,13 @@ test("search engines: canonical links, social previews, sitemap and robots", asy
   for (const q of content.products) assert.match(sitemap, new RegExp(`/products/${q.slug}<`));
   assert.doesNotMatch(sitemap, /\/admin/);
   assert.match(await page("robots.txt"), /Disallow: \/admin/);
+});
+
+test("company contact details appear on the contact page and in every footer", async () => {
+  const contact = await page("contact.html");
+  assert.match(contact, /\+91 97897 86467/);
+  assert.match(contact, /reach@asmsrounaqh\.com/);
+  assert.match(contact, /144, Broadway/);
+  assert.doesNotMatch(contact, /to be added/);
+  assert.match(await page("index.html"), /footer-contact[^]*\+91 97897 86467/);
 });
