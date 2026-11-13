@@ -11,7 +11,7 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/&/g, "&(
 
 const pages = [
   ["index.html", /Chennai plots, homes and building supplies\./],
-  ["properties.html", /Plots and homes around Chennai/],
+  ["properties.html", /Property for sale around Chennai/],
   ["products.html", /Steel, roofing and concrete products/],
   ["contact.html", /Tell us what you are looking for\./],
   ["privacy.html", /What we collect/],

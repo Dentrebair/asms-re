@@ -40,14 +40,15 @@ export default function ProductsPage() {
             ) : (
               <Catalog
                 label="Products"
-                filters={[{ name: "category", label: "Category", attr: "category", kind: "equals", fromHash: true, options: productCategories.map((category) => ({ value: category.id, label: category.name })) }]}
+                tabs={{ name: "category", attr: "category", label: "Product category", allLabel: "All products", options: productCategories.map((category) => ({ value: category.id, label: category.name })) }}
+                search="Product, grade or standard"
                 sorts={SORTS}
                 notes={productCategories.map((category) => ({ value: category.id, text: category.intro }))}
-                noteFilter="category"
                 total={productCount}
               >
                 {products.map(({ product, category }, i) => (
-                  <li key={product.slug} data-order={i} data-category={category.id} data-name={product.name}>
+                  <li key={product.slug} data-order={i} data-category={category.id} data-name={product.name}
+                    data-search={[product.name, product.summary, category.name, ...product.specs.map((x) => x.value)].join(" ").toLowerCase()}>
                     <ListingCardFor product={product} categoryName={category.name} />
                   </li>
                 ))}

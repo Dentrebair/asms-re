@@ -89,9 +89,9 @@ export default function Home() {
               <h2 id="products-title">Steel, roofing and concrete, specified</h2>
               <p>A catalogue for contractors, architects, industrial buyers and project owners, built to make comparison and quotation requests straightforward.</p>
               <ul className="plate-links">
-                <li><a href="/products#steel-peb">Steel and PEB components</a></li>
-                <li><a href="/products#roofing">Roofing and walling</a></li>
-                <li><a href="/products#concrete-finishing">Concrete and finishing</a></li>
+                <li><a href="/products?category=steel-peb">Steel and PEB components</a></li>
+                <li><a href="/products?category=roofing">Roofing and walling</a></li>
+                <li><a href="/products?category=concrete-finishing">Concrete and finishing</a></li>
               </ul>
               <a className="btn btn--quiet" href="/products">Browse the catalogue</a>
             </div>

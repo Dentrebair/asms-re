@@ -14,7 +14,8 @@
     "content:pull": "node scripts/pull-content.mjs",
     "test:db": "supabase/tests/run.sh",
     "test:admin": "tests/admin-e2e/run.sh",
-    "demo": "node scripts/demo-server.mjs"
+    "demo": "node scripts/demo-server.mjs",
+    "test:browser": "tests/browser/run.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",

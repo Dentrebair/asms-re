@@ -114,10 +114,27 @@ small { font-size: var(--text-sm); }
 .card-foot small { color: var(--color-muted); }
 
 .catalog { display: grid; gap: var(--space-xl); }
+.catalog-tabs { display: flex; gap: var(--space-xs); overflow-x: auto; scrollbar-width: none; }
+.catalog-tabs button { min-height: 44px; padding-inline: var(--space-md); flex-shrink: 0; border: 1px solid var(--color-rule); border-radius: 999px; background: none; color: var(--color-ink-2); font: inherit; font-weight: 700; cursor: pointer; }
+.catalog-tabs button:hover { border-color: var(--color-muted); color: var(--color-ink); }
+.catalog-tabs button[aria-pressed="true"] { border-color: var(--color-field); background: var(--color-field); color: var(--color-on-field); }
+.catalog-drawer > summary { display: none; }
 .catalog-controls { padding-block: var(--space-lg); display: flex; flex-wrap: wrap; gap: var(--space-md) var(--gap-columns); align-items: flex-end; border-block: 1px solid var(--color-rule); }
-.catalog-controls .field { flex: 1 1 12rem; max-width: 18rem; }
-.catalog-controls .result-count { margin-left: auto; padding-bottom: var(--space-sm); }
-html:not(.js) .catalog-controls, html:not(.js) .pager { display: none; }
+.catalog-controls .field { flex: 1 1 11rem; max-width: 16rem; }
+.catalog-controls .field--search { flex: 2 1 16rem; max-width: 24rem; }
+.catalog-apply { display: none; }
+.catalog-summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg); }
+.chips { margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); list-style: none; }
+.chips button:not(.link) { min-height: 36px; padding-inline: var(--space-sm); border: 1px solid var(--color-rule); border-radius: 999px; background: var(--color-paper-2); color: var(--color-ink); font: inherit; font-size: var(--text-sm); cursor: pointer; }
+.chips .link, .empty-state .link { display: inline; min-height: 0; padding: 0; border: 0; background: none; font: inherit; font-weight: 700; cursor: pointer; }
+html:not(.js) .catalog-tabs, html:not(.js) .catalog-drawer, html:not(.js) .catalog-summary, html:not(.js) .pager { display: none; }
+@media (max-width: 40rem) {
+  .catalog-drawer { border-block: 1px solid var(--color-rule); }
+  .catalog-drawer > summary { min-height: 48px; display: flex; align-items: center; font-weight: 700; cursor: pointer; }
+  .catalog-drawer .catalog-controls { border-block: 0; padding-top: 0; }
+  .catalog-controls .field, .catalog-controls .field--search { flex-basis: 100%; max-width: none; }
+  .catalog-apply { margin-bottom: var(--space-md); display: inline-flex; }
+}
 .catalog-note { max-width: 65ch; color: var(--color-ink-2); }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding-top: var(--space-lg); border-top: 1px solid var(--color-rule); }
 .pager p { color: var(--color-ink-2); font-size: var(--text-sm); }
