@@ -14,6 +14,7 @@ const pages = [
   ["properties.html", /Plots and homes around Chennai/],
   ["products.html", /Steel, roofing and concrete products/],
   ["contact.html", /Tell us what you are looking for\./],
+  ["privacy.html", /What we collect/],
   ["404.html", /./],
   ["admin.html", /<meta name="robots" content="noindex, nofollow"/],
 ];

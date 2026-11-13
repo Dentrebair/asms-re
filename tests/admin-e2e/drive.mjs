@@ -52,6 +52,7 @@ const shot = async (name) => { const r = await cdp("Page.captureScreenshot", { f
 const backend = async () => (await fetch(`${BASE}/__log`)).json();
 const toast = () => js(`document.querySelector('.adm-toast span')?.textContent ?? ''`);
 
+let b;
 try {
   await connect();
   await cdp("Page.enable"); await cdp("Runtime.enable"); await cdp("DOM.enable");
@@ -68,9 +69,30 @@ try {
   await fill("Password", "correct-horse");
   await click("Sign in");
   await waitFor(`!!document.querySelector('.adm-header')`, "admin header");
-  check("owner sees Staff tab", await js(`[...document.querySelectorAll('.adm-header nav button')].map(b=>b.textContent).join(',') === 'Properties,Products,Staff'`));
+  check("owner sees all four tabs, Enquiries first with 1 new", await js(`[...document.querySelectorAll('.adm-header nav button')].map(b=>b.textContent).join(',') === 'Enquiries1,Properties,Products,Staff'`),
+    await js(`[...document.querySelectorAll('.adm-header nav button')].map(b=>b.textContent).join(',')`));
+
+  // 1b. enquiries inbox: contact links, status, notes
+  await waitFor(`document.body.textContent.includes('Ravi Kumar')`, "enquiry listed");
+  check("enquiry shows call, WhatsApp and email links", await js(`(() => { const a = [...document.querySelectorAll('.adm-enquiry-contact a')].map(x => x.getAttribute('href'));
+    return a[0] === 'tel:9840012345' && a[1] === 'https://wa.me/919840012345' && a[2].startsWith('mailto:ravi@example.com?subject='); })()`));
+  check("message keeps its line breaks", await js(`getComputedStyle(document.querySelector('.adm-enquiry-message')).whiteSpace === 'pre-wrap'`));
+  await shot("1b-enquiries");
+  await js(`(() => { const el = document.querySelector('.adm-enquiry-head select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el, 'contacted'); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await waitFor(`document.body.textContent.includes('No new enquiries')`, "moved out of New");
+  b = await backend();
+  check("status change patches only status", JSON.stringify(b.log.filter((l) => l.op === "update" && l.table === "enquiries").pop()) === JSON.stringify({ op: "update", table: "enquiries", filter: [["id", "eq.enq-1"]], change: { status: "contacted" } }));
+  check("badge clears when nothing is new", await js(`!document.querySelector('.adm-count')`));
+  await click("All");
+  await waitFor(`!!document.querySelector('.adm-enquiry-notes textarea')`, "enquiry in All");
+  await js(`(() => { const el = document.querySelector('.adm-enquiry-notes textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el, 'Called, visit on Saturday'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  await click("Save note");
+  await waitFor(`(document.querySelector('.adm-toast span')?.textContent ?? '') === 'Note saved.'`, "note saved");
+  b = await backend();
+  check("note saved", b.db.enquiries[0].notes === "Called, visit on Saturday");
 
   // 2. create a property with a photo
+  await click("Properties");
   await waitFor(`document.body.textContent.includes('No properties yet')`, "empty properties list");
   await click("+ New property");
   await waitFor(`!!document.querySelector('.adm-form')`, "property form");
@@ -97,7 +119,7 @@ try {
   await click("Create property");
   await waitFor(`document.body.textContent.includes('East-facing plot in Tambaram') && !document.querySelector('.adm-form')`, "back on list");
   check("saved toast", (await toast()).startsWith("Saved. The website updates"), await toast());
-  let b = await backend();
+  b = await backend();
   const uploads = b.log.filter((l) => l.op === "upload");
   check("4 files uploaded (2 photos × large+small)", uploads.length === 4, uploads.map((u) => `${u.path}:${u.bytes}`).join(" "));
   check("small variants named -sm", uploads.filter((u) => u.path.endsWith("-sm.webp") || u.path.endsWith("-sm.jpg")).length === 2);
@@ -176,11 +198,34 @@ try {
   await waitFor(`document.querySelector('.adm-card h1')?.textContent === 'Staff sign in'`, "signed out");
   check("sign out returns to sign-in", true);
 
-  // 9. mobile layout of the list
+  // 9. public contact form sends a real enquiry
+  await cdp("Page.navigate", { url: `${BASE}/contact?interest=ASMS-0001` });
+  await waitFor(`document.getElementById('f-interest')?.value === 'ASMS-0001'`, "contact form prefilled");
+  check("form is connected", await js(`document.querySelector('form.enquiry-form').dataset.endpoint === 'http://127.0.0.1:54401/rest/v1/enquiries'`));
+  const before = (await backend()).db.enquiries.length;
+  await click("Send enquiry");
+  await sleep(300);
+  check("empty form is not sent", (await backend()).db.enquiries.length === before && await js(`document.querySelector('.form-help[data-tone="error"]') !== null`));
+  await fill("Full name", "Meena S"); await fill("Phone number", "+91 98840 55555"); await fill("Email address", "meena@example.com");
+  await fill("How can we help?", "Need 2 tonnes of TMT bars.");
+  check("category preset from the link", await js(`document.getElementById('f-category').value === 'Property purchase'`));
+  await js(`document.querySelector('.consent input').click()`);
+  await click("Send enquiry");
+  await waitFor(`!!document.querySelector('.enquiry-sent')`, "thank-you message");
+  check("thank-you names the visitor and phone", (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("Thank you, Meena S.") && (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("reached our team") && (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("+91 98840 55555"));
+  b = await backend();
+  const sent = b.log.filter((l) => l.op === "insert" && l.table === "enquiries").pop();
+  check("enquiry sent with form fields only", sent && JSON.stringify(Object.keys(sent.rows[0]).sort()) === JSON.stringify(["category", "consent", "email", "interest", "message", "name", "phone"])
+    && sent.rows[0].consent === true && sent.rows[0].interest === "ASMS-0001" && sent.apikey === "anon-test" && sent.prefer === "return=minimal", JSON.stringify(sent));
+  await shot("7-enquiry-sent");
+
+  // 10. mobile layout of the list
   await cdp("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await cdp("Page.navigate", { url: `${BASE}/admin` });
+  await waitFor(`document.querySelector('.adm-card h1')?.textContent === 'Staff sign in'`, "sign-in again");
   await fill("Email", "owner@asms.test"); await fill("Password", "correct-horse"); await click("Sign in");
   await waitFor(`!!document.querySelector('.adm-header')`, "mobile header");
-  await sleep(600);
+  await waitFor(`!!document.querySelector('.adm-enquiries li')`, "mobile inbox");
   check("no horizontal overflow on phone", await js(`document.documentElement.scrollWidth <= 390`), String(await js(`document.documentElement.scrollWidth`)));
   await shot("6-mobile");
 } catch (e) {

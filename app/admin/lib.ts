@@ -17,6 +17,19 @@ export function supabase(): SupabaseClient {
 
 // --------------------------------------------------------------- db types --
 export type StaffRow = { email: string; name: string | null; role: "owner" | "editor"; created_at?: string };
+export type EnquiryStatus = "new" | "contacted" | "closed";
+export type EnquiryRow = {
+  id: string;
+  created_at: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  category: string;
+  interest: string | null;
+  message: string;
+  status: EnquiryStatus;
+  notes: string | null;
+};
 export type CategoryRow = { id: string; name: string; intro: string; icon: string; sort_order: number };
 export type ImageRef = { path: string; alt: string };
 

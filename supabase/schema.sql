@@ -152,6 +152,103 @@ create policy "staff update media" on storage.objects for update to authenticate
 drop policy if exists "staff delete media" on storage.objects;
 create policy "staff delete media" on storage.objects for delete to authenticated using (bucket_id = 'media' and public.is_staff());
 
+-- ------------------------------------------------------------ enquiries ----
+-- Visitors can add an enquiry from /contact but can never read one back.
+-- Staff read and manage them on the admin Enquiries tab. Enquiries never
+-- trigger a site rebuild.
+create table if not exists public.enquiries (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null check (char_length(btrim(name)) between 1 and 120),
+  phone      text not null check (phone ~ '^[0-9+() -]{7,20}$'),
+  email      text check (email is null or (char_length(email) <= 200 and email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$')),
+  category   text not null check (category in ('Property purchase', 'Construction products', 'General enquiry')),
+  interest   text check (interest is null or char_length(interest) <= 200),
+  message    text not null check (char_length(btrim(message)) between 1 and 4000),
+  consent    boolean not null check (consent),
+  status     text not null default 'new' check (status in ('new', 'contacted', 'closed')),
+  notes      text check (notes is null or char_length(notes) <= 4000),
+  updated_at timestamptz not null default now()
+);
+create index if not exists enquiries_created_at on public.enquiries (created_at desc);
+
+-- Visitors may only fill the form's fields; status and notes are staff-only.
+revoke all on public.enquiries from anon, authenticated;
+grant insert (name, phone, email, category, interest, message, consent) on public.enquiries to anon, authenticated;
+grant select, delete on public.enquiries to authenticated;
+grant update (status, notes) on public.enquiries to authenticated;
+
+alter table public.enquiries enable row level security;
+drop policy if exists "anyone sends an enquiry" on public.enquiries;
+create policy "anyone sends an enquiry" on public.enquiries for insert to anon, authenticated with check (true);
+drop policy if exists "staff read enquiries" on public.enquiries;
+create policy "staff read enquiries" on public.enquiries for select to authenticated using (public.is_staff());
+drop policy if exists "staff update enquiries" on public.enquiries;
+create policy "staff update enquiries" on public.enquiries for update to authenticated using (public.is_staff()) with check (public.is_staff());
+drop policy if exists "staff delete enquiries" on public.enquiries;
+create policy "staff delete enquiries" on public.enquiries for delete to authenticated using (public.is_staff());
+
+-- Tidies input and limits floods: 3 an hour from one phone, 30 per 10 minutes overall.
+create or replace function private.check_enquiry() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  new.name := btrim(new.name);
+  new.phone := btrim(new.phone);
+  new.email := nullif(lower(btrim(coalesce(new.email, ''))), '');
+  new.interest := nullif(btrim(coalesce(new.interest, '')), '');
+  new.status := 'new';
+  new.notes := null;
+  new.created_at := now();
+  if (select count(*) from public.enquiries where phone = new.phone and created_at > now() - interval '1 hour') >= 3
+     or (select count(*) from public.enquiries where created_at > now() - interval '10 minutes') >= 30 then
+    raise exception 'Too many enquiries. Please try again later.' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists enquiries_check on public.enquiries;
+create trigger enquiries_check before insert on public.enquiries for each row execute function private.check_enquiry();
+drop trigger if exists enquiries_touch on public.enquiries;
+create trigger enquiries_touch before update on public.enquiries for each row execute function private.touch_updated_at();
+
+-- Optional email alert for each new enquiry, sent through Resend (resend.com).
+-- Needs three Vault secrets (see supabase/README.md); without them it does nothing.
+create or replace function private.notify_enquiry() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  api_key text;
+  send_to text;
+  send_from text;
+begin
+  select decrypted_secret into api_key   from vault.decrypted_secrets where name = 'resend_api_key';
+  select decrypted_secret into send_to   from vault.decrypted_secrets where name = 'enquiry_notify_to';
+  select decrypted_secret into send_from from vault.decrypted_secrets where name = 'enquiry_notify_from';
+  if api_key is null or send_to is null or send_from is null then return null; end if;
+  perform net.http_post(
+    url     := 'https://api.resend.com/emails',
+    body    := jsonb_build_object(
+      'from', send_from,
+      'to', string_to_array(replace(send_to, ' ', ''), ','),
+      'subject', 'New enquiry: ' || new.category || ' from ' || new.name,
+      'text', concat_ws(E'\n',
+        'Name: ' || new.name,
+        'Phone: ' || new.phone,
+        'Email: ' || coalesce(new.email, 'not given'),
+        'Category: ' || new.category,
+        'Interested in: ' || coalesce(new.interest, 'not given'),
+        '',
+        new.message,
+        '',
+        'Reply and track it in the admin panel, Enquiries tab.')),
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || api_key,
+      'Content-Type', 'application/json'));
+  return null;
+end $$;
+
+drop trigger if exists enquiries_notify on public.enquiries;
+create trigger enquiries_notify after insert on public.enquiries for each row execute function private.notify_enquiry();
+
 -- ------------------------------------------------- automatic site rebuild ----
 -- Content changes call GitHub's repository_dispatch API, which runs the
 -- "Deploy to Hostinger" workflow. The token and repo live in Supabase Vault

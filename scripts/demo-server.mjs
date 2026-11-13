@@ -41,6 +41,10 @@ function seed() {
       id: `prod-${i + 1}`, slug: p.slug, category_id: p.categoryId, name: p.name, summary: p.summary, specs: p.specs, unit: p.unit,
       image_path: local(p.image?.src), image_alt: null, published: false, sort_order: i, created_at: new Date().toISOString(),
     })),
+    enquiries: [{
+      id: "enq-1", created_at: new Date().toISOString(), name: "Ravi Kumar (demo)", phone: "98400 12345", email: "ravi@example.com",
+      category: "Property purchase", interest: plot.reference, message: "Is this plot still available? Can I visit on Saturday?", status: "new", notes: null,
+    }],
     properties: [{
       id: "prop-1", slug: plot.slug, reference: plot.reference, title: plot.title, published: true, featured: true,
       status_label: "Available", property_type: plot.propertyType, transaction_type: plot.transactionType, ownership: plot.ownership,
@@ -62,6 +66,7 @@ const builtin = (path) => {
 };
 
 let db = existsSync(dbFile) ? JSON.parse(readFileSync(dbFile, "utf8")) : seed();
+db.enquiries ??= []; // demo data saved before enquiries existed
 const save = () => writeFileSync(dbFile, JSON.stringify(db, null, 1));
 save();
 
@@ -96,8 +101,9 @@ const send = (res, status, body, headers = {}) => {
   res.end(body === undefined ? "" : typeof body === "string" ? body : JSON.stringify(body));
 };
 const read = (req) => new Promise((r) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => r(Buffer.concat(c))); });
-const KEYS = { staff: "email", product_categories: "id", products: "slug", properties: "slug" };
-const UNIQUE = { properties: ["slug", "reference"], products: ["slug"], staff: ["email"], product_categories: ["id"] };
+const KEYS = { staff: "email", product_categories: "id", products: "slug", properties: "slug", enquiries: "id" };
+const UNIQUE = { properties: ["slug", "reference"], products: ["slug"], staff: ["email"], product_categories: ["id"], enquiries: ["id"] };
+const ENQUIRY_FIELDS = ["name", "phone", "email", "category", "interest", "message", "consent"];
 const filters = (url) => [...url.searchParams].filter(([k]) => !["select", "order", "limit", "columns", "on_conflict"].includes(k));
 const unquote = (v) => decodeURIComponent(v).replace(/^"|"$/g, "");
 const match = (row, fs) => fs.every(([k, v]) => {
@@ -187,11 +193,20 @@ createServer(async (req, res) => {
     if (!db[table]) return send(res, 404, { message: `relation "${table}" does not exist` });
     const fs = filters(url);
     // Same visibility rules as supabase/schema.sql.
-    const visible = (r) => staff ? true : table === "product_categories" ? true : table === "staff" ? false : r.published === true;
+    const visible = (r) => staff ? true : table === "product_categories" ? true : table === "staff" || table === "enquiries" ? false : r.published === true;
     if (req.method === "GET") {
       const found = db[table].filter((r) => visible(r) && match(r, fs));
       if ((req.headers.accept ?? "").includes("vnd.pgrst.object")) return found[0] ? send(res, 200, found[0]) : send(res, 406, { code: "PGRST116", message: "no rows" });
       return send(res, 200, found);
+    }
+    // Like the database rules: anyone may send an enquiry (form fields only), nothing else.
+    if (table === "enquiries" && req.method === "POST") {
+      const r = JSON.parse(body);
+      if (Object.keys(r).some((k) => !ENQUIRY_FIELDS.includes(k)) || r.consent !== true) return send(res, 403, { code: "42501", message: "permission denied for table enquiries" });
+      db.enquiries.unshift({ id: `enq-${Date.now()}`, created_at: new Date().toISOString(), ...r, status: "new", notes: null });
+      save();
+      console.log(`✉ New enquiry from ${r.name} (${r.phone}) — see the Enquiries tab`);
+      return send(res, 201);
     }
     const canWrite = staff && (table !== "staff" || staff.role === "owner");
     if (!canWrite) return send(res, 403, { code: "42501", message: "new row violates row-level security policy" });
@@ -222,7 +237,7 @@ createServer(async (req, res) => {
     if (table === "staff" && !db.staff.some((s) => s.role === "owner")) { db = JSON.parse(readFileSync(dbFile, "utf8")); return send(res, 400, { message: "At least one owner must remain" }); }
     save();
     console.log(`✎ ${req.method === "POST" ? "Saved" : req.method === "PATCH" ? "Updated" : "Deleted"} ${table} (by ${me})`);
-    if (table !== "staff") scheduleRebuild(`${table} changed`);
+    if (table !== "staff" && table !== "enquiries") scheduleRebuild(`${table} changed`);
     return send(res, req.method === "POST" ? 201 : 204);
   }
 

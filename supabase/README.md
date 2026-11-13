@@ -10,8 +10,10 @@ staff edit in /admin ──► Supabase (database + photos)
                GitHub Actions: pull content → build → FTP to Hostinger   (~3 min)
 ```
 
-Visitors never touch Supabase: each build copies published content into
-`content/content.json` and photos into `public/media/`. A twice-weekly
+Visitors browse static pages: each build copies published content into
+`content/content.json` and photos into `public/media/`. The one exception is
+the contact form, which adds a row to the `enquiries` table. Visitors can add
+an enquiry but never read one; staff answer them on the admin **Enquiries** tab. A twice-weekly
 scheduled build keeps the free project from pausing.
 
 ## One-time setup
@@ -59,6 +61,18 @@ scheduled build keeps the free project from pausing.
    When the token expires, generate a new one and run
    `select vault.update_secret((select id from vault.secrets where name = 'github_dispatch_token'), '<new token>');`
 
+9. **Optional: email alerts for new enquiries.** Without this step enquiries
+   still arrive in the admin panel; this also emails them to you. Create a free
+   account at [resend.com](https://resend.com), verify your domain
+   (`asmsrounaqh.com`, a few DNS records in Hostinger), and create an API key
+   with *Sending access*. Then in the Supabase SQL Editor (never in chat):
+   ```sql
+   select vault.create_secret('<the Resend API key>', 'resend_api_key');
+   select vault.create_secret('sales@asmsrounaqh.com', 'enquiry_notify_to');        -- comma-separate several
+   select vault.create_secret('ASMS-ROUNAQH website <website@asmsrounaqh.com>', 'enquiry_notify_from');
+   ```
+   The "from" address must be on the domain you verified in Resend.
+
 ## Notes
 
 - **Roles:** *editors* manage properties and products; *owners* can also manage staff.
@@ -68,6 +82,10 @@ scheduled build keeps the free project from pausing.
 - **Login emails** use Supabase's built-in mailer, which is rate-limited. That's fine
   for a few staff invites; for more, set up custom SMTP (e.g. your Hostinger mailbox)
   under *Authentication → Emails*.
+- **Enquiries:** limited to 3 an hour from one phone number and 30 every
+  10 minutes in total, to stop floods of spam. Staff can mark each one New,
+  Contacted or Closed, keep private notes, and delete it. Enquiries never
+  trigger a website rebuild.
 - **Testing the rules locally:** `npm run test:db` applies `schema.sql` to a throwaway
   Postgres and checks every permission (needs Postgres installed).
 

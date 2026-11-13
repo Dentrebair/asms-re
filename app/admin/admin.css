@@ -30,7 +30,8 @@
 .adm-brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; }
 .adm-brand span { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.6); border-radius: 50%; font-family: var(--font-display), Georgia, serif; font-size: 12px; }
 .adm-brand small { padding: 3px 8px; color: var(--forest-deep); border-radius: 999px; background: var(--gold-light); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
-.adm-header nav { display: flex; gap: 4px; }
+.adm-header nav { max-width: 100%; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.adm-header nav button { flex-shrink: 0; }
 .adm-header nav button { min-height: 38px; padding: 0 14px; color: rgba(255,255,255,.75); border: 0; border-radius: 999px; background: none; font: inherit; font-weight: 700; cursor: pointer; }
 .adm-header nav button[aria-current="page"] { color: var(--forest-deep); background: white; }
 .adm-user { margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 13px; }
@@ -102,6 +103,8 @@
 
 @media (max-width: 760px) {
   .adm-header { padding: 10px 16px; }
+  .adm-header nav { width: 100%; }
+  .adm-header nav button { padding: 0 11px; }
   .adm-user { width: 100%; margin-left: 0; justify-content: space-between; }
   .adm-list li { flex-wrap: wrap; }
   .adm-list-actions { width: 100%; justify-content: flex-start; }
@@ -113,3 +116,26 @@
 .adm-form fieldset.adm-rows { padding: 0; display: grid; grid-template-columns: 1fr; gap: 8px; border: 0; border-radius: 0; background: none; }
 .adm-row > input { flex: 1; min-width: 0; }
 .adm-form-head > .adm-link { justify-self: start; }
+
+/* Enquiries inbox */
+.adm-header nav button .adm-count { margin-left: 6px; padding: 1px 7px; color: var(--forest-deep); border-radius: 999px; background: var(--gold-light); font-size: 11px; }
+.adm-filter { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: white; }
+.adm-filter button { min-height: 34px; padding: 0 12px; color: var(--muted); border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.adm-filter button span { color: inherit; opacity: .7; }
+.adm-filter button[aria-pressed="true"] { color: white; background: var(--forest); }
+.adm-enquiries { margin: 0; padding: 0; display: grid; gap: 12px; list-style: none; }
+.adm-enquiries > li { padding: 18px; display: grid; gap: 12px; border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 14px; background: white; }
+.adm-enquiries > li[data-status="new"] { border-left-color: var(--gold, #ad792a); }
+.adm-enquiries > li[data-status="contacted"] { border-left-color: var(--forest-mid); }
+.adm-enquiry-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.adm-enquiry-head > div { display: grid; gap: 2px; }
+.adm-enquiry-head strong { color: var(--forest-deep); font-size: 17px; }
+.adm-enquiry-head span { font-size: 13px; }
+.adm-enquiry-head select { width: auto; }
+.adm-enquiry-contact { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-enquiry-contact a { text-decoration: none; }
+.adm-enquiry-interest { margin: 0; font-size: 14px; }
+.adm-enquiry-message { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.adm-enquiry-notes { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.adm-enquiry-notes .adm-field { flex: 1; min-width: min(100%, 260px); }
+.adm-enquiry-foot { display: flex; justify-content: flex-end; }

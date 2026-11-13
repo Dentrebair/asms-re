@@ -3,19 +3,22 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { explain, isConfigured, supabase, type StaffRow } from "./lib";
+import { EnquiriesAdmin } from "./enquiries-admin";
 import { ProductsAdmin } from "./products-admin";
 import { PropertiesAdmin } from "./properties-admin";
 import { StaffAdmin } from "./staff-admin";
 import { Toast } from "./ui";
 
-type Tab = "properties" | "products" | "staff";
+type Tab = "enquiries" | "properties" | "products" | "staff";
+const TAB_LABELS: Record<Tab, string> = { enquiries: "Enquiries", properties: "Properties", products: "Products", staff: "Staff" };
 type AuthState = "loading" | "signed-out" | "set-password" | "not-staff" | "ready";
 
 export default function AdminApp() {
   const [state, setState] = useState<AuthState>("loading");
   const [session, setSession] = useState<Session | null>(null);
   const [me, setMe] = useState<StaffRow | null>(null);
-  const [tab, setTab] = useState<Tab>("properties");
+  const [tab, setTab] = useState<Tab>("enquiries");
+  const [newEnquiries, setNewEnquiries] = useState(0);
   const [toast, setToast] = useState<{ message: string; tone: "ok" | "error" } | null>(null);
   const notify = useCallback((message: string, tone: "ok" | "error" = "ok") => setToast({ message, tone }), []);
 
@@ -47,6 +50,12 @@ export default function AdminApp() {
     return () => sub.subscription.unsubscribe();
   }, [resolve]);
 
+  // Count of new enquiries for the tab badge.
+  useEffect(() => {
+    if (state !== "ready") return;
+    void supabase().from("enquiries").select("id").eq("status", "new").limit(500).then(({ data }) => setNewEnquiries(data?.length ?? 0));
+  }, [state]);
+
   // Auto-dismiss success messages.
   useEffect(() => {
     if (toast?.tone !== "ok") return;
@@ -77,8 +86,10 @@ export default function AdminApp() {
       <header className="adm-header">
         <a className="adm-brand" href="/"><span>AR</span> ASMS–ROUNAQH <small>Admin</small></a>
         <nav aria-label="Admin sections">
-          {(["properties", "products", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => (
-            <button key={t} type="button" aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>
+          {(["enquiries", "properties", "products", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => (
+            <button key={t} type="button" aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>
+              {TAB_LABELS[t]}{t === "enquiries" && newEnquiries > 0 && <span className="adm-count" aria-label={`${newEnquiries} new`}>{newEnquiries}</span>}
+            </button>
           ))}
         </nav>
         <div className="adm-user">
@@ -88,6 +99,7 @@ export default function AdminApp() {
         </div>
       </header>
       <main className="adm-main">
+        {tab === "enquiries" && <EnquiriesAdmin notify={notify} onNewCount={setNewEnquiries} />}
         {tab === "properties" && <PropertiesAdmin notify={notify} />}
         {tab === "products" && <ProductsAdmin notify={notify} />}
         {tab === "staff" && me.role === "owner" && <StaffAdmin me={me} notify={notify} />}

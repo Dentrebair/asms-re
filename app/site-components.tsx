@@ -101,9 +101,10 @@ export function Footer({ credits = [] }: { credits?: Credit[] }) {
           <a href="/#divisions">Services</a>
           <a href="/#why-us">About us</a>
           <a href="/contact">Send an enquiry</a>
+          <a href="/privacy">Privacy notice</a>
           <a href="/admin" rel="nofollow">Staff login</a>
         </nav>
-        <p className="footer-legal">© {BRAND}. Address, phone, business email and registration details are being verified. Privacy policy and terms of use are in preparation.</p>
+        <p className="footer-legal">© {BRAND}. Address, phone, business email and registration details are being verified. Terms of use are in preparation.</p>
         {credits.length > 0 && (
           <p className="footer-credits" data-credits>
             Photographs: {credits.map((c, i) => (

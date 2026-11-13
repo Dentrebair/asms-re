@@ -64,3 +64,49 @@ insert into public.properties (slug, reference, title) values ('Bad Slug!', 'R-9
 insert into public.properties (slug, reference, title, price) values ('neg', 'R-10', 'x', -5);
 insert into public.staff (email) values ('NotLower@x.com');
 select pg_temp.check('bad slug / negative price / uppercase email rejected', (select count(*) from public.properties where reference in ('R-9','R-10')) = 0 and (select count(*) from public.staff where email ilike 'notlower%') = 0);
+
+-- ---------- enquiries
+truncate net.calls;
+insert into vault.decrypted_secrets values ('resend_api_key', 're_test'), ('enquiry_notify_to', 'sales@asms.test, owner@asms.test'), ('enquiry_notify_from', 'Website <web@asms.test>');
+set role anon; set request.jwt.claims = '{}';
+insert into public.enquiries (name, phone, email, category, interest, message, consent)
+  values ('  Priya  ', '+91 98400 12345', ' Priya@Example.COM ', 'Property purchase', 'ASMS-0001', 'Is the plot still available?', true);
+select pg_temp.check('anon cannot read enquiries back', (select count(*) from public.enquiries) = 0);
+insert into public.enquiries (name, phone, category, message, consent, status) values ('Sneaky', '9840012345', 'General enquiry', 'x', true, 'closed');
+insert into public.enquiries (name, phone, category, message, consent) values ('No consent', '9840012346', 'General enquiry', 'x', false);
+insert into public.enquiries (name, phone, category, message, consent) values ('Bad phone', 'call me', 'General enquiry', 'x', true);
+insert into public.enquiries (name, phone, category, message, consent) values ('Bad category', '9840012347', 'Loans', 'x', true);
+update public.enquiries set status = 'closed'; delete from public.enquiries;
+reset role;
+select pg_temp.check('anon enquiry saved and tidied', (select count(*) from public.enquiries) = 1
+  and (select name = 'Priya' and email = 'priya@example.com' and status = 'new' from public.enquiries));
+select pg_temp.check('anon cannot set status, skip consent, or send bad phone/category', (select count(*) from public.enquiries) = 1);
+select pg_temp.check('anon cannot change or delete enquiries', (select status from public.enquiries) = 'new');
+select pg_temp.check('enquiry sends one email alert, no rebuild', (select count(*) from net.calls) = 1
+  and (select bool_and(url = 'https://api.resend.com/emails' and headers ->> 'Authorization' = 'Bearer re_test'
+       and body -> 'to' = '["sales@asms.test","owner@asms.test"]'::jsonb and body ->> 'subject' = 'New enquiry: Property purchase from Priya') from net.calls));
+
+set role authenticated; set request.jwt.claims = '{"email":"stranger@gmail.com"}';
+select pg_temp.check('stranger cannot read enquiries', (select count(*) from public.enquiries) = 0);
+update public.enquiries set status = 'closed';
+reset role;
+select pg_temp.check('stranger changed nothing on enquiries', (select status from public.enquiries) = 'new');
+
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+select pg_temp.check('staff read enquiries', (select count(*) from public.enquiries) = 1);
+update public.enquiries set status = 'contacted', notes = 'Called, site visit Saturday';
+update public.enquiries set message = 'rewritten';
+reset role;
+select pg_temp.check('staff update status and notes but not the message', (select status = 'contacted' and notes = 'Called, site visit Saturday' and message = 'Is the plot still available?' from public.enquiries));
+
+set role anon; set request.jwt.claims = '{}';
+insert into public.enquiries (name, phone, category, message, consent) values ('Repeat', '+91 98400 12345', 'General enquiry', 'two', true);
+insert into public.enquiries (name, phone, category, message, consent) values ('Repeat', '+91 98400 12345', 'General enquiry', 'three', true);
+insert into public.enquiries (name, phone, category, message, consent) values ('Repeat', '+91 98400 12345', 'General enquiry', 'four', true);
+reset role;
+select pg_temp.check('fourth enquiry in an hour from one phone is refused', (select count(*) from public.enquiries) = 3);
+
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+delete from public.enquiries where message = 'three';
+reset role;
+select pg_temp.check('staff delete an enquiry', (select count(*) from public.enquiries) = 2);
