@@ -143,7 +143,7 @@ function sheetRows(p: (typeof properties)[number] | undefined) {
   const rows: { step: string; label: string; value: string | null }[] = [
     { step: "1", label: "Asking price", value: priceLabel(p) },
     { step: "1", label: "Area", value: areaLabel(p) },
-    { step: "2", label: "Road width", value: p.roadWidth },
+    { step: "2", label: "Road width", value: p.roadWidthFt ? `${p.roadWidthFt} ft` : null },
     { step: "2", label: "Floors allowed", value: p.floorsAllowed },
     { step: "3", label: "Reference", value: p.reference },
     { step: "3", label: "Site visits", value: "By prior appointment" },

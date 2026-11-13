@@ -48,30 +48,46 @@ export type ProductRow = {
   updated_at?: string;
 };
 
+export type PropertyStage = "draft" | "submitted" | "under_review" | "changes_requested" | "rejected" | "approved" | "live" | "paused" | "sold" | "expired" | "archived";
+
 export type PropertyRow = {
   id?: string;
   slug: string;
   reference: string;
   title: string;
-  published: boolean;
+  stage: PropertyStage;
   featured: boolean;
-  status_label: string;
+  category: "residential" | "plot" | "commercial" | "agricultural";
   property_type: string;
   transaction_type: string | null;
   ownership: string | null;
   location: string;
   locality: string | null;
   price: number | null;
+  price_negotiable: boolean | null;
   area_sqft: number | null;
+  area_unit: "sqft" | "sqyd" | "cent" | "acre";
   dimensions: string | null;
   facing: string | null;
-  road_width: string | null;
-  approval: string | null;
-  rera: string | null;
+  bhk: number | null;
+  bathrooms: number | null;
+  carpet_area_sqft: number | null;
+  furnishing: string | null;
+  floor_info: string | null;
+  parking: string | null;
+  possession: string | null;
+  road_width_ft: number | null;
+  frontage_ft: number | null;
+  land_use: string | null;
   corner_plot: boolean | null;
   boundary_wall: boolean | null;
   gated_layout: boolean | null;
   floors_allowed: string | null;
+  usable_area_sqft: number | null;
+  access_notes: string | null;
+  zoning_notes: string | null;
+  approval: string | null;
+  rera: string | null;
   availability: string | null;
   description: string | null;
   amenities: string[];
@@ -79,17 +95,22 @@ export type PropertyRow = {
   documents: { label: string; status: string }[];
   images: ImageRef[];
   posted_on: string | null;
+  last_confirmed_on: string | null;
   sort_order: number;
   updated_at?: string;
 };
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 export const emptyProperty = (): PropertyRow => ({
-  slug: "", reference: "", title: "", published: false, featured: false, status_label: "Available",
+  slug: "", reference: "", title: "", stage: "draft", featured: false, category: "plot",
   property_type: "Residential plot", transaction_type: null, ownership: null, location: "", locality: null,
-  price: null, area_sqft: null, dimensions: null, facing: null, road_width: null, approval: null, rera: null,
-  corner_plot: null, boundary_wall: null, gated_layout: null, floors_allowed: null, availability: null,
+  price: null, price_negotiable: null, area_sqft: null, area_unit: "sqft", dimensions: null, facing: null,
+  bhk: null, bathrooms: null, carpet_area_sqft: null, furnishing: null, floor_info: null, parking: null, possession: null,
+  road_width_ft: null, frontage_ft: null, land_use: null, corner_plot: null, boundary_wall: null, gated_layout: null, floors_allowed: null,
+  usable_area_sqft: null, access_notes: null, zoning_notes: null, approval: null, rera: null, availability: null,
   description: null, amenities: [], nearby: [], documents: [], images: [],
-  posted_on: new Date().toISOString().slice(0, 10), sort_order: 0,
+  posted_on: today(), last_confirmed_on: today(), sort_order: 0,
 });
 
 export const emptyProduct = (categoryId = ""): ProductRow => ({

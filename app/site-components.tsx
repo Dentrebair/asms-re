@@ -1,4 +1,5 @@
 import { areaLabel, priceLabel, type ProductRecord, type PropertyRecord } from "@/lib/content";
+import { listingTag, shortDate } from "@/lib/property";
 import { ListingCard, type ListingCardData } from "./listing-card";
 
 /** The brand name. A non-breaking hyphen joins the two words (Hallmark gate 19 bars dashes in copy). */
@@ -53,14 +54,14 @@ export function propertyCardData(p: PropertyRecord): ListingCardData {
     href: `/properties/${p.slug}`,
     title: p.title,
     image: p.images[0] ? { src: p.images[0].srcSmall, alt: p.images[0].alt } : null,
-    tag: p.statusLabel,
+    tag: listingTag(p),
     facts: [
       { label: "Location", value: p.location },
       { label: "Type", value: p.propertyType },
       { label: "Area", value: areaLabel(p) },
     ],
     value: priceLabel(p),
-    meta: `Ref. ${p.reference}`,
+    meta: p.postedOn ? `Listed ${shortDate(p.postedOn)}` : `Ref. ${p.reference}`,
   };
 }
 

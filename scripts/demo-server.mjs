@@ -46,10 +46,13 @@ function seed() {
       category: "Property purchase", interest: plot.reference, message: "Is this plot still available? Can I visit on Saturday?", status: "new", notes: null,
     }],
     properties: [{
-      id: "prop-1", slug: plot.slug, reference: plot.reference, title: plot.title, published: true, featured: true,
-      status_label: "Available", property_type: plot.propertyType, transaction_type: plot.transactionType, ownership: plot.ownership,
+      id: "prop-1", slug: plot.slug, reference: plot.reference, title: plot.title, stage: "live", featured: true,
+      category: plot.category, property_type: plot.propertyType, price_negotiable: plot.priceNegotiable, area_unit: plot.areaUnit,
+      road_width_ft: plot.roadWidthFt, frontage_ft: plot.frontageFt, land_use: plot.landUse, last_confirmed_on: plot.lastConfirmedOn,
+      bhk: null, bathrooms: null, carpet_area_sqft: null, furnishing: null, floor_info: null, parking: null, possession: null,
+      usable_area_sqft: null, access_notes: null, zoning_notes: null, transaction_type: plot.transactionType, ownership: plot.ownership,
       location: plot.location, locality: plot.locality, price: plot.price, area_sqft: plot.areaSqFt, dimensions: plot.dimensions,
-      facing: plot.facing, road_width: plot.roadWidth, approval: plot.approval, rera: plot.rera, corner_plot: plot.cornerPlot,
+      facing: plot.facing, approval: plot.approval, rera: plot.rera, corner_plot: plot.cornerPlot,
       boundary_wall: plot.boundaryWall, gated_layout: plot.gatedLayout, floors_allowed: plot.floorsAllowed, availability: plot.availability,
       description: plot.description, amenities: plot.amenities, nearby: plot.nearby, documents: plot.documents,
       images: [{ path: "properties/demo-hero.webp", alt: plot.images[0].alt }], posted_on: plot.postedOn, sort_order: 0,
@@ -193,7 +196,7 @@ createServer(async (req, res) => {
     if (!db[table]) return send(res, 404, { message: `relation "${table}" does not exist` });
     const fs = filters(url);
     // Same visibility rules as supabase/schema.sql.
-    const visible = (r) => staff ? true : table === "product_categories" ? true : table === "staff" || table === "enquiries" ? false : r.published === true;
+    const visible = (r) => staff ? true : table === "product_categories" ? true : table === "staff" || table === "enquiries" ? false : table === "properties" ? ["live", "sold"].includes(r.stage) : r.published === true;
     if (req.method === "GET") {
       const found = db[table].filter((r) => visible(r) && match(r, fs));
       if ((req.headers.accept ?? "").includes("vnd.pgrst.object")) return found[0] ? send(res, 200, found[0]) : send(res, 406, { code: "PGRST116", message: "no rows" });

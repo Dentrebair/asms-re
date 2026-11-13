@@ -106,7 +106,8 @@ try {
   check("slug auto-generated", (await js(`[...document.querySelectorAll('input')].find(i=>i.value.includes('tambaram'))?.value`)) === "east-facing-plot-in-tambaram-asms-0001");
   check("price preview shows lakhs", await js(`document.body.textContent.includes('₹52 L · ₹52,00,000 · ₹4,333/sq ft')`));
   await js(`[...document.querySelectorAll('.adm-check')].find(l=>l.textContent.startsWith('Water supply')).querySelector('input').click()`);
-  await js(`[...document.querySelectorAll('.adm-check')].find(l=>l.textContent.startsWith('Published')).querySelector('input').click()`);
+  await fill("Stage", "live");
+  check("plot shows land fields, not home fields", await js(`document.body.textContent.includes('Land details') && !document.body.textContent.includes('Home details')`));
   await click("+ Add place");
   await js(`(() => { const row = document.querySelector('.adm-row'); const inp = row.querySelectorAll('input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
     set.call(inp[0], 'Tambaram station'); inp[0].dispatchEvent(new Event('input',{bubbles:true})); set.call(inp[1], '1.5 km'); inp[1].dispatchEvent(new Event('input',{bubbles:true})); })()`);
@@ -124,7 +125,7 @@ try {
   check("4 files uploaded (2 photos × large+small)", uploads.length === 4, uploads.map((u) => `${u.path}:${u.bytes}`).join(" "));
   check("small variants named -sm", uploads.filter((u) => u.path.endsWith("-sm.webp") || u.path.endsWith("-sm.jpg")).length === 2);
   const ins = b.log.find((l) => l.op === "insert" && l.table === "properties")?.rows[0];
-  check("insert row fields", ins && ins.title === "East-facing plot in Tambaram" && ins.price === 5200000 && ins.area_sqft === 1200 && ins.facing === "East" && ins.corner_plot === true && ins.published === true
+  check("insert row fields", ins && ins.title === "East-facing plot in Tambaram" && ins.price === 5200000 && ins.area_sqft === 1200 && ins.facing === "East" && ins.corner_plot === true && ins.stage === "live" && ins.category === "plot" && ins.area_unit === "sqft"
     && ins.slug === "east-facing-plot-in-tambaram-asms-0001" && ins.amenities.join() === "Water supply" && ins.nearby.length === 1 && ins.nearby[0].name === "Tambaram station" && ins.images.length === 2 && !("id" in ins), JSON.stringify(ins)?.slice(0, 300));
   await shot("3-properties-list");
 
@@ -150,11 +151,20 @@ try {
   check("removed photo deleted from storage (both sizes)", del && del.prefixes.includes(removedPath) && del.prefixes.some((p) => p.includes("-sm.")), JSON.stringify(del));
   check("update sent with 1 image", b.log.filter((l) => l.op === "update" && l.table === "properties").pop()?.change.images.length === 1);
 
-  // 5. unpublish toggle
-  await click("Unpublish");
+  // 5. pause, then the area-unit conversion and category switch on a new form
+  await click("Pause");
   await sleep(500);
   b = await backend();
-  check("unpublish patches published=false", JSON.stringify(b.log.filter((l) => l.op === "update").pop()?.change) === '{"published":false}');
+  check("pause patches stage=paused", JSON.stringify(b.log.filter((l) => l.op === "update").pop()?.change) === '{"stage":"paused"}');
+  await click("+ New property");
+  await waitFor(`!!document.querySelector('.adm-form')`, "property form 3");
+  await fill("Show area in", "acre");
+  await fill("Area (acres)", "2.5");
+  check("acres stored as sq ft", await js(`document.body.textContent.includes('= 1,08,900 sq ft')`));
+  await fill("Category", "residential");
+  check("residential shows home fields and subtypes", await js(`document.body.textContent.includes('Home details') && !document.body.textContent.includes('Land details') && [...document.querySelectorAll('select')].some(s => s.value === 'Apartment')`));
+  await click("Cancel");
+  await waitFor(`!document.querySelector('.adm-form')`, "list after cancel");
 
   // 6. products: create one
   await click("Products");

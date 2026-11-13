@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getProperty, isSample, priceLabel, pricePerSqFt, properties, similarProperties, type PropertyRecord } from "@/lib/content";
+import { allProperties, getProperty, isSample, priceLabel, pricePerSqFt, similarProperties, type PropertyRecord } from "@/lib/content";
+import { keySpecs, listingTag, shortDate } from "@/lib/property";
 import { formatINR, monthlyEmi } from "@/lib/format";
 import { amenityIcon, nearbyIcon } from "@/lib/presets";
 import { Icon, type IconName } from "../../icons";
@@ -12,7 +13,7 @@ export const dynamicParams = false;
 type Params = Promise<{ slug: string }>;
 
 export function generateStaticParams() {
-  return properties.map((p) => ({ slug: p.slug }));
+  return allProperties.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Params }) {
@@ -24,36 +25,29 @@ export async function generateMetadata({ params }: { params: Params }) {
   };
 }
 
-const yesNo = (value: boolean | null) => (value === null ? null : value ? "Yes" : "No");
+const SPEC_ICONS: Record<string, IconName> = {
+  "Plot area": "area", "Built-up area": "area", "Total area": "area", "Carpet area": "area", "Usable area": "area",
+  Dimensions: "ruler", Frontage: "ruler", Facing: "compass", "Road width": "road", Access: "road",
+  Bedrooms: "key", Bathrooms: "water", Parking: "roof", Possession: "key", Type: "layers", "Land use": "tree",
+};
 
+/** The first six type-specific facts, as the icon strip under the gallery. */
 function highlights(p: PropertyRecord): { icon: IconName; label: string; value: string }[] {
-  const items: [IconName, string, string | null][] = [
-    ["area", "Plot area", p.areaSqFt ? `${p.areaSqFt.toLocaleString("en-IN")} sq ft` : null],
-    ["ruler", "Dimensions", p.dimensions],
-    ["compass", "Facing", p.facing],
-    ["road", "Road width", p.roadWidth],
-    ["shield", "Approval", p.approval],
-    ["key", "Ownership", p.ownership],
-  ];
-  return items.filter((i): i is [IconName, string, string] => !!i[2]).map(([icon, label, value]) => ({ icon, label, value }));
+  return keySpecs(p).slice(0, 6).map(([label, value]) => ({ icon: SPEC_ICONS[label] ?? "shield", label, value }));
 }
 
+/** Everything else a buyer checks: type-specific facts, then legal and listing facts. */
 function overview(p: PropertyRecord): [string, string][] {
   const rows: [string, string | null][] = [
     ["Property type", p.propertyType],
+    ...keySpecs(p),
     ["Transaction type", p.transactionType],
     ["Ownership", p.ownership],
     ["Approval authority", p.approval],
     ["RERA registration", p.rera],
-    ["Area", p.areaSqFt ? `${p.areaSqFt.toLocaleString("en-IN")} sq ft (approx. ${(p.areaSqFt / 435.6).toFixed(2)} cents)` : null],
-    ["Dimensions", p.dimensions],
-    ["Facing", p.facing],
-    ["Width of facing road", p.roadWidth],
-    ["Corner plot", yesNo(p.cornerPlot)],
-    ["Boundary wall", yesNo(p.boundaryWall)],
-    ["Gated layout", yesNo(p.gatedLayout)],
-    ["Floors allowed for construction", p.floorsAllowed],
     ["Availability", p.availability],
+    ["Price negotiable", p.priceNegotiable === null ? null : p.priceNegotiable ? "Yes" : "No"],
+    ["Details last confirmed", p.lastConfirmedOn ? shortDate(p.lastConfirmedOn) : null],
   ];
   return rows.filter((r): r is [string, string] => !!r[1]);
 }
@@ -62,10 +56,12 @@ export default async function PropertyDetailPage({ params }: { params: Params })
   const p = getProperty((await params).slug);
   if (!p) notFound();
 
+  const sold = p.stage === "sold";
+  const tag = listingTag(p);
   const keyFacts = highlights(p);
   const details = overview(p);
   const perSqFt = pricePerSqFt(p);
-  const emiFrom = p.price ? monthlyEmi(p.price * 0.8, 8.5, 20) : null;
+  const emiFrom = p.price && !sold ? monthlyEmi(p.price * 0.8, 8.5, 20) : null;
   const nearbyGroups = [...new Set(p.nearby.map((n) => n.group))].map((group) => ({ group, places: p.nearby.filter((n) => n.group === group) }));
   const similar = similarProperties(p.slug);
   const gallery = p.images.slice(0, 3);
@@ -75,7 +71,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
     ["amenities", "Amenities", p.amenities.length > 0],
     ["nearby", "Nearby", p.nearby.length > 0],
     ["documents", "Documents", p.documents.length > 0],
-    ["emi", "EMI calculator", !!p.price],
+    ["emi", "EMI calculator", !!p.price && !sold],
     ["similar", "Similar properties", similar.length > 0],
   ] as const;
 
@@ -87,12 +83,12 @@ export default async function PropertyDetailPage({ params }: { params: Params })
         <nav className="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/properties">Properties</a><span>/</span><b>{p.reference}</b></nav>
         <div className="detail-heading">
           <div>
-            <div className="detail-kicker"><span className="tag">{p.statusLabel}</span><span>Ref. {p.reference}</span>{p.postedOn && <span>Posted <time dateTime={p.postedOn}>{new Date(p.postedOn).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</time></span>}</div>
+            <div className="detail-kicker">{tag && <span className="tag">{tag}</span>}<span>Ref. {p.reference}</span>{p.postedOn && <span>Listed <time dateTime={p.postedOn}>{shortDate(p.postedOn)}</time></span>}{p.lastConfirmedOn && <span>Details confirmed <time dateTime={p.lastConfirmedOn}>{shortDate(p.lastConfirmedOn)}</time></span>}</div>
             <h1>{p.title}</h1>
             <p>{[p.location, p.locality].filter(Boolean).join(", ")}</p>
           </div>
           <div className="detail-price">
-            <small>Asking price</small>
+            <small>{sold ? "Sold" : "Asking price"}</small>
             <strong>{priceLabel(p)}</strong>
             {p.price && <small className="num">{formatINR(p.price)}</small>}
             {perSqFt && <small className="num">{perSqFt} per sq ft</small>}
@@ -181,7 +177,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
             </section>
           )}
 
-          {p.price && (
+          {p.price && !sold && (
             <section className="detail-section" id="emi">
               <h2>Estimate your EMI</h2>
               <EmiCalculator price={p.price} />
@@ -189,6 +185,13 @@ export default async function PropertyDetailPage({ params }: { params: Params })
           )}
         </div>
 
+        {sold ? (
+        <aside className="detail-enquiry-card on-field" aria-labelledby="enquire-title">
+          <h2 id="enquire-title">This property has been sold</h2>
+          <p>It is no longer available, so we are not taking enquiries for it. Similar properties are listed below.</p>
+          <a className="btn" href="/properties">See available properties</a>
+        </aside>
+        ) : (
         <aside className="detail-enquiry-card on-field" aria-labelledby="enquire-title">
           <h2 id="enquire-title">{priceLabel(p)}</h2>
           <p>Quote reference <strong>{p.reference}</strong> when you contact the team.</p>
@@ -196,6 +199,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
           <a className="btn btn--quiet" href={`/contact?interest=${encodeURIComponent(`${p.reference} site visit`)}`}>Request a site visit</a>
           <p className="detail-card-note"><strong>Before you enquire.</strong> Prepare your preferred location, intended use, budget range and timeline.</p>
         </aside>
+        )}
       </section>
 
       {similar.length > 0 && (

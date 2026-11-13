@@ -33,11 +33,18 @@ test("exports a page for every property, with its own details", async () => {
     assert.match(html, new RegExp(escape(p.title)), p.slug);
     assert.match(html, new RegExp(escape(p.reference)), p.slug);
     if (p.amenities.length) assert.match(html, /Amenities &amp; infrastructure/, p.slug);
-    if (p.price) assert.match(html, /Estimate your EMI/, p.slug);
+    if (p.price && p.stage === "live") assert.match(html, /Estimate your EMI/, p.slug);
     else assert.doesNotMatch(html, /Estimate your EMI/, p.slug);
+    if (p.stage === "sold") {
+      assert.match(html, /This property has been sold/, p.slug);
+      assert.doesNotMatch(html, /Enquire about property/, p.slug);
+    }
   }
   const listing = await page("properties.html");
-  for (const p of content.properties) assert.match(listing, new RegExp(`href="/properties/${p.slug}"`));
+  for (const p of content.properties) {
+    if (p.stage === "live") assert.match(listing, new RegExp(`href="/properties/${p.slug}"`));
+    else assert.doesNotMatch(listing, new RegExp(`href="/properties/${p.slug}"`), `${p.slug} is ${p.stage} and must stay out of search`);
+  }
 });
 
 test("products page lists every product and ships its photos", async () => {

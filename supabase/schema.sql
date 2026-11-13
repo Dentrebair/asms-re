@@ -72,25 +72,46 @@ create table if not exists public.properties (
   slug             text not null unique check (slug ~ '^[a-z0-9-]+$'),
   reference        text not null unique,
   title            text not null,
-  published        boolean not null default false,
+  -- Listing stage (PRD section 11). Visitors see only 'live' (in search) and 'sold' (detail page, marked Sold).
+  stage            text not null default 'draft' check (stage in ('draft', 'submitted', 'under_review', 'changes_requested', 'rejected', 'approved', 'live', 'paused', 'sold', 'expired', 'archived')),
   featured         boolean not null default false,
-  status_label     text not null default 'Available',
+  -- residential | plot | commercial | agricultural; property_type is the subtype shown to buyers.
+  category         text not null default 'plot' check (category in ('residential', 'plot', 'commercial', 'agricultural')),
   property_type    text not null default 'Residential plot',
   transaction_type text,
   ownership        text,
   location         text not null default '',
   locality         text,
   price            bigint check (price is null or price > 0),
+  price_negotiable boolean,
+  -- Area is stored in sq ft; area_unit is how it is shown (with the sq ft conversion on the detail page).
   area_sqft        numeric check (area_sqft is null or area_sqft > 0),
+  area_unit        text not null default 'sqft' check (area_unit in ('sqft', 'sqyd', 'cent', 'acre')),
   dimensions       text,
   facing           text,
-  road_width       text,
-  approval         text,
-  rera             text,
+  -- residential
+  bhk              smallint check (bhk is null or bhk between 1 and 20),
+  bathrooms        smallint check (bathrooms is null or bathrooms between 0 and 20),
+  carpet_area_sqft numeric check (carpet_area_sqft is null or carpet_area_sqft > 0),
+  furnishing       text,
+  floor_info       text,
+  parking          text,
+  possession       text check (possession is null or possession in ('Ready to move', 'Under construction')),
+  -- plot and land
+  road_width_ft    numeric check (road_width_ft is null or road_width_ft > 0),
+  frontage_ft      numeric check (frontage_ft is null or frontage_ft > 0),
+  land_use         text,
   corner_plot      boolean,
   boundary_wall    boolean,
   gated_layout     boolean,
   floors_allowed   text,
+  -- commercial
+  usable_area_sqft numeric check (usable_area_sqft is null or usable_area_sqft > 0),
+  access_notes     text,
+  zoning_notes     text,
+  -- approvals: shown only as entered by ASMS; never implied when empty
+  approval         text,
+  rera             text,
   availability     text,
   description      text,
   amenities        text[] not null default '{}',
@@ -98,10 +119,12 @@ create table if not exists public.properties (
   documents        jsonb not null default '[]' check (jsonb_typeof(documents) = 'array'),
   images           jsonb not null default '[]' check (jsonb_typeof(images) = 'array'),
   posted_on        date default current_date,
+  last_confirmed_on date default current_date,
   sort_order       int not null default 0,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
+create index if not exists properties_stage on public.properties (stage);
 
 create or replace function private.touch_updated_at() returns trigger
 language plpgsql set search_path = '' as $$
@@ -134,7 +157,7 @@ drop policy if exists "staff write products" on public.products;
 create policy "staff write products" on public.products for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
 drop policy if exists "public read published properties" on public.properties;
-create policy "public read published properties" on public.properties for select to anon, authenticated using (published or public.is_staff());
+create policy "public read published properties" on public.properties for select to anon, authenticated using (stage in ('live', 'sold') or public.is_staff());
 drop policy if exists "staff write properties" on public.properties;
 create policy "staff write properties" on public.properties for all to authenticated using (public.is_staff()) with check (public.is_staff());
 

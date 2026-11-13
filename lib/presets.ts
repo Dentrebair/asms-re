@@ -25,8 +25,6 @@ export const NEARBY_GROUPS: { label: string; icon: IconName }[] = [
   { label: "Other", icon: "compass" },
 ];
 
-export const PROPERTY_TYPES = ["Residential plot", "Land", "Agricultural land", "Residential", "Independent house", "Villa", "Apartment", "Commercial"];
-export const STATUS_LABELS = ["Available", "New listing", "Under offer", "Sold"];
 export const FACINGS = ["North", "East", "South", "West", "North-East", "North-West", "South-East", "South-West"];
 export const CATEGORY_ICONS: IconName[] = ["layers", "roof", "brick", "wall", "road", "bolt", "water"];
 

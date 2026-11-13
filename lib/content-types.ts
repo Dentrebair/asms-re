@@ -14,28 +14,47 @@ export type NearbyPlace = { group: string; name: string; distance: string };
 export type DocumentStatus = { label: string; status: string };
 export type Spec = { label: string; value: string };
 
+export type PropertyCategory = "residential" | "plot" | "commercial" | "agricultural";
+export type AreaUnit = "sqft" | "sqyd" | "cent" | "acre";
+
 export type PropertyRecord = {
   slug: string;
   reference: string;
   title: string;
+  /** Only "live" listings appear in search; "sold" ones keep their page, marked Sold. */
+  stage: "live" | "sold";
   featured: boolean;
-  statusLabel: string;
+  category: PropertyCategory;
   propertyType: string;
   transactionType: string | null;
   ownership: string | null;
   location: string;
   locality: string | null;
   price: number | null;
+  priceNegotiable: boolean | null;
   areaSqFt: number | null;
+  areaUnit: AreaUnit;
   dimensions: string | null;
   facing: string | null;
-  roadWidth: string | null;
-  approval: string | null;
-  rera: string | null;
+  bhk: number | null;
+  bathrooms: number | null;
+  carpetAreaSqFt: number | null;
+  furnishing: string | null;
+  floorInfo: string | null;
+  parking: string | null;
+  possession: string | null;
+  roadWidthFt: number | null;
+  frontageFt: number | null;
+  landUse: string | null;
   cornerPlot: boolean | null;
   boundaryWall: boolean | null;
   gatedLayout: boolean | null;
   floorsAllowed: string | null;
+  usableAreaSqFt: number | null;
+  accessNotes: string | null;
+  zoningNotes: string | null;
+  approval: string | null;
+  rera: string | null;
   availability: string | null;
   description: string | null;
   amenities: string[];
@@ -43,6 +62,7 @@ export type PropertyRecord = {
   documents: DocumentStatus[];
   images: SiteImage[];
   postedOn: string | null;
+  lastConfirmedOn: string | null;
 };
 
 export type ProductCategory = { id: string; name: string; icon: string; intro: string };

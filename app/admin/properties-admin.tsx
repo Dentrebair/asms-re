@@ -2,11 +2,29 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { formatINR, formatINRShort } from "@/lib/format";
-import { AMENITY_PRESETS, FACINGS, NEARBY_GROUPS, PROPERTY_TYPES, STATUS_LABELS, slugify } from "@/lib/presets";
-import { deletePhotos, emptyProperty, explain, mediaUrl, supabase, type PropertyRow } from "./lib";
+import { AMENITY_PRESETS, FACINGS, NEARBY_GROUPS, slugify } from "@/lib/presets";
+import { AREA_UNITS, CATEGORIES, SUBTYPES, areaIn } from "@/lib/property";
+import { deletePhotos, emptyProperty, explain, mediaUrl, supabase, type PropertyRow, type PropertyStage } from "./lib";
 import { Check, NumberInput, Photos, Rows, Select, Text, TextArea, YesNo } from "./ui";
 
 type Notify = (message: string, tone?: "ok" | "error") => void;
+
+// Stages staff set directly. Seller-review stages (submitted … approved) arrive with the seller portal.
+const STAGES: { value: PropertyStage; label: string }[] = [
+  { value: "draft", label: "Draft (not on the website)" },
+  { value: "live", label: "Live (in search)" },
+  { value: "paused", label: "Paused (hidden, stats kept)" },
+  { value: "sold", label: "Sold (page kept, marked Sold)" },
+  { value: "archived", label: "Archived (hidden)" },
+];
+const STAGE_LABEL: Record<PropertyStage, string> = {
+  draft: "Draft", submitted: "Submitted", under_review: "Under review", changes_requested: "Changes requested", rejected: "Rejected",
+  approved: "Approved", live: "Live", paused: "Paused", sold: "Sold", expired: "Needs reconfirming", archived: "Archived",
+};
+const isPublic = (stage: PropertyStage) => stage === "live" || stage === "sold";
+const STALE_DAYS = 30;
+const daysSince = (iso: string | null) => (iso ? Math.floor((Date.now() - Date.parse(iso)) / 864e5) : Infinity);
+const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export function PropertiesAdmin({ notify }: { notify: Notify }) {
   const [rows, setRows] = useState<PropertyRow[] | null>(null);
@@ -65,13 +83,18 @@ export function PropertiesAdmin({ notify }: { notify: Notify }) {
                 <strong>{r.title}</strong>
                 <span>{r.reference} · {r.location || "No location"} · {r.price ? formatINRShort(r.price) : "Price on request"}</span>
                 <span className="adm-tags">
-                  <em className={r.published ? "adm-tag-live" : "adm-tag-draft"}>{r.published ? "Live" : "Draft"}</em>
-                  <em>{r.status_label}</em>
+                  <em className={r.stage === "live" ? "adm-tag-live" : "adm-tag-draft"}>{STAGE_LABEL[r.stage]}</em>
+                  <em>{r.property_type}</em>
                   {r.featured && <em>Featured</em>}
+                  {r.stage === "live" && daysSince(r.last_confirmed_on) > STALE_DAYS && <em className="adm-tag-draft">Not confirmed for {STALE_DAYS}+ days</em>}
                 </span>
               </div>
               <div className="adm-list-actions">
-                <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { published: !r.published })}>{r.published ? "Unpublish" : "Publish"}</button>
+                {r.stage === "live"
+                  ? <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { stage: "paused" })}>Pause</button>
+                  : r.stage !== "sold" && <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { stage: "live", last_confirmed_on: todayIso() })}>Publish</button>}
+                {r.stage === "live" && <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { last_confirmed_on: todayIso() })} title="Record that the details were checked today">Still available</button>}
+                {r.stage === "live" && <button type="button" className="adm-btn adm-btn-ghost" onClick={() => confirm(`Mark ${r.reference} as sold? It leaves search and stops taking enquiries.`) && patch(r, { stage: "sold" })}>Mark sold</button>}
                 <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { featured: !r.featured })}>{r.featured ? "Unfeature" : "Feature"}</button>
                 <button type="button" className="adm-btn" onClick={() => setEditing(r)}>Edit</button>
                 <button type="button" className="adm-btn adm-btn-danger" onClick={() => remove(r)}>Delete</button>
@@ -119,7 +142,7 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
     if (error) return notify(explain(error), "error");
     // Photos removed in this edit are now unreferenced.
     await deletePhotos(initial.images.map((i) => i.path).filter((path) => !p.images.some((i) => i.path === path)));
-    notify(row.published ? "Saved. The website updates in about 3 minutes." : "Saved as draft (not shown on the website).");
+    notify(isPublic(row.stage) ? "Saved. The website updates in about 3 minutes." : "Saved. It is not shown on the website.");
     onDone(true);
   }
 
@@ -138,13 +161,15 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
         <Text label="Title" value={p.title} onChange={setTitle} required placeholder="e.g. East-facing plot in Tambaram" wide />
         <Text label="Reference" value={p.reference} onChange={setReference} required placeholder="e.g. ASMS-0001" hint="Shown to buyers; must be unique." />
         <Text label="Web address (slug)" value={p.slug} onChange={(v) => { setSlugTouched(true); set("slug", slugify(v ?? "")); }} required hint={`asmsrounaqh.com/properties/${p.slug || "…"}`} />
-        <Select label="Property type" value={p.property_type} options={PROPERTY_TYPES} onChange={(v) => set("property_type", v ?? "Residential plot")} required />
-        <Select label="Status" value={p.status_label} options={STATUS_LABELS} onChange={(v) => set("status_label", v ?? "Available")} required />
+        <Select label="Category" value={p.category} options={CATEGORIES.map((c) => ({ value: c.id, label: c.label }))} required
+          onChange={(v) => { const c = (v ?? "plot") as PropertyRow["category"]; setP((cur) => ({ ...cur, category: c, property_type: SUBTYPES[c].includes(cur.property_type) ? cur.property_type : SUBTYPES[c][0] })); }} />
+        <Select label="Property type" value={p.property_type} options={SUBTYPES[p.category]} onChange={(v) => set("property_type", v ?? SUBTYPES[p.category][0])} required />
+        <Select label="Stage" value={p.stage} options={p.stage in STAGE_LABEL && !STAGES.some((x) => x.value === p.stage) ? [...STAGES, { value: p.stage, label: STAGE_LABEL[p.stage] }] : STAGES} onChange={(v) => set("stage", (v ?? "draft") as PropertyStage)} required />
         <Text label="Location" value={p.location} onChange={(v) => set("location", v ?? "")} required placeholder="e.g. Tambaram, Chennai" />
         <Text label="Locality / landmark" value={p.locality} onChange={(v) => set("locality", v)} placeholder="e.g. Near Tambaram railway station" />
         <Field2 label="Posted on"><input type="date" value={p.posted_on ?? ""} onChange={(e) => set("posted_on", e.target.value || null)} /></Field2>
+        <Field2 label="Details last confirmed"><input type="date" value={p.last_confirmed_on ?? ""} onChange={(e) => set("last_confirmed_on", e.target.value || null)} /></Field2>
         <div className="adm-checks adm-wide">
-          <Check label="Published" hint="Show on the website" checked={p.published} onChange={(v) => set("published", v)} />
           <Check label="Featured" hint="Show on the home page" checked={p.featured} onChange={(v) => set("featured", v)} />
         </div>
       </fieldset>
@@ -152,23 +177,58 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
       <fieldset><legend>Price &amp; size</legend>
         <NumberInput label="Price (₹)" value={p.price} onChange={(v) => set("price", v === null ? null : Math.round(v))} placeholder="Leave empty for “Price on request”"
           hint={p.price ? `${formatINRShort(p.price)} · ${formatINR(p.price)}${p.area_sqft ? ` · ${formatINR(p.price / p.area_sqft)}/sq ft` : ""}` : "Empty = “Price on request”"} />
-        <NumberInput label="Area (sq ft)" value={p.area_sqft} onChange={(v) => set("area_sqft", v)} hint={p.area_sqft ? `≈ ${(p.area_sqft / 435.6).toFixed(2)} cents` : undefined} />
+        <YesNo label="Price negotiable" value={p.price_negotiable} onChange={(v) => set("price_negotiable", v)} />
+        <Select label="Show area in" value={p.area_unit} options={AREA_UNITS.map((u) => ({ value: u.id, label: u.label }))} onChange={(v) => set("area_unit", (v ?? "sqft") as PropertyRow["area_unit"])} required />
+        <NumberInput label={`${p.category === "residential" ? "Built-up area" : "Area"} (${(AREA_UNITS.find((u) => u.id === p.area_unit) ?? AREA_UNITS[0]).label})`}
+          value={p.area_sqft === null ? null : +(p.area_sqft / (AREA_UNITS.find((u) => u.id === p.area_unit) ?? AREA_UNITS[0]).sqft).toFixed(4)}
+          onChange={(v) => set("area_sqft", v === null ? null : +(v * (AREA_UNITS.find((u) => u.id === p.area_unit) ?? AREA_UNITS[0]).sqft).toFixed(2))}
+          hint={p.area_sqft && p.area_unit !== "sqft" ? `= ${areaIn(p.area_sqft, "sqft")}` : p.area_sqft ? `≈ ${areaIn(p.area_sqft, "cent")}` : undefined} />
         <Text label="Dimensions" value={p.dimensions} onChange={(v) => set("dimensions", v)} placeholder="e.g. 30 × 40 ft" />
         <Select label="Facing" value={p.facing} options={FACINGS} onChange={(v) => set("facing", v)} allowEmpty />
-        <Text label="Road width" value={p.road_width} onChange={(v) => set("road_width", v)} placeholder="e.g. 30 ft" />
       </fieldset>
 
+      {p.category === "residential" && (
+        <fieldset><legend>Home details</legend>
+          <NumberInput label="Bedrooms (BHK)" value={p.bhk} onChange={(v) => set("bhk", v === null ? null : Math.round(v))} />
+          <NumberInput label="Bathrooms" value={p.bathrooms} onChange={(v) => set("bathrooms", v === null ? null : Math.round(v))} />
+          <NumberInput label="Carpet area (sq ft)" value={p.carpet_area_sqft} onChange={(v) => set("carpet_area_sqft", v)} />
+          <Text label="Floor" value={p.floor_info} onChange={(v) => set("floor_info", v)} placeholder="e.g. 3rd of 6 floors" />
+          <Text label="Furnishing" value={p.furnishing} onChange={(v) => set("furnishing", v)} list={["Unfurnished", "Semi-furnished", "Furnished"]} />
+          <Text label="Parking" value={p.parking} onChange={(v) => set("parking", v)} placeholder="e.g. 1 covered car park" />
+          <Select label="Possession" value={p.possession} options={["Ready to move", "Under construction"]} onChange={(v) => set("possession", v)} allowEmpty />
+        </fieldset>
+      )}
+
+      {(p.category === "plot" || p.category === "agricultural") && (
+        <fieldset><legend>Land details</legend>
+          <NumberInput label="Frontage (ft)" value={p.frontage_ft} onChange={(v) => set("frontage_ft", v)} />
+          <NumberInput label="Road width (ft)" value={p.road_width_ft} onChange={(v) => set("road_width_ft", v)} />
+          <Text label="Land use" value={p.land_use} onChange={(v) => set("land_use", v)} list={["Residential", "Commercial", "Agricultural", "Industrial"]} />
+          {p.category === "plot" && <Text label="Floors allowed" value={p.floors_allowed} onChange={(v) => set("floors_allowed", v)} placeholder="e.g. G + 2" />}
+          <YesNo label="Corner plot" value={p.corner_plot} onChange={(v) => set("corner_plot", v)} />
+          <YesNo label="Boundary wall" value={p.boundary_wall} onChange={(v) => set("boundary_wall", v)} />
+          <YesNo label="Gated layout" value={p.gated_layout} onChange={(v) => set("gated_layout", v)} />
+        </fieldset>
+      )}
+
+      {p.category === "commercial" && (
+        <fieldset><legend>Commercial details</legend>
+          <NumberInput label="Usable area (sq ft)" value={p.usable_area_sqft} onChange={(v) => set("usable_area_sqft", v)} />
+          <Text label="Floor" value={p.floor_info} onChange={(v) => set("floor_info", v)} placeholder="e.g. Ground floor" />
+          <Text label="Parking" value={p.parking} onChange={(v) => set("parking", v)} placeholder="e.g. 6 car parks, truck access" />
+          <Text label="Access" value={p.access_notes} onChange={(v) => set("access_notes", v)} placeholder="e.g. Direct access from a 40 ft road" />
+          <Text label="Zoning notes" value={p.zoning_notes} onChange={(v) => set("zoning_notes", v)} />
+          <Select label="Possession" value={p.possession} options={["Ready to move", "Under construction"]} onChange={(v) => set("possession", v)} allowEmpty />
+        </fieldset>
+      )}
+
       <fieldset><legend>Legal &amp; details</legend>
-        <Text label="Approval" value={p.approval} onChange={(v) => set("approval", v)} placeholder="e.g. DTCP, CMDA" list={["DTCP", "CMDA", "Panchayat", "Verification pending"]} />
+        <Text label="Approval" value={p.approval} onChange={(v) => set("approval", v)} placeholder="Leave empty unless confirmed" list={["DTCP", "CMDA", "Panchayat", "Verification pending"]} hint="Shown exactly as entered. Leave empty rather than guess." />
         <Text label="RERA registration" value={p.rera} onChange={(v) => set("rera", v)} placeholder="RERA number, or “Not applicable”" />
         <Text label="Ownership" value={p.ownership} onChange={(v) => set("ownership", v)} list={["Freehold", "Leasehold", "Power of attorney"]} />
         <Text label="Transaction type" value={p.transaction_type} onChange={(v) => set("transaction_type", v)} list={["New", "Resale"]} />
-        <Text label="Availability" value={p.availability} onChange={(v) => set("availability", v)} list={["Immediate", "Within 3 months", "Under construction"]} />
-        <Text label="Floors allowed" value={p.floors_allowed} onChange={(v) => set("floors_allowed", v)} placeholder="e.g. G + 2" />
-        <YesNo label="Corner plot" value={p.corner_plot} onChange={(v) => set("corner_plot", v)} />
-        <YesNo label="Boundary wall" value={p.boundary_wall} onChange={(v) => set("boundary_wall", v)} />
-        <YesNo label="Gated layout" value={p.gated_layout} onChange={(v) => set("gated_layout", v)} />
-        <TextArea label="Description" value={p.description} onChange={(v) => set("description", v)} hint="Leave a blank line between paragraphs." />
+        <Text label="Availability" value={p.availability} onChange={(v) => set("availability", v)} list={["Immediate", "Within 3 months"]} />
+        <TextArea label="Description" value={p.description} onChange={(v) => set("description", v)} hint="Highlights, access, limitations. No return-on-investment claims. Leave a blank line between paragraphs." />
       </fieldset>
 
       <fieldset><legend>Photos</legend>
