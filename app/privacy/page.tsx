@@ -22,14 +22,15 @@ export default function PrivacyPage() {
         <section className="sec sec--list" aria-label="Privacy notice">
           <div className="container prose">
             <h2>What we collect</h2>
-            <p>When you send an enquiry we receive your name, phone number, the category and the property or product you ask about, your message, and your email address if you give one. Browsing the site does not ask you for any personal details, and we do not use advertising or tracking cookies.</p>
+            <p>When you send an enquiry, ask for a site visit or request a quote, we receive your name, phone number, the property or product you ask about, your message, any visit preference or quantity you give, and your email address if you give one.</p>
+            <p>Browsing the site does not ask you for any personal details, and we do not use advertising cookies. To count how many people look at each property, your browser keeps a random code; we record that a property page was viewed, shared or its WhatsApp button pressed, with the time. The code is not linked to your name or phone number, and views from our own staff are left out.</p>
 
             <h2>Why we use it</h2>
             <p>Only to reply to your enquiry: to call or write to you, share property documents or a product quotation, and arrange a site visit if you ask for one. We do not sell your details or use them for unrelated marketing.</p>
 
             <h2>Where it is kept and who sees it</h2>
             <ul>
-              <li>Enquiries are stored in a secured database run by our hosting provider, Supabase. Only {BRAND} staff with an admin account can read them.</li>
+              <li>Enquiries are stored in a secured database run by our hosting provider, Supabase. Only {BRAND} staff with an admin account can read them. Property owners who list with us do not see your details.</li>
               <li>If email alerts are switched on, a copy of the enquiry is sent to our business inbox through an email delivery service.</li>
               <li>We delete enquiries that are closed and no longer needed, and remove spam straight away.</li>
             </ul>

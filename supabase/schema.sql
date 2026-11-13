@@ -176,30 +176,52 @@ drop policy if exists "staff delete media" on storage.objects;
 create policy "staff delete media" on storage.objects for delete to authenticated using (bucket_id = 'media' and public.is_staff());
 
 -- ------------------------------------------------------------ enquiries ----
--- Visitors can add an enquiry from /contact but can never read one back.
--- Staff read and manage them on the admin Enquiries tab. Enquiries never
--- trigger a site rebuild.
+-- Leads from the website: property enquiries, site visit requests, product
+-- quotes and general questions (PRD sections 8, 12, 13). Visitors can add one
+-- but never read one back. Staff work them on the admin Enquiries tab.
+-- Enquiries never trigger a site rebuild.
 create table if not exists public.enquiries (
-  id         uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now(),
-  name       text not null check (char_length(btrim(name)) between 1 and 120),
-  phone      text not null check (phone ~ '^[0-9+() -]{7,20}$'),
-  email      text check (email is null or (char_length(email) <= 200 and email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$')),
-  category   text not null check (category in ('Property purchase', 'Construction products', 'General enquiry')),
-  interest   text check (interest is null or char_length(interest) <= 200),
-  message    text not null check (char_length(btrim(message)) between 1 and 4000),
-  consent    boolean not null check (consent),
-  status     text not null default 'new' check (status in ('new', 'contacted', 'closed')),
-  notes      text check (notes is null or char_length(notes) <= 4000),
-  updated_at timestamptz not null default now()
+  id           uuid primary key default gen_random_uuid(),
+  created_at   timestamptz not null default now(),
+  kind         text not null check (kind in ('property', 'visit', 'product', 'general')),
+  source       text not null default 'contact_page' check (source in ('contact_page', 'property_page', 'product_page')),
+  name         text not null check (char_length(btrim(name)) between 1 and 120),
+  phone        text not null check (phone ~ '^[0-9+() -]{7,20}$'),
+  email        text check (email is null or (char_length(email) <= 200 and email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$')),
+  -- what it is about: a property reference, a product slug, or free text
+  property_ref text check (property_ref is null or char_length(property_ref) <= 60),
+  property_id  uuid references public.properties (id) on delete set null,
+  product_slug text check (product_slug is null or char_length(product_slug) <= 120),
+  interest     text check (interest is null or char_length(interest) <= 200),
+  message      text check (message is null or char_length(message) <= 4000),
+  -- site visit request: a preference, not a booking
+  preferred_date date,
+  preferred_time text check (preferred_time is null or preferred_time in ('Morning', 'Afternoon', 'Evening')),
+  -- product quote
+  organisation text check (organisation is null or char_length(organisation) <= 120),
+  quantity     text check (quantity is null or char_length(quantity) <= 120),
+  delivery_location text check (delivery_location is null or char_length(delivery_location) <= 160),
+  consent      boolean not null check (consent),
+  -- set by the database, never by the visitor
+  repeat_contact boolean not null default false,
+  -- staff workflow (PRD section 12 lead statuses)
+  status       text not null default 'new' check (status in ('new', 'contacted', 'qualified', 'visit_requested', 'negotiation', 'closed_won', 'closed_lost', 'not_interested')),
+  assigned_to  text references public.staff (email) on update cascade on delete set null,
+  follow_up_on date,
+  notes        text check (notes is null or char_length(notes) <= 4000),
+  updated_at   timestamptz not null default now(),
+  check (kind = 'visit' or (message is not null and char_length(btrim(message)) > 0))
 );
 create index if not exists enquiries_created_at on public.enquiries (created_at desc);
+create index if not exists enquiries_phone on public.enquiries (phone, created_at desc);
+create index if not exists enquiries_property on public.enquiries (property_id);
 
--- Visitors may only fill the form's fields; status and notes are staff-only.
+-- Visitors may only fill the form's fields; everything else is the database's or staff's.
 revoke all on public.enquiries from anon, authenticated;
-grant insert (name, phone, email, category, interest, message, consent) on public.enquiries to anon, authenticated;
+grant insert (kind, source, name, phone, email, property_ref, product_slug, interest, message, preferred_date, preferred_time, organisation, quantity, delivery_location, consent)
+  on public.enquiries to anon, authenticated;
 grant select, delete on public.enquiries to authenticated;
-grant update (status, notes) on public.enquiries to authenticated;
+grant update (status, assigned_to, follow_up_on, notes) on public.enquiries to authenticated;
 
 alter table public.enquiries enable row level security;
 drop policy if exists "anyone sends an enquiry" on public.enquiries;
@@ -211,17 +233,39 @@ create policy "staff update enquiries" on public.enquiries for update to authent
 drop policy if exists "staff delete enquiries" on public.enquiries;
 create policy "staff delete enquiries" on public.enquiries for delete to authenticated using (public.is_staff());
 
--- Tidies input and limits floods: 3 an hour from one phone, 30 per 10 minutes overall.
+-- Tidies input, links the property, flags repeat contacts, refuses enquiries
+-- for properties that are not live, and limits floods: 3 an hour from one
+-- phone, 30 per 10 minutes overall.
 create or replace function private.check_enquiry() returns trigger
 language plpgsql security definer set search_path = '' as $$
+declare
+  prop public.properties%rowtype;
 begin
   new.name := btrim(new.name);
   new.phone := btrim(new.phone);
   new.email := nullif(lower(btrim(coalesce(new.email, ''))), '');
   new.interest := nullif(btrim(coalesce(new.interest, '')), '');
-  new.status := 'new';
+  new.message := nullif(btrim(coalesce(new.message, '')), '');
+  new.property_ref := nullif(upper(btrim(coalesce(new.property_ref, ''))), '');
+  new.status := case when new.kind = 'visit' then 'visit_requested' else 'new' end;
+  new.assigned_to := null;
+  new.follow_up_on := null;
   new.notes := null;
   new.created_at := now();
+  if new.kind <> 'visit' then new.preferred_date := null; new.preferred_time := null; end if;
+  if new.preferred_date is not null and new.preferred_date < current_date then
+    raise exception 'The preferred visit date is in the past.' using errcode = 'P0001';
+  end if;
+  if new.property_ref is not null then
+    select * into prop from public.properties where upper(reference) = new.property_ref;
+    if found and prop.stage <> 'live' then
+      raise exception 'This property is no longer available.' using errcode = 'P0001';
+    end if;
+    new.property_id := prop.id;  -- null when the reference is unknown; staff still see what was typed
+  else
+    new.property_id := null;
+  end if;
+  new.repeat_contact := exists (select 1 from public.enquiries where phone = new.phone and created_at > now() - interval '30 days');
   if (select count(*) from public.enquiries where phone = new.phone and created_at > now() - interval '1 hour') >= 3
      or (select count(*) from public.enquiries where created_at > now() - interval '10 minutes') >= 30 then
     raise exception 'Too many enquiries. Please try again later.' using errcode = 'P0001';
@@ -233,6 +277,85 @@ drop trigger if exists enquiries_check on public.enquiries;
 create trigger enquiries_check before insert on public.enquiries for each row execute function private.check_enquiry();
 drop trigger if exists enquiries_touch on public.enquiries;
 create trigger enquiries_touch before update on public.enquiries for each row execute function private.touch_updated_at();
+
+-- Every staff change to an enquiry is recorded (PRD: "changes timestamped").
+create table if not exists public.enquiry_history (
+  id          bigint generated always as identity primary key,
+  enquiry_id  uuid not null references public.enquiries (id) on delete cascade,
+  at          timestamptz not null default now(),
+  actor       text,
+  field       text not null,
+  old_value   text,
+  new_value   text
+);
+create index if not exists enquiry_history_enquiry on public.enquiry_history (enquiry_id, at);
+revoke all on public.enquiry_history from anon, authenticated;
+grant select on public.enquiry_history to authenticated;
+alter table public.enquiry_history enable row level security;
+drop policy if exists "staff read enquiry history" on public.enquiry_history;
+create policy "staff read enquiry history" on public.enquiry_history for select to authenticated using (public.is_staff());
+
+create or replace function private.log_enquiry_change() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  who text := nullif(lower(coalesce(auth.jwt() ->> 'email', '')), '');
+begin
+  if new.status is distinct from old.status then
+    insert into public.enquiry_history (enquiry_id, actor, field, old_value, new_value) values (new.id, who, 'status', old.status, new.status);
+  end if;
+  if new.assigned_to is distinct from old.assigned_to then
+    insert into public.enquiry_history (enquiry_id, actor, field, old_value, new_value) values (new.id, who, 'assigned_to', old.assigned_to, new.assigned_to);
+  end if;
+  if new.follow_up_on is distinct from old.follow_up_on then
+    insert into public.enquiry_history (enquiry_id, actor, field, old_value, new_value) values (new.id, who, 'follow_up_on', old.follow_up_on::text, new.follow_up_on::text);
+  end if;
+  if new.notes is distinct from old.notes then
+    insert into public.enquiry_history (enquiry_id, actor, field, old_value, new_value) values (new.id, who, 'notes', null, null);
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists enquiries_log on public.enquiries;
+create trigger enquiries_log after update on public.enquiries for each row execute function private.log_enquiry_change();
+
+-- ---------------------------------------------------------------- events ----
+-- First-party measurement (PRD section 14): property page views (after 3 s on
+-- the page), WhatsApp button clicks and shares. Visitors are a random ID kept
+-- in their browser; no names, phones or IP addresses are stored. Written only
+-- through public.track(), which checks the property is live and ignores
+-- repeats from the same browser within 10 minutes.
+create table if not exists public.events (
+  id          bigint generated always as identity primary key,
+  at          timestamptz not null default now(),
+  type        text not null check (type in ('property_view', 'whatsapp_click', 'property_shared')),
+  property_id uuid not null references public.properties (id) on delete cascade,
+  visitor     uuid not null,
+  source      text check (source is null or char_length(source) <= 40)
+);
+create index if not exists events_property_at on public.events (property_id, at);
+create index if not exists events_visitor_at on public.events (visitor, at);
+revoke all on public.events from anon, authenticated;
+grant select on public.events to authenticated;
+alter table public.events enable row level security;
+drop policy if exists "staff read events" on public.events;
+create policy "staff read events" on public.events for select to authenticated using (public.is_staff());
+
+create or replace function public.track(event_type text, property_ref text, visitor uuid, source text default null) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  pid uuid;
+begin
+  if event_type not in ('property_view', 'whatsapp_click', 'property_shared') or visitor is null then return; end if;
+  if public.is_staff() then return; end if;  -- staff browsing their own site is not demand
+  select id into pid from public.properties where upper(reference) = upper(btrim(property_ref)) and stage = 'live';
+  if pid is null then return; end if;
+  if exists (select 1 from public.events e where e.visitor = track.visitor and e.property_id = pid and e.type = event_type and e.at > now() - interval '10 minutes') then return; end if;
+  if (select count(*) from public.events e where e.visitor = track.visitor and e.at > now() - interval '1 day') >= 300 then return; end if;
+  insert into public.events (type, property_id, visitor, source) values (event_type, pid, visitor, left(source, 40));
+end $$;
+
+revoke execute on function public.track(text, text, uuid, text) from public;
+grant execute on function public.track(text, text, uuid, text) to anon, authenticated;
 
 -- Optional email alert for each new enquiry, sent through Resend (resend.com).
 -- Needs three Vault secrets (see supabase/README.md); without them it does nothing.
@@ -252,15 +375,18 @@ begin
     body    := jsonb_build_object(
       'from', send_from,
       'to', string_to_array(replace(send_to, ' ', ''), ','),
-      'subject', 'New enquiry: ' || new.category || ' from ' || new.name,
+      'subject', case new.kind when 'visit' then 'Site visit request' when 'product' then 'Product quote request' when 'property' then 'Property enquiry' else 'New enquiry' end
+                 || coalesce(' (' || new.property_ref || ')', '') || ' from ' || new.name,
       'text', concat_ws(E'\n',
         'Name: ' || new.name,
         'Phone: ' || new.phone,
         'Email: ' || coalesce(new.email, 'not given'),
-        'Category: ' || new.category,
-        'Interested in: ' || coalesce(new.interest, 'not given'),
+        'About: ' || coalesce(new.property_ref, new.product_slug, new.interest, 'not given'),
+        case when new.kind = 'visit' then 'Preferred visit: ' || coalesce(to_char(new.preferred_date, 'DD Mon YYYY'), 'any day') || ', ' || coalesce(new.preferred_time, 'any time') end,
+        case when new.kind = 'product' then 'Quantity: ' || coalesce(new.quantity, 'not given') || '; deliver to: ' || coalesce(new.delivery_location, 'not given') || coalesce('; organisation: ' || new.organisation, '') end,
+        case when new.repeat_contact then 'Note: this phone number sent another enquiry in the last 30 days.' end,
         '',
-        new.message,
+        coalesce(new.message, ''),
         '',
         'Reply and track it in the admin panel, Enquiries tab.')),
     headers := jsonb_build_object(

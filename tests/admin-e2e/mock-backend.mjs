@@ -12,7 +12,11 @@ const db = {
   product_categories: [{ id: "steel-peb", name: "Structural steel & PEB", intro: "Steel.", icon: "layers", sort_order: 1 }],
   products: [],
   properties: [],
-  enquiries: [{ id: "enq-1", created_at: "2026-11-10T09:30:00Z", name: "Ravi Kumar", phone: "98400 12345", email: "ravi@example.com", category: "Property purchase", interest: "ASMS-0001", message: "Is this plot still available?\nCan I visit on Saturday?", status: "new", notes: null }],
+  enquiries: [{ id: "enq-1", created_at: "2026-11-10T09:30:00Z", kind: "property", source: "property_page", name: "Ravi Kumar", phone: "98400 12345", email: "ravi@example.com",
+    property_ref: "ASMS-0001", property_id: "id-x", product_slug: null, interest: "East-facing plot", message: "Is this plot still available?\nCan I visit on Saturday?",
+    preferred_date: null, preferred_time: null, organisation: null, quantity: null, delivery_location: null, repeat_contact: true,
+    status: "new", assigned_to: null, follow_up_on: null, notes: null }],
+  enquiry_history: [],
 };
 const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "*", "access-control-expose-headers": "*" };
 const send = (res, status, body, headers = {}) => {
@@ -56,6 +60,7 @@ createServer(async (req, res) => {
 
   // ---- PostgREST
   if (url.pathname === "/rest/v1/rpc/request_site_rebuild") { log.push({ op: "rpc-rebuild" }); return send(res, 204); }
+  if (url.pathname === "/rest/v1/rpc/track") { log.push({ op: "track", ...JSON.parse(body) }); return send(res, 204); }
   if (url.pathname.startsWith("/rest/v1/")) {
     const table = url.pathname.slice(9);
     const rows = db[table];
@@ -74,7 +79,7 @@ createServer(async (req, res) => {
         const key = table === "staff" ? "email" : table === "product_categories" || table === "enquiries" ? "id" : "slug";
         const i = rows.findIndex((x) => x[key] === r[key]);
         if (i >= 0 && !upsert) return send(res, 409, { code: "23505", message: `duplicate key value violates unique constraint "${table}_${key}_key"` });
-        const row = { id: r.id ?? `id-${rows.length + 1}`, created_at: new Date().toISOString(), ...(table === "enquiries" ? { status: "new", notes: null } : {}), ...r };
+        const row = { id: r.id ?? `id-${rows.length + 1}`, created_at: new Date().toISOString(), ...r, ...(table === "enquiries" ? { status: r.kind === "visit" ? "visit_requested" : "new", notes: null, assigned_to: null, follow_up_on: null, repeat_contact: false } : {}) };
         if (i >= 0) rows[i] = { ...rows[i], ...row }; else rows.push(row);
       }
       return send(res, 201);

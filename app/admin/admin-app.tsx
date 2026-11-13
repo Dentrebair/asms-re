@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { explain, isConfigured, supabase, type StaffRow } from "./lib";
-import { EnquiriesAdmin } from "./enquiries-admin";
+import { EnquiriesAdmin, isFresh } from "./enquiries-admin";
 import { ProductsAdmin } from "./products-admin";
 import { PropertiesAdmin } from "./properties-admin";
 import { StaffAdmin } from "./staff-admin";
@@ -31,6 +31,8 @@ export default function AdminApp() {
     if (error) notify(explain(error), "error");
     setMe(data as StaffRow | null);
     setState(data ? "ready" : "not-staff");
+    // Views from staff browsers are not demand; the public pages skip tracking when this is set.
+    if (data) { try { localStorage.setItem("asms-staff", "1"); } catch { /* storage blocked */ } }
     setToast((t) => (t?.tone === "error" ? null : t)); // clear stale sign-in errors
   }, [notify]);
 
@@ -53,7 +55,7 @@ export default function AdminApp() {
   // Count of new enquiries for the tab badge.
   useEffect(() => {
     if (state !== "ready") return;
-    void supabase().from("enquiries").select("id").eq("status", "new").limit(500).then(({ data }) => setNewEnquiries(data?.length ?? 0));
+    void supabase().from("enquiries").select("status").in("status", ["new", "visit_requested"]).limit(1000).then(({ data }) => setNewEnquiries((data ?? []).filter(isFresh).length));
   }, [state]);
 
   // Auto-dismiss success messages.
@@ -99,7 +101,7 @@ export default function AdminApp() {
         </div>
       </header>
       <main className="adm-main">
-        {tab === "enquiries" && <EnquiriesAdmin notify={notify} onNewCount={setNewEnquiries} />}
+        {tab === "enquiries" && <EnquiriesAdmin me={me} notify={notify} onNewCount={setNewEnquiries} />}
         {tab === "properties" && <PropertiesAdmin notify={notify} />}
         {tab === "products" && <ProductsAdmin notify={notify} />}
         {tab === "staff" && me.role === "owner" && <StaffAdmin me={me} notify={notify} />}

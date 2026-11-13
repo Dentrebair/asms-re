@@ -1,32 +1,26 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { ENQUIRY_ENDPOINT, sendEnquiry, type EnquiryKind } from "@/lib/enquiry";
 
-const CATEGORIES = ["Property purchase", "Construction products", "General enquiry"];
+const CATEGORIES: { label: string; kind: EnquiryKind }[] = [
+  { label: "Property purchase", kind: "property" },
+  { label: "Construction products", kind: "product" },
+  { label: "General enquiry", kind: "general" },
+];
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const ENDPOINT = SUPABASE_URL && SUPABASE_ANON_KEY ? `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/enquiries` : "";
+type Prefill = { category: string; interest: string; ref: string; product: string };
 
-type Prefill = { category: string; interest: string };
-
-// Reads ?category=…&interest=… (set by "Request quote" / "Enquire" links) in the
-// browser, so the page can stay a static file.
+// Reads ?category=…&interest=…&ref=…&product=… (set by "Enquire" and "Request
+// quote" links) in the browser, so the page can stay a static file.
 function readPrefill(): Prefill {
   const params = new URLSearchParams(window.location.search);
-  const interest = params.get("interest")?.slice(0, 120) ?? "";
+  const ref = (params.get("ref") ?? "").slice(0, 60);
+  const product = (params.get("product") ?? "").slice(0, 120);
+  const interest = (params.get("interest") ?? ref).slice(0, 120);
   const requested = params.get("category") ?? "";
-  const category = CATEGORIES.includes(requested) ? requested : interest ? "Property purchase" : "";
-  return { category, interest };
-}
-
-/** Turns the database's refusal into a sentence a visitor can act on. */
-function reason(status: number, message: string) {
-  if (/Too many enquiries/.test(message)) return "We have already received several enquiries from this number in the last hour. Please try again later.";
-  if (/phone/.test(message)) return "Please check the phone number: use digits, spaces and + only.";
-  if (/email/.test(message)) return "Please check the email address.";
-  if (status >= 500 || status === 0) return "Our enquiry service is not responding right now. Please try again in a few minutes.";
-  return "Your enquiry could not be sent. Please check the details and try again.";
+  const category = CATEGORIES.some((c) => c.label === requested) ? requested : product ? "Construction products" : interest ? "Property purchase" : "";
+  return { category, interest, ref, product };
 }
 
 /**
@@ -35,7 +29,7 @@ function reason(status: number, message: string) {
  * configured it says plainly that nothing was sent and never shows success.
  */
 export default function EnquiryForm() {
-  const [prefill, setPrefill] = useState<Prefill>({ category: "", interest: "" });
+  const [prefill, setPrefill] = useState<Prefill>({ category: "", interest: "", ref: "", product: "" });
   const [help, setHelp] = useState<{ text: string; tone: "info" | "error" } | null>(null);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<{ name: string; phone: string } | null>(null);
@@ -65,35 +59,27 @@ export default function EnquiryForm() {
       setHelp({ text: "Your enquiry could not be sent. Please contact us by phone or email.", tone: "error" });
       return;
     }
-    const enquiry = {
+    const kind = CATEGORIES.find((c) => c.label === value("category"))?.kind ?? "general";
+    const interest = value("interest");
+    setBusy(true);
+    setHelp({ text: "Sending your enquiry…", tone: "info" });
+    const failure = await sendEnquiry({
+      kind,
+      source: "contact_page",
       name: value("name"),
       phone: value("phone"),
       email: value("email") || null,
-      category: value("category"),
-      interest: value("interest") || null,
+      // The reference travels only while the visitor kept the prefilled text.
+      property_ref: kind === "property" && prefill.ref && interest.includes(prefill.ref) ? prefill.ref : null,
+      product_slug: kind === "product" && prefill.product ? prefill.product : null,
+      interest: interest || null,
       message: value("message"),
       consent: data.get("consent") === "on",
-    };
-    setBusy(true);
-    setHelp({ text: "Sending your enquiry…", tone: "info" });
-    try {
-      const res = await fetch(form.dataset.endpoint, {
-        method: "POST",
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify(enquiry),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setHelp({ text: reason(res.status, String(body?.message ?? "")), tone: "error" });
-        return;
-      }
-      setHelp(null);
-      setSent({ name: enquiry.name, phone: enquiry.phone });
-    } catch {
-      setHelp({ text: reason(0, ""), tone: "error" });
-    } finally {
-      setBusy(false);
-    }
+    });
+    setBusy(false);
+    if (failure) return setHelp({ text: failure, tone: "error" });
+    setHelp(null);
+    setSent({ name: value("name"), phone: value("phone") });
   }
 
   if (sent) {
@@ -110,7 +96,7 @@ export default function EnquiryForm() {
   }
 
   return (
-    <form key={`${category}|${defaultInterest}`} className="enquiry-form" onSubmit={handleSubmit} data-endpoint={ENDPOINT} noValidate aria-labelledby="form-title" aria-busy={busy}>
+    <form key={`${category}|${defaultInterest}`} className="enquiry-form" onSubmit={handleSubmit} data-endpoint={ENQUIRY_ENDPOINT} noValidate aria-labelledby="form-title" aria-busy={busy}>
       <div>
         <h2 id="form-title">Tell us what you are looking for.</h2>
         <p className="form-help">Fields marked with an asterisk are required.</p>
@@ -125,7 +111,7 @@ export default function EnquiryForm() {
           <label htmlFor="f-category">Enquiry category *</label>
           <select id="f-category" name="category" required defaultValue={category}>
             <option value="" disabled>Select a category</option>
-            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            {CATEGORIES.map((c) => <option key={c.label}>{c.label}</option>)}
           </select>
         </div>
       </div>

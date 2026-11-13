@@ -46,6 +46,9 @@ scheduled build keeps the free project from pausing.
    - `SUPABASE_URL` = the Project URL
    - `SUPABASE_ANON_KEY` = the anon/publishable key
 
+   - `WHATSAPP_NUMBER` (optional) = the business WhatsApp number with country
+     code, e.g. `919840012345`. Leave it out and the WhatsApp buttons stay hidden.
+
    These two are public by design (they ship in the admin page); the database
    rules in `schema.sql` are what protect the data. Never use the
    `service_role` key anywhere in this project.
@@ -82,10 +85,16 @@ scheduled build keeps the free project from pausing.
 - **Login emails** use Supabase's built-in mailer, which is rate-limited. That's fine
   for a few staff invites; for more, set up custom SMTP (e.g. your Hostinger mailbox)
   under *Authentication → Emails*.
-- **Enquiries:** limited to 3 an hour from one phone number and 30 every
-  10 minutes in total, to stop floods of spam. Staff can mark each one New,
-  Contacted or Closed, keep private notes, and delete it. Enquiries never
-  trigger a website rebuild.
+- **Enquiries:** property enquiries, site visit requests (a request, never a
+  booking), product quotes and general questions. Limited to 3 an hour from
+  one phone number and 30 every 10 minutes in total. Staff move each through
+  New, Visit requested, Contacted, Qualified, Negotiation and a closed state,
+  assign it, set a follow-up date and keep private notes; every change is
+  logged with who made it. Enquiries for sold or paused properties are refused.
+- **Measurement:** property page views (after 3 seconds), WhatsApp button
+  clicks and shares are stored in `events` with a random browser code, never
+  a name or phone. Repeats from one browser within 10 minutes and staff
+  browsing are ignored. Seller and admin dashboards will read these.
 - **Testing the rules locally:** `npm run test:db` applies `schema.sql` to a throwaway
   Postgres and checks every permission (needs Postgres installed).
 

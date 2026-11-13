@@ -90,6 +90,14 @@ try {
   await waitFor(`(document.querySelector('.adm-toast span')?.textContent ?? '') === 'Note saved.'`, "note saved");
   b = await backend();
   check("note saved", b.db.enquiries[0].notes === "Called, visit on Saturday");
+  await js(`(() => { const el = document.querySelector('.adm-enquiry-work select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el, 'owner@asms.test'); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await js(`(() => { const el = document.querySelector('.adm-enquiry-work input[type=date]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, '2026-12-01'); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await sleep(500);
+  b = await backend();
+  check("assign to a staff member and set a follow-up date", b.db.enquiries[0].assigned_to === "owner@asms.test" && b.db.enquiries[0].follow_up_on === "2026-12-01", JSON.stringify(b.db.enquiries[0]).slice(0, 200));
+  check("repeat contact flag shown", await js(`!!document.querySelector('.adm-flag')`));
+  await js(`document.querySelector('.adm-filter input, .adm-toolbar .adm-check input').click()`);
+  check("assigned-to-me filter keeps it", await js(`document.querySelectorAll('.adm-enquiries > li').length === 1`));
 
   // 2. create a property with a photo
   await click("Properties");
@@ -209,7 +217,7 @@ try {
   check("sign out returns to sign-in", true);
 
   // 9. public contact form sends a real enquiry
-  await cdp("Page.navigate", { url: `${BASE}/contact?interest=ASMS-0001` });
+  await cdp("Page.navigate", { url: `${BASE}/contact?ref=ASMS-0001` });
   await waitFor(`document.getElementById('f-interest')?.value === 'ASMS-0001'`, "contact form prefilled");
   check("form is connected", await js(`document.querySelector('form.enquiry-form').dataset.endpoint === 'http://127.0.0.1:54401/rest/v1/enquiries'`));
   const before = (await backend()).db.enquiries.length;
@@ -225,9 +233,44 @@ try {
   check("thank-you names the visitor and phone", (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("Thank you, Meena S.") && (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("reached our team") && (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("+91 98840 55555"));
   b = await backend();
   const sent = b.log.filter((l) => l.op === "insert" && l.table === "enquiries").pop();
-  check("enquiry sent with form fields only", sent && JSON.stringify(Object.keys(sent.rows[0]).sort()) === JSON.stringify(["category", "consent", "email", "interest", "message", "name", "phone"])
-    && sent.rows[0].consent === true && sent.rows[0].interest === "ASMS-0001" && sent.apikey === "anon-test" && sent.prefer === "return=minimal", JSON.stringify(sent));
+  check("enquiry sent with form fields only", sent && JSON.stringify(Object.keys(sent.rows[0]).sort()) === JSON.stringify(["consent", "email", "interest", "kind", "message", "name", "phone", "property_ref", "source"])
+    && sent.rows[0].consent === true && sent.rows[0].kind === "property" && sent.rows[0].property_ref === "ASMS-0001" && sent.rows[0].source === "contact_page" && sent.apikey === "anon-test" && sent.prefer === "return=minimal", JSON.stringify(sent));
   await shot("7-enquiry-sent");
+
+  // 9b. property page: view counted after 3 s, visit request, WhatsApp click, share
+  await js(`localStorage.removeItem('asms-staff')`);
+  await cdp("Browser.grantPermissions", { origin: BASE, permissions: ["clipboardReadWrite", "clipboardSanitizedWrite"] });
+  await cdp("Page.navigate", { url: `${BASE}/properties/residential-plot-opportunity` });
+  await waitFor(`!!document.querySelector('.rail-form')`, "enquiry rail");
+  await sleep(3600);
+  b = await backend();
+  check("view counted after 3 seconds", b.log.some((l) => l.op === "track" && l.event_type === "property_view" && l.property_ref === "ASMS-PREVIEW-01" && /^[0-9a-f-]{36}$/.test(l.visitor)));
+  await click("Request a visit");
+  await fill("Full name", "Karthik R"); await fill("Phone or WhatsApp number", "9884022222");
+  const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString("en-CA");
+  await fill("Preferred day", tomorrow); await fill("Time of day", "Morning");
+  await js(`document.querySelector('.rail-form .consent input').click()`);
+  await click("Send visit request");
+  await waitFor(`!!document.querySelector('.rail-sent')`, "visit request sent");
+  check("visit confirmation says request, not booking", (await js(`document.querySelector('.rail-sent').textContent`)).includes("This is a request, not a booking"));
+  b = await backend();
+  const visit = b.log.filter((l) => l.op === "insert" && l.table === "enquiries").pop()?.rows[0];
+  check("visit request sent with property and preference", visit && visit.kind === "visit" && visit.source === "property_page" && visit.property_ref === "ASMS-PREVIEW-01" && visit.preferred_date === tomorrow && visit.preferred_time === "Morning" && !("message" in visit), JSON.stringify(visit));
+  check("visit lands in the inbox as Visit requested", b.db.enquiries.find((e) => e.name === "Karthik R")?.status === "visit_requested");
+  await js(`(() => { const a = [...document.querySelectorAll('.rail-secondary a')].find(x => x.textContent === 'WhatsApp us'); a.addEventListener('click', (e) => e.preventDefault()); a.click(); window.__wa = a.href; })()`);
+  await sleep(400);
+  b = await backend();
+  check("WhatsApp click tracked separately from enquiries", b.log.some((l) => l.op === "track" && l.event_type === "whatsapp_click") && (await js(`window.__wa`)).startsWith("https://wa.me/919800000000?text=Hello"));
+  await cdp("Emulation.setFocusEmulationEnabled", { enabled: true });  // the clipboard needs a focused page
+  await js(`Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })`);  // test the copy-link path
+  await click("Share this property");
+  await waitFor(`document.querySelector('.share-link')?.textContent === 'Link copied'`, "link copied");
+  b = await backend();
+  check("share tracked", b.log.some((l) => l.op === "track" && l.event_type === "property_shared"));
+  await cdp("Page.navigate", { url: `${BASE}/properties/sold-plot-sample` });
+  await sleep(4000);
+  b = await backend();
+  check("sold page: no enquiry form, no view counted", !(await js(`!!document.querySelector('.rail-form')`)) && !b.log.some((l) => l.op === "track" && l.property_ref === "ASMS-PREVIEW-07"));
 
   // 10. mobile layout of the list
   await cdp("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });

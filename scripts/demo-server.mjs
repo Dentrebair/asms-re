@@ -42,9 +42,12 @@ function seed() {
       image_path: local(p.image?.src), image_alt: null, published: false, sort_order: i, created_at: new Date().toISOString(),
     })),
     enquiries: [{
-      id: "enq-1", created_at: new Date().toISOString(), name: "Ravi Kumar (demo)", phone: "98400 12345", email: "ravi@example.com",
-      category: "Property purchase", interest: plot.reference, message: "Is this plot still available? Can I visit on Saturday?", status: "new", notes: null,
+      id: "enq-1", created_at: new Date().toISOString(), kind: "visit", source: "property_page", name: "Ravi Kumar (demo)", phone: "98400 12345", email: "ravi@example.com",
+      property_ref: plot.reference, property_id: "prop-1", product_slug: null, interest: plot.title, message: "Can I visit on Saturday morning?",
+      preferred_date: null, preferred_time: "Morning", organisation: null, quantity: null, delivery_location: null, repeat_contact: false,
+      status: "visit_requested", assigned_to: null, follow_up_on: null, notes: null,
     }],
+    enquiry_history: [],
     properties: [{
       id: "prop-1", slug: plot.slug, reference: plot.reference, title: plot.title, stage: "live", featured: true,
       category: plot.category, property_type: plot.propertyType, price_negotiable: plot.priceNegotiable, area_unit: plot.areaUnit,
@@ -70,6 +73,7 @@ const builtin = (path) => {
 
 let db = existsSync(dbFile) ? JSON.parse(readFileSync(dbFile, "utf8")) : seed();
 db.enquiries ??= []; // demo data saved before enquiries existed
+db.enquiry_history ??= [];
 const save = () => writeFileSync(dbFile, JSON.stringify(db, null, 1));
 save();
 
@@ -106,7 +110,7 @@ const send = (res, status, body, headers = {}) => {
 const read = (req) => new Promise((r) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => r(Buffer.concat(c))); });
 const KEYS = { staff: "email", product_categories: "id", products: "slug", properties: "slug", enquiries: "id" };
 const UNIQUE = { properties: ["slug", "reference"], products: ["slug"], staff: ["email"], product_categories: ["id"], enquiries: ["id"] };
-const ENQUIRY_FIELDS = ["name", "phone", "email", "category", "interest", "message", "consent"];
+const ENQUIRY_FIELDS = ["kind", "source", "name", "phone", "email", "property_ref", "product_slug", "interest", "message", "preferred_date", "preferred_time", "organisation", "quantity", "delivery_location", "consent"];
 const filters = (url) => [...url.searchParams].filter(([k]) => !["select", "order", "limit", "columns", "on_conflict"].includes(k));
 const unquote = (v) => decodeURIComponent(v).replace(/^"|"$/g, "");
 const match = (row, fs) => fs.every(([k, v]) => {
@@ -186,6 +190,7 @@ createServer(async (req, res) => {
   }
 
   // ---- database
+  if (url.pathname === "/rest/v1/rpc/track") { const e = JSON.parse(body); console.log(`· ${e.event_type} ${e.property_ref}`); return send(res, 204); }
   if (url.pathname === "/rest/v1/rpc/request_site_rebuild") {
     if (!staff) return send(res, 403, { code: "42501", message: "Not allowed" });
     rebuild("Update website now");
@@ -196,7 +201,7 @@ createServer(async (req, res) => {
     if (!db[table]) return send(res, 404, { message: `relation "${table}" does not exist` });
     const fs = filters(url);
     // Same visibility rules as supabase/schema.sql.
-    const visible = (r) => staff ? true : table === "product_categories" ? true : table === "staff" || table === "enquiries" ? false : table === "properties" ? ["live", "sold"].includes(r.stage) : r.published === true;
+    const visible = (r) => staff ? true : table === "product_categories" ? true : table === "staff" || table === "enquiries" || table === "enquiry_history" ? false : table === "properties" ? ["live", "sold"].includes(r.stage) : r.published === true;
     if (req.method === "GET") {
       const found = db[table].filter((r) => visible(r) && match(r, fs));
       if ((req.headers.accept ?? "").includes("vnd.pgrst.object")) return found[0] ? send(res, 200, found[0]) : send(res, 406, { code: "PGRST116", message: "no rows" });
@@ -206,7 +211,8 @@ createServer(async (req, res) => {
     if (table === "enquiries" && req.method === "POST") {
       const r = JSON.parse(body);
       if (Object.keys(r).some((k) => !ENQUIRY_FIELDS.includes(k)) || r.consent !== true) return send(res, 403, { code: "42501", message: "permission denied for table enquiries" });
-      db.enquiries.unshift({ id: `enq-${Date.now()}`, created_at: new Date().toISOString(), ...r, status: "new", notes: null });
+      db.enquiries.unshift({ id: `enq-${Date.now()}`, created_at: new Date().toISOString(), ...r, status: r.kind === "visit" ? "visit_requested" : "new",
+        repeat_contact: db.enquiries.some((e) => e.phone === r.phone), assigned_to: null, follow_up_on: null, notes: null });
       save();
       console.log(`✉ New enquiry from ${r.name} (${r.phone}) — see the Enquiries tab`);
       return send(res, 201);
@@ -240,6 +246,12 @@ createServer(async (req, res) => {
     if (table === "staff" && !db.staff.some((s) => s.role === "owner")) { db = JSON.parse(readFileSync(dbFile, "utf8")); return send(res, 400, { message: "At least one owner must remain" }); }
     save();
     console.log(`✎ ${req.method === "POST" ? "Saved" : req.method === "PATCH" ? "Updated" : "Deleted"} ${table} (by ${me})`);
+    if (table === "enquiries" && req.method === "PATCH") {
+      const change = JSON.parse(body);
+      for (const r of db.enquiries.filter((x) => match(x, fs))) for (const [field, value] of Object.entries(change))
+        db.enquiry_history.push({ id: db.enquiry_history.length + 1, enquiry_id: r.id, at: new Date().toISOString(), actor: me, field, old_value: null, new_value: field === "notes" ? null : value });
+      save();
+    }
     if (table !== "staff" && table !== "enquiries") scheduleRebuild(`${table} changed`);
     return send(res, req.method === "POST" ? 201 : 204);
   }

@@ -6,6 +6,7 @@ import { amenityIcon, nearbyIcon } from "@/lib/presets";
 import { Icon, type IconName } from "../../icons";
 import { BRAND, Footer, Header, PropertyCard } from "../../site-components";
 import EmiCalculator from "./emi-calculator";
+import { MobileActionBar, PropertyEnquiry, ShareButton, ViewTracker, WhatsAppButton } from "./property-actions";
 
 export const dynamic = "force-static";
 export const dynamicParams = false;
@@ -57,6 +58,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
   if (!p) notFound();
 
   const sold = p.stage === "sold";
+  const listing = { reference: p.reference, title: p.title };
   const tag = listingTag(p);
   const keyFacts = highlights(p);
   const details = overview(p);
@@ -192,12 +194,14 @@ export default async function PropertyDetailPage({ params }: { params: Params })
           <a className="btn" href="/properties">See available properties</a>
         </aside>
         ) : (
-        <aside className="detail-enquiry-card on-field" aria-labelledby="enquire-title">
+        <aside id="enquire" className="detail-enquiry-card on-field" aria-labelledby="enquire-title">
           <h2 id="enquire-title">{priceLabel(p)}</h2>
-          <p>Quote reference <strong>{p.reference}</strong> when you contact the team.</p>
-          <a className="btn" href={`/contact?interest=${encodeURIComponent(p.reference)}`}>Enquire about property</a>
-          <a className="btn btn--quiet" href={`/contact?interest=${encodeURIComponent(`${p.reference} site visit`)}`}>Request a site visit</a>
-          <p className="detail-card-note"><strong>Before you enquire.</strong> Prepare your preferred location, intended use, budget range and timeline.</p>
+          <p>Ref. <strong>{p.reference}</strong>{p.priceNegotiable ? ", price negotiable" : ""}</p>
+          <PropertyEnquiry listing={listing} />
+          <div className="rail-secondary">
+            <WhatsAppButton listing={listing} />
+            <ShareButton listing={listing} />
+          </div>
         </aside>
         )}
       </section>
@@ -219,6 +223,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
         </div>
       </section>
       </main>
+      {!sold && <><ViewTracker reference={p.reference} /><MobileActionBar listing={listing} /></>}
       <Footer />
     </>
   );

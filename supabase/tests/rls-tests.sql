@@ -72,44 +72,86 @@ select pg_temp.check('bad slug / negative price / uppercase email rejected', (se
 truncate net.calls;
 insert into vault.decrypted_secrets values ('resend_api_key', 're_test'), ('enquiry_notify_to', 'sales@asms.test, owner@asms.test'), ('enquiry_notify_from', 'Website <web@asms.test>');
 set role anon; set request.jwt.claims = '{}';
-insert into public.enquiries (name, phone, email, category, interest, message, consent)
-  values ('  Priya  ', '+91 98400 12345', ' Priya@Example.COM ', 'Property purchase', 'ASMS-0001', 'Is the plot still available?', true);
+insert into public.enquiries (kind, source, name, phone, email, property_ref, message, consent)
+  values ('property', 'property_page', '  Priya  ', '+91 98400 12345', ' Priya@Example.COM ', 'r-1', 'Is the plot still available?', true);
 select pg_temp.check('anon cannot read enquiries back', (select count(*) from public.enquiries) = 0);
-insert into public.enquiries (name, phone, category, message, consent, status) values ('Sneaky', '9840012345', 'General enquiry', 'x', true, 'closed');
-insert into public.enquiries (name, phone, category, message, consent) values ('No consent', '9840012346', 'General enquiry', 'x', false);
-insert into public.enquiries (name, phone, category, message, consent) values ('Bad phone', 'call me', 'General enquiry', 'x', true);
-insert into public.enquiries (name, phone, category, message, consent) values ('Bad category', '9840012347', 'Loans', 'x', true);
-update public.enquiries set status = 'closed'; delete from public.enquiries;
+insert into public.enquiries (kind, name, phone, message, consent, status) values ('general', 'Sneaky', '9840012345', 'x', true, 'closed_won');
+insert into public.enquiries (kind, name, phone, message, consent, repeat_contact) values ('general', 'Sneaky2', '9840012399', 'x', true, true);
+insert into public.enquiries (kind, name, phone, message, consent) values ('general', 'No consent', '9840012346', 'x', false);
+insert into public.enquiries (kind, name, phone, message, consent) values ('general', 'Bad phone', 'call me', 'x', true);
+insert into public.enquiries (kind, name, phone, message, consent) values ('loans', 'Bad kind', '9840012347', 'x', true);
+insert into public.enquiries (kind, name, phone, consent) values ('property', 'No message', '9840012348', true);
+insert into public.enquiries (kind, name, phone, property_ref, message, consent) values ('property', 'Sold one', '9840012349', 'R-4', 'still there?', true);
+insert into public.enquiries (kind, name, phone, property_ref, preferred_date, consent) values ('visit', 'Past date', '9840012350', 'R-1', current_date - 1, true);
+update public.enquiries set status = 'closed_won'; delete from public.enquiries;
 reset role;
-select pg_temp.check('anon enquiry saved and tidied', (select count(*) from public.enquiries) = 1
-  and (select name = 'Priya' and email = 'priya@example.com' and status = 'new' from public.enquiries));
-select pg_temp.check('anon cannot set status, skip consent, or send bad phone/category', (select count(*) from public.enquiries) = 1);
+select pg_temp.check('anon enquiry saved, tidied and linked to the property', (select count(*) from public.enquiries) = 1
+  and (select name = 'Priya' and email = 'priya@example.com' and status = 'new' and property_ref = 'R-1'
+       and property_id = (select id from public.properties where reference = 'R-1') and not repeat_contact from public.enquiries));
+select pg_temp.check('refused: status/flags set by visitor, no consent, bad phone or kind, empty message, sold property, past visit date', (select count(*) from public.enquiries) = 1);
 select pg_temp.check('anon cannot change or delete enquiries', (select status from public.enquiries) = 'new');
 select pg_temp.check('enquiry sends one email alert, no rebuild', (select count(*) from net.calls) = 1
   and (select bool_and(url = 'https://api.resend.com/emails' and headers ->> 'Authorization' = 'Bearer re_test'
-       and body -> 'to' = '["sales@asms.test","owner@asms.test"]'::jsonb and body ->> 'subject' = 'New enquiry: Property purchase from Priya') from net.calls));
+       and body -> 'to' = '["sales@asms.test","owner@asms.test"]'::jsonb and body ->> 'subject' = 'Property enquiry (R-1) from Priya') from net.calls));
+
+set role anon; set request.jwt.claims = '{}';
+insert into public.enquiries (kind, source, name, phone, property_ref, preferred_date, preferred_time, consent)
+  values ('visit', 'property_page', 'Priya', '+91 98400 12345', 'R-1', current_date + 3, 'Morning', true);
+insert into public.enquiries (kind, source, name, phone, product_slug, quantity, delivery_location, organisation, message, consent)
+  values ('product', 'product_page', 'Arun', '9884011111', 'aac-blocks', '20 cubic metres', 'Tambaram', 'Arun Builders', 'Need delivery next week', true);
+reset role;
+select pg_temp.check('visit request needs no message, starts as visit_requested, flagged as a repeat contact',
+  (select status = 'visit_requested' and repeat_contact and preferred_time = 'Morning' from public.enquiries where kind = 'visit'));
+select pg_temp.check('product quote keeps quantity and delivery', (select quantity = '20 cubic metres' and delivery_location = 'Tambaram' and property_id is null from public.enquiries where kind = 'product'));
 
 set role authenticated; set request.jwt.claims = '{"email":"stranger@gmail.com"}';
 select pg_temp.check('stranger cannot read enquiries', (select count(*) from public.enquiries) = 0);
-update public.enquiries set status = 'closed';
+update public.enquiries set status = 'closed_won';
 reset role;
-select pg_temp.check('stranger changed nothing on enquiries', (select status from public.enquiries) = 'new');
+select pg_temp.check('stranger changed nothing on enquiries', (select count(*) from public.enquiries where status = 'closed_won') = 0);
 
 set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
-select pg_temp.check('staff read enquiries', (select count(*) from public.enquiries) = 1);
-update public.enquiries set status = 'contacted', notes = 'Called, site visit Saturday';
-update public.enquiries set message = 'rewritten';
+select pg_temp.check('staff read enquiries', (select count(*) from public.enquiries) = 3);
+update public.enquiries set status = 'contacted', assigned_to = 'editor@asms.test', follow_up_on = current_date + 2, notes = 'Called, site visit Saturday' where name = 'Priya' and kind = 'property';
+update public.enquiries set message = 'rewritten', repeat_contact = true where kind = 'property';
 reset role;
-select pg_temp.check('staff update status and notes but not the message', (select status = 'contacted' and notes = 'Called, site visit Saturday' and message = 'Is the plot still available?' from public.enquiries));
+select pg_temp.check('staff update status, owner, follow-up and notes, but not what the visitor wrote',
+  (select status = 'contacted' and assigned_to = 'editor@asms.test' and notes = 'Called, site visit Saturday' and message = 'Is the plot still available?' and not repeat_contact from public.enquiries where kind = 'property'));
+select pg_temp.check('each change is in the history with who made it',
+  (select count(*) from public.enquiry_history where actor = 'editor@asms.test') = 4
+  and (select new_value from public.enquiry_history where field = 'status') = 'contacted');
+set role anon; set request.jwt.claims = '{}';
+select pg_temp.check('visitors cannot read history', (select count(*) from public.enquiry_history) = 0);
+reset role;
 
 set role anon; set request.jwt.claims = '{}';
-insert into public.enquiries (name, phone, category, message, consent) values ('Repeat', '+91 98400 12345', 'General enquiry', 'two', true);
-insert into public.enquiries (name, phone, category, message, consent) values ('Repeat', '+91 98400 12345', 'General enquiry', 'three', true);
-insert into public.enquiries (name, phone, category, message, consent) values ('Repeat', '+91 98400 12345', 'General enquiry', 'four', true);
+insert into public.enquiries (kind, name, phone, message, consent) values ('general', 'Repeat', '+91 98400 12345', 'three', true);
+insert into public.enquiries (kind, name, phone, message, consent) values ('general', 'Repeat', '+91 98400 12345', 'four', true);
 reset role;
-select pg_temp.check('fourth enquiry in an hour from one phone is refused', (select count(*) from public.enquiries) = 3);
+select pg_temp.check('fourth enquiry in an hour from one phone is refused', (select count(*) from public.enquiries where phone = '+91 98400 12345') = 3);
 
 set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
 delete from public.enquiries where message = 'three';
 reset role;
-select pg_temp.check('staff delete an enquiry', (select count(*) from public.enquiries) = 2);
+select pg_temp.check('staff delete an enquiry', (select count(*) from public.enquiries) = 3);
+
+-- ---------- events
+truncate net.calls;
+set role anon; set request.jwt.claims = '{}';
+select public.track('property_view', 'r-1', '00000000-0000-0000-0000-000000000001', 'detail');
+select public.track('property_view', 'R-1', '00000000-0000-0000-0000-000000000001', 'detail');  -- repeat within 10 min: ignored
+select public.track('whatsapp_click', 'R-1', '00000000-0000-0000-0000-000000000001', 'detail');
+select public.track('property_view', 'R-1', '00000000-0000-0000-0000-000000000002', 'detail');
+select public.track('property_view', 'R-2', '00000000-0000-0000-0000-000000000003', 'detail');  -- draft: ignored
+select public.track('property_view', 'R-4', '00000000-0000-0000-0000-000000000003', 'detail');  -- sold: ignored
+select public.track('enquiry_created', 'R-1', '00000000-0000-0000-0000-000000000003', 'detail');  -- not a trackable type
+insert into public.events (type, property_id, visitor) select 'property_view', id, gen_random_uuid() from public.properties;
+select pg_temp.check('visitors cannot read events', (select count(*) from public.events) = 0);
+reset role;
+select pg_temp.check('track records live views and clicks only, deduped per browser', (select count(*) from public.events) = 3
+  and (select count(*) from public.events where type = 'property_view') = 2 and (select count(distinct visitor) from public.events) = 2);
+select pg_temp.check('events trigger no rebuild', (select count(*) from net.calls) = 0);
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+select public.track('property_view', 'R-1', '00000000-0000-0000-0000-000000000009', 'detail');  -- staff browsing: ignored
+select pg_temp.check('staff read events', (select count(*) from public.events) = 3);
+reset role;

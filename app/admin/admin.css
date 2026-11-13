@@ -139,3 +139,13 @@
 .adm-enquiry-notes { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
 .adm-enquiry-notes .adm-field { flex: 1; min-width: min(100%, 260px); }
 .adm-enquiry-foot { display: flex; justify-content: flex-end; }
+.adm-flag { justify-self: start; padding: 2px 8px; color: #6e592f; border-radius: 999px; background: rgba(246,225,185,.7); font-size: 11px; font-weight: 700; }
+.adm-enquiry-facts { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 14px; }
+.adm-enquiry-facts div { display: flex; gap: 6px; }
+.adm-enquiry-facts dt { color: var(--muted); }
+.adm-enquiry-facts dd { margin: 0; font-weight: 600; }
+.adm-enquiry-work { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.adm-enquiry-work .adm-field { flex: 1 1 200px; max-width: 280px; }
+.adm-enquiry-foot { justify-content: space-between; align-items: flex-start; gap: 12px; }
+.adm-history summary { min-height: 40px; display: inline-flex; align-items: center; color: var(--forest); font-weight: 700; cursor: pointer; }
+.adm-history ol { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
