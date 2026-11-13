@@ -34,7 +34,7 @@ order the rest gets built. Section numbers (§) refer to the PRD.
 
 ## Phases
 
-**Phase 1: no outside accounts needed** (in progress)
+**Phase 1: no outside accounts needed** (done 13 Nov 2026, commits 845b073 to 2baa609, except `/about` and `/services`, which wait for ASMS wording)
 
 1. Data model v2:
    - property category with type-specific fields
@@ -84,7 +84,7 @@ order the rest gets built. Section numbers (§) refer to the PRD.
 - Live-edit revisions
 - Admin submissions queue with checklist, audit log, seller management
 
-**Phase 4: analytics.**
+**Phase 4: analytics.** The admin overview can start now from the events and enquiries already being recorded; the seller dashboard follows Phase 3.
 - Daily metrics rollup
 - Seller dashboard (KPIs, per-property stats, 7 / 30 day trends)
 - Admin overview and analytics
