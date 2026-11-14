@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   openGraph: { siteName: "ASMS‑ROUNAQH", locale: "en_IN", type: "website", images: [{ url: "/asms-hero.webp" }] },
 };
 
+const SPECULATION_RULES = {"prefetch":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/admin"}},{"not":{"href_matches":"/admin/*"}},{"not":{"selector_matches":"[target=_blank], [download], [href$='.pdf']"}}]},"eagerness":"moderate"}]};
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     // The font variables sit on <html> so the :root tokens can read them.
@@ -25,6 +27,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
         {/* Hallmark's render check reads hero postures from page styles; Tailwind strips CSS comments, so they ride here. */}
         <style dangerouslySetInnerHTML={{ __html: "/* Hallmark · hero: Ledge (/), Banner (/properties), Banner (/products), Banner (/contact) · posture: committed · shape: Photographic · job: buy */" }} />
+        {/* Speculation rules: fetch a page while the visitor hovers or presses its link, so it opens
+            instantly. Prefetch only, never prerender: a prerendered property page would run its
+            3-second view counter for a page nobody looked at. Admin is excluded. */}
+        <script type="speculationrules" dangerouslySetInnerHTML={{ __html: JSON.stringify(SPECULATION_RULES) }} />
       </head>
       <body>{children}</body>
     </html>

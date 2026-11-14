@@ -112,7 +112,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
           {gallery.map((image, index) => (
             <figure key={image.src} className={index === 0 ? "gallery-main" : ""}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={index === 0 ? image.src : image.srcSmall} alt={image.alt || p.title} loading={index === 0 ? "eager" : "lazy"} decoding="async" />
+              <img src={index === 0 ? image.src : image.srcSmall} alt={image.alt || p.title} {...(index === 0 ? { fetchPriority: "high" as const } : { loading: "lazy" as const, decoding: "async" as const })} />
                           </figure>
           ))}
           {p.images.length > 3 && <a className="btn btn--quiet btn--small gallery-more" href="#photos">View all {p.images.length} photos</a>}
