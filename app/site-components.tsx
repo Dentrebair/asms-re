@@ -18,8 +18,9 @@ const NAV_LINKS = [
 function Wordmark() {
   return (
     <a className="wordmark" href="/" aria-label={`${BRAND} home`}>
-      <span className="wordmark-mark" aria-hidden="true">AR</span>
-      <span className="wordmark-name">{BRAND}</span>
+      {/* The company's script logo from asmsrounaqh.com, made transparent (public/brand). */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- static export, no image optimiser */}
+      <img className="wordmark-logo" src="/brand/logo-script.webp" alt="" width={260} height={160} />
     </a>
   );
 }
@@ -97,7 +98,9 @@ export function Footer({ credits = [] }: { credits?: Credit[] }) {
     <footer className="footer on-field">
       <div className="container footer-inner">
         <p className="footer-letter">If a listing or a product fits what you are planning, write to us with its reference. We reply with the verified details.</p>
-        <p className="footer-signoff"><span className="footer-name">{BRAND}</span><span>Chennai, Tamil Nadu</span></p>
+        <p className="footer-signoff">
+          {/* eslint-disable-next-line @next/next/no-img-element -- static export, no image optimiser */}
+          <img className="footer-logo" src="/brand/logo-full-light.webp" alt={`${BRAND}, construction firm. Real expertise, real estates, real buildings. Legacy since ${COMPANY.since}.`} width={487} height={320} loading="lazy" /><span>Chennai, Tamil Nadu</span></p>
         <nav className="footer-links" aria-label="Footer">
           <a href="/properties">Properties</a>
           <a href="/products">Products</a>

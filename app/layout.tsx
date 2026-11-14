@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "ASMS‑ROUNAQH | Property, construction products and services in Chennai",
   description: "Plots and homes in and around Chennai, specified construction products and engineering services from one accountable team.",
   alternates: { canonical: "/" },
+  icons: { icon: "/icon.png", apple: "/apple-icon.png" },
   openGraph: { siteName: "ASMS‑ROUNAQH", locale: "en_IN", type: "website", images: [{ url: "/asms-hero.webp" }] },
 };
 

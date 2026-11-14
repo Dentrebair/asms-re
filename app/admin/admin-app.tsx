@@ -86,7 +86,9 @@ export default function AdminApp() {
   return (
     <Shell>
       <header className="adm-header">
-        <a className="adm-brand" href="/"><span>AR</span> ASMS–ROUNAQH <small>Admin</small></a>
+        <a className="adm-brand" href="/">
+          {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+          <img src="/icon.png" alt="" width={34} height={34} /> ASMS–ROUNAQH <small>Admin</small></a>
         <nav aria-label="Admin sections">
           {(["enquiries", "properties", "products", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => (
             <button key={t} type="button" aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>
@@ -148,7 +150,8 @@ function SignIn({ notify }: { notify: (m: string, t?: "ok" | "error") => void })
 
   return (
     <form className="adm-card" onSubmit={submit}>
-      <span className="adm-brand-mark">AR</span>
+      {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+      <img className="adm-brand-mark" src="/brand/logo-script.webp" alt="ASMS-ROUNAQH" width={260} height={160} />
       <h1>{mode === "password" ? "Staff sign in" : "Reset password"}</h1>
       <label className="adm-field"><span className="adm-label">Email</span><input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
       {mode === "password" && (
@@ -180,7 +183,8 @@ function SetPassword({ onDone, notify }: { onDone: () => void; notify: (m: strin
 
   return (
     <form className="adm-card" onSubmit={submit}>
-      <span className="adm-brand-mark">AR</span>
+      {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+      <img className="adm-brand-mark" src="/brand/logo-script.webp" alt="ASMS-ROUNAQH" width={260} height={160} />
       <h1>Choose your password</h1>
       <label className="adm-field"><span className="adm-label">New password</span><input type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
       <label className="adm-field"><span className="adm-label">Repeat password</span><input type="password" autoComplete="new-password" minLength={8} required value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} /></label>
