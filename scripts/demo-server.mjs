@@ -39,7 +39,8 @@ function seed() {
     product_categories: sample.categories.map((c, i) => ({ ...c, sort_order: i + 1 })),
     products: sample.products.map((p, i) => ({
       id: `prod-${i + 1}`, slug: p.slug, category_id: p.categoryId, name: p.name, summary: p.summary, specs: p.specs, unit: p.unit,
-      image_path: local(p.image?.src), image_alt: null, published: false, sort_order: i, created_at: new Date().toISOString(),
+      suitable_use: p.suitableUse, availability: p.availability,
+      image_path: local(p.image?.src), image_alt: null, published: true, sort_order: i, created_at: new Date().toISOString(),
     })),
     enquiries: [{
       id: "enq-1", created_at: new Date().toISOString(), kind: "visit", source: "property_page", name: "Ravi Kumar (demo)", phone: "98400 12345", email: "ravi@example.com",
@@ -48,19 +49,12 @@ function seed() {
       status: "visit_requested", assigned_to: null, follow_up_on: null, notes: null,
     }],
     enquiry_history: [],
-    properties: [{
-      id: "prop-1", slug: plot.slug, reference: plot.reference, title: plot.title, stage: "live", featured: true,
-      category: plot.category, property_type: plot.propertyType, price_negotiable: plot.priceNegotiable, area_unit: plot.areaUnit,
-      road_width_ft: plot.roadWidthFt, frontage_ft: plot.frontageFt, land_use: plot.landUse, last_confirmed_on: plot.lastConfirmedOn,
-      bhk: null, bathrooms: null, carpet_area_sqft: null, furnishing: null, floor_info: null, parking: null, possession: null,
-      usable_area_sqft: null, access_notes: null, zoning_notes: null, transaction_type: plot.transactionType, ownership: plot.ownership,
-      location: plot.location, locality: plot.locality, price: plot.price, area_sqft: plot.areaSqFt, dimensions: plot.dimensions,
-      facing: plot.facing, approval: plot.approval, rera: plot.rera, corner_plot: plot.cornerPlot,
-      boundary_wall: plot.boundaryWall, gated_layout: plot.gatedLayout, floors_allowed: plot.floorsAllowed, availability: plot.availability,
-      description: plot.description, amenities: plot.amenities, nearby: plot.nearby, documents: plot.documents,
-      images: [{ path: "properties/demo-hero.webp", alt: plot.images[0].alt }], posted_on: plot.postedOn, sort_order: 0,
-      created_at: new Date().toISOString(),
-    }],
+    // Every sample property, in the same shape as the database (camelCase to snake_case).
+    properties: sample.properties.map((p, i) => ({
+      ...Object.fromEntries(Object.entries(p).filter(([k]) => !["images", "areaSqFt", "carpetAreaSqFt", "usableAreaSqFt"].includes(k)).map(([k, v]) => [k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`), v])),
+      id: `prop-${i + 1}`, area_sqft: p.areaSqFt, carpet_area_sqft: p.carpetAreaSqFt, usable_area_sqft: p.usableAreaSqFt,
+      images: [{ path: "properties/demo-hero.webp", alt: p.images[0]?.alt ?? p.title }], sort_order: i, created_at: new Date().toISOString(),
+    })),
   };
 }
 // Built-in photos for seeded rows (uploads go to .demo/media).
