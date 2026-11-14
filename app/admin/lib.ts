@@ -100,6 +100,7 @@ export type PropertyRow = {
   floors_allowed: string | null;
   usable_area_sqft: number | null;
   access_notes: string | null;
+  map_url: string | null;
   zoning_notes: string | null;
   approval: string | null;
   rera: string | null;
@@ -123,7 +124,7 @@ export const emptyProperty = (): PropertyRow => ({
   price: null, price_negotiable: null, area_sqft: null, area_unit: "sqft", dimensions: null, facing: null,
   bhk: null, bathrooms: null, carpet_area_sqft: null, furnishing: null, floor_info: null, parking: null, possession: null,
   road_width_ft: null, frontage_ft: null, land_use: null, corner_plot: null, boundary_wall: null, gated_layout: null, floors_allowed: null,
-  usable_area_sqft: null, access_notes: null, zoning_notes: null, approval: null, rera: null, availability: null,
+  usable_area_sqft: null, access_notes: null, map_url: null, zoning_notes: null, approval: null, rera: null, availability: null,
   description: null, amenities: [], nearby: [], documents: [], images: [],
   posted_on: today(), last_confirmed_on: today(), sort_order: 0,
 });

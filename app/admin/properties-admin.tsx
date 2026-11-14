@@ -167,6 +167,7 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
         <Select label="Stage" value={p.stage} options={p.stage in STAGE_LABEL && !STAGES.some((x) => x.value === p.stage) ? [...STAGES, { value: p.stage, label: STAGE_LABEL[p.stage] }] : STAGES} onChange={(v) => set("stage", (v ?? "draft") as PropertyStage)} required />
         <Text label="Location" value={p.location} onChange={(v) => set("location", v ?? "")} required placeholder="e.g. Tambaram, Chennai" />
         <Text label="Locality / landmark" value={p.locality} onChange={(v) => set("locality", v)} placeholder="e.g. Near Tambaram railway station" />
+        <Text label="Google Maps link" value={p.map_url} onChange={(v) => set("map_url", v)} hint="Paste the share link from Google Maps (starts with https://)" placeholder="https://maps.app.goo.gl/…" />
         <Field2 label="Posted on"><input type="date" value={p.posted_on ?? ""} onChange={(e) => set("posted_on", e.target.value || null)} /></Field2>
         <Field2 label="Details last confirmed"><input type="date" value={p.last_confirmed_on ?? ""} onChange={(e) => set("last_confirmed_on", e.target.value || null)} /></Field2>
         <div className="adm-checks adm-wide">

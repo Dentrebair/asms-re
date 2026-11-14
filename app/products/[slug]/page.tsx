@@ -47,7 +47,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             {p.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={p.image.src} alt={p.image.alt || p.name} width={1200} height={900} fetchPriority="high" />
-            ) : <span className="photo-missing" aria-hidden="true">AR</span>}
+            ) : <span className="photo-missing" aria-hidden="true" />}
           </figure>
           <div className="product-intro">
             <span className="tag">{category.name}</span>

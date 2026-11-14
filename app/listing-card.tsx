@@ -23,7 +23,7 @@ export function ListingCard({ card, priority = false }: { card: ListingCardData;
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image.src} alt={image.alt || title} width={800} height={600} loading={priority ? "eager" : "lazy"} decoding="async" />
-        ) : <span className="photo-missing" aria-hidden="true">AR</span>}
+        ) : <span className="photo-missing" aria-hidden="true" />}
         {tag && <span className="tag">{tag}</span>}
       </figure>
       <h3>{title}</h3>

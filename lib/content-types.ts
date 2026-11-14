@@ -63,6 +63,8 @@ export type PropertyRecord = {
   images: SiteImage[];
   postedOn: string | null;
   lastConfirmedOn: string | null;
+  /** https link to the site on a map; older content files may not have it. */
+  mapUrl?: string | null;
 };
 
 export type ProductCategory = { id: string; name: string; icon: string; intro: string };

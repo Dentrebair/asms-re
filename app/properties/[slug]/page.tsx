@@ -95,7 +95,10 @@ export default async function PropertyDetailPage({ params }: { params: Params })
           <div>
             <div className="detail-kicker">{tag && <span className="tag">{tag}</span>}<span>Ref. {p.reference}</span>{p.postedOn && <span>Listed <time dateTime={p.postedOn}>{shortDate(p.postedOn)}</time></span>}{p.lastConfirmedOn && <span>Details confirmed <time dateTime={p.lastConfirmedOn}>{shortDate(p.lastConfirmedOn)}</time></span>}</div>
             <h1>{p.title}</h1>
-            <p>{[p.location, p.locality].filter(Boolean).join(", ")}</p>
+            <p>
+              {[p.location, p.locality].filter(Boolean).join(", ")}
+              {p.mapUrl?.startsWith("https://") && <> · <a className="link" href={p.mapUrl} target="_blank" rel="noopener noreferrer">Open in Google Maps</a></>}
+            </p>
           </div>
           <div className="detail-price">
             <small>{sold ? "Sold" : "Asking price"}</small>

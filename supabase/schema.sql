@@ -110,6 +110,8 @@ create table if not exists public.properties (
   -- commercial
   usable_area_sqft numeric check (usable_area_sqft is null or usable_area_sqft > 0),
   access_notes     text,
+  -- A Google Maps (or other https) link to the site, shown as "Open in Google Maps".
+  map_url          text check (map_url is null or map_url ~ '^https://[^[:space:]]+$'),
   zoning_notes     text,
   -- approvals: shown only as entered by ASMS; never implied when empty
   approval         text,

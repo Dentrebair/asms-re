@@ -116,6 +116,7 @@ const content = {
     images: (p.images ?? []).map((img) => image(img.path, img.alt || p.title)).filter(Boolean),
     postedOn: p.posted_on,
     lastConfirmedOn: p.last_confirmed_on,
+    mapUrl: p.map_url ?? null,
   })),
 };
 
