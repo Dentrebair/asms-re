@@ -93,7 +93,7 @@ small { font-size: var(--text-sm); }
 /* --------------------------------------------------------------- home --- */
 .hero { position: relative; min-height: 100svh; margin-top: calc(-1 * var(--nav-offset)); display: grid; align-items: end; padding-block: var(--nav-offset) var(--space-2xl); color: var(--color-ink); }
 .hero-photo { position: absolute; inset: 0; margin: 0; }
-.hero-photo > img { object-position: 60% 45%; }
+.hero-photo > img { object-position: 50% 70%; }
 .hero-inner { position: relative; z-index: var(--z-raised); width: 100%; display: flex; align-items: end; justify-content: space-between; gap: var(--space-xl); }
 .hero-plate { max-width: 760px; padding: var(--space-xl); display: grid; gap: var(--space-md); border-radius: var(--radius-card); background: var(--color-paper); }
 .hero-plate h1 { max-width: 18ch; font-size: var(--text-display-s); line-height: 1.02; }

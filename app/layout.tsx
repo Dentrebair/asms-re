@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "Plots and homes in and around Chennai, specified construction products and engineering services from one accountable team.",
   alternates: { canonical: "/" },
   icons: { icon: "/icon.png", apple: "/apple-icon.png" },
-  openGraph: { siteName: "ASMS‑ROUNAQH", locale: "en_IN", type: "website", images: [{ url: "/asms-hero.webp" }] },
+  openGraph: { siteName: "ASMS‑ROUNAQH", locale: "en_IN", type: "website", images: [{ url: "/hero-chennai-omr.webp" }] },
 };
 
 const SPECULATION_RULES = {"prefetch":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/admin"}},{"not":{"href_matches":"/admin/*"}},{"not":{"selector_matches":"[target=_blank], [download], [href$='.pdf']"}}]},"eagerness":"moderate"}]};

@@ -6,7 +6,7 @@ export type * from "./content-types";
 
 const content = data as SiteContent;
 
-export const HERO_IMAGE = "/asms-hero.webp";
+export const HERO_IMAGE = "/hero-chennai-omr.webp";
 
 /** True while the site shows the committed sample data instead of Supabase content. */
 export const isSample = content.source === "sample";

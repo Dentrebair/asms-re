@@ -5,6 +5,7 @@ import { Footer, Header, PropertyCard, type Credit } from "./site-components";
 
 // Library photograph for the products showcase (Wikimedia Commons), credited in the footer.
 const STEEL_PHOTO = { src: "/showcase-steel.webp", width: 3171, height: 1953 };
+const HERO_CREDIT: Credit = { label: "Apartments on OMR, Chennai", artist: "Joel Samuel Raj", license: "CC BY-SA 4.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0", source: "https://commons.wikimedia.org/wiki/File:An_apartment_in_OMR.jpg" };
 const STEEL_CREDIT: Credit = { label: "Steel reinforcement bars", artist: "W.carter", license: "CC BY-SA 4.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0", source: "https://commons.wikimedia.org/wiki/File:A_bunch_of_rebar_up_close.jpg" };
 
 export const dynamic = "force-static";
@@ -20,9 +21,9 @@ export default function Home() {
         <link rel="preload" as="image" href={HERO_IMAGE} type="image/webp" fetchPriority="high" />
 
         <section className="hero" aria-labelledby="hero-title">
-          <figure className="hero-photo" data-slot="hero" data-alt="A recent property or project, photographed on site in daylight">
+          <figure className="hero-photo" data-slot="hero" data-alt="Apartment towers along Chennai's OMR, a library photo credited in the footer">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={HERO_IMAGE} width={1536} height={1024} alt="A two-storey house with a tiled roof behind a garden" fetchPriority="high" />
+            <img src={HERO_IMAGE} width={2000} height={1324} alt="Apartment towers along Chennai's OMR under a monsoon sky" fetchPriority="high" />
           </figure>
           <div className="container hero-inner">
             <div className="hero-plate">
@@ -134,7 +135,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <Footer credits={[STEEL_CREDIT]} />
+      <Footer credits={[HERO_CREDIT, STEEL_CREDIT]} />
     </>
   );
 }
