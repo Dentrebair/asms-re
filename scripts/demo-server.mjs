@@ -113,6 +113,26 @@ const match = (row, fs) => fs.every(([k, v]) => {
   if (v.startsWith("in.(")) return v.slice(4, -1).split(",").map(unquote).includes(String(row[k]));
   return true;
 });
+/** PostgREST-style ?order=a.desc,b,c.desc.nullslast (nulls go last by default for asc, first for desc, as in Postgres). */
+function sortRows(rows, order) {
+  if (!order) return rows;
+  const keys = order.split(",").map((part) => {
+    const [col, ...mods] = part.split(".");
+    const desc = mods.includes("desc");
+    return { col, desc, nullsLast: mods.includes("nullslast") || (!desc && !mods.includes("nullsfirst")) };
+  });
+  return [...rows].sort((a, b) => {
+    for (const { col, desc, nullsLast } of keys) {
+      const x = a[col] ?? null, y = b[col] ?? null;
+      if (x === y) continue;
+      if (x === null) return nullsLast ? 1 : -1;
+      if (y === null) return nullsLast ? -1 : 1;
+      const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+      if (c) return desc ? -c : c;
+    }
+    return 0;
+  });
+}
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json", ".woff2": "font/woff2", ".rsc": "text/x-component" };
 
 /** storage-js may send raw bytes or multipart form data; return just the file bytes. */
@@ -197,7 +217,7 @@ createServer(async (req, res) => {
     // Same visibility rules as supabase/schema.sql.
     const visible = (r) => staff ? true : table === "product_categories" ? true : table === "staff" || table === "enquiries" || table === "enquiry_history" ? false : table === "properties" ? ["live", "sold"].includes(r.stage) : r.published === true;
     if (req.method === "GET") {
-      const found = db[table].filter((r) => visible(r) && match(r, fs));
+      const found = sortRows(db[table].filter((r) => visible(r) && match(r, fs)), url.searchParams.get("order"));
       if ((req.headers.accept ?? "").includes("vnd.pgrst.object")) return found[0] ? send(res, 200, found[0]) : send(res, 406, { code: "PGRST116", message: "no rows" });
       return send(res, 200, found);
     }

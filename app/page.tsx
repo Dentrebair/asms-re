@@ -48,7 +48,8 @@ export default function Home() {
           {isSample && <p className="container notice">Design preview: these listings are samples until verified inventory is added.</p>}
           <div className="container">
             <ul className="card-grid" aria-label="Properties for sale">
-              {properties.slice(0, 6).map((p, i) => <li key={p.slug}><PropertyCard property={p} priority={i < 3} /></li>)}
+              {/* The first six live listings (featured, then newest); any without photos go to the end. */}
+              {[...properties.slice(0, 6)].sort((a, b) => Number(!a.images.length) - Number(!b.images.length)).map((p, i) => <li key={p.slug}><PropertyCard property={p} priority={i < 3} /></li>)}
             </ul>
           </div>
         </section>

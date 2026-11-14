@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { allProperties, getProperty, isSample, priceLabel, pricePerSqFt, similarProperties, type PropertyRecord } from "@/lib/content";
+import { HERO_IMAGE, allProperties, getProperty, isSample, priceLabel, pricePerSqFt, similarProperties, type PropertyRecord } from "@/lib/content";
 import { keySpecs, listingTag, shortDate } from "@/lib/property";
 import { formatINR, monthlyEmi } from "@/lib/format";
 import { amenityIcon, nearbyIcon } from "@/lib/presets";
@@ -29,7 +29,8 @@ export async function generateMetadata({ params }: { params: Params }) {
       title: property.title,
       description,
       url: `/properties/${property.slug}`,
-      images: property.images[0] ? [{ url: property.images[0].src, alt: property.images[0].alt || property.title }] : undefined,
+      // No photos yet: share with the site's main photo rather than no preview at all.
+      images: [property.images[0] ? { url: property.images[0].src, alt: property.images[0].alt || property.title } : { url: HERO_IMAGE, alt: BRAND }],
     },
   };
 }
