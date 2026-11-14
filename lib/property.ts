@@ -11,7 +11,7 @@ export const CATEGORIES: { id: PropertyCategory; label: string; tab: string }[] 
 export const SUBTYPES: Record<PropertyCategory, string[]> = {
   residential: ["Apartment", "Independent house", "Villa"],
   plot: ["Residential plot", "Land"],
-  commercial: ["Office", "Retail shop", "Showroom", "Warehouse", "Industrial shed", "Commercial land"],
+  commercial: ["Office", "Retail shop", "Showroom", "Warehouse", "Industrial shed", "Commercial land", "Educational campus"],
   agricultural: ["Agricultural land", "Farm land"],
 };
 

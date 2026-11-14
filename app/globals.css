@@ -296,7 +296,8 @@ html:not(.js) .catalog-tabs, html:not(.js) .catalog-drawer, html:not(.js) .catal
 .gallery-count-2 figure:first-child { grid-row: auto; }
 .gallery-count-2 figure:nth-child(2) { border-radius: 0 var(--radius-card) var(--radius-card) 0; }
 .detail-gallery figcaption { position: absolute; left: var(--space-md); bottom: var(--space-md); padding: var(--space-2xs) var(--space-sm); border-radius: var(--radius-inner); background: var(--color-paper); color: var(--color-ink-2); font-size: var(--text-sm); }
-.gallery-more { position: absolute; right: var(--space-md); bottom: var(--space-md); z-index: var(--z-raised); background: var(--color-paper); }
+/* The gallery is also a .container, so its padding (the gutter) has to be added back. */
+.gallery-more { position: absolute; right: calc(var(--gutter) + var(--space-md)); bottom: var(--space-md); z-index: var(--z-raised); background: var(--color-paper); }
 .key-highlights { margin-top: var(--space-lg); display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-block: 1px solid var(--color-rule); }
 .key-highlights div { min-width: 0; padding: var(--space-lg) var(--space-md); display: grid; gap: var(--space-2xs); color: var(--color-accent-ink); border-left: 1px solid var(--color-rule); }
 .key-highlights div:first-child { padding-left: 0; border-left: 0; }
