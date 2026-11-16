@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ENQUIRY_ENDPOINT, sendEnquiry, type EnquiryKind } from "@/lib/enquiry";
 import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { Mail, Phone, Tag, User } from "lucide-react";
 import { TextArea } from "@astryxdesign/core/TextArea";
 import { Selector } from "@astryxdesign/core/Selector";
 import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
@@ -122,13 +123,13 @@ export default function EnquiryForm() {
           <Text type="supporting" as="p">Required fields are marked.</Text>
         </VStack>
         <Grid columns={{ minWidth: 200, repeat: "fit" }} gap={3}>
-          <TextInput label="Full name" htmlName="name" value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
-          <TextInput label="Phone number" htmlName="phone" type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
-          <TextInput label="Email address" htmlName="email" type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" placeholder="you@example.com" status={status("email")} />
+          <TextInput label="Full name" htmlName="name" startIcon={User} value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
+          <TextInput label="Phone number" htmlName="phone" startIcon={Phone} type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
+          <TextInput label="Email address" htmlName="email" startIcon={Mail} type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" placeholder="you@example.com" status={status("email")} />
           <Selector label="Enquiry category" htmlName="category" value={f.category} placeholder="Select a category" isRequired
             options={CATEGORIES.map((c) => ({ value: c.label, label: c.label }))} onChange={(v) => set("category", v)} status={status("category")} />
         </Grid>
-        <TextInput label="Property or product of interest" htmlName="interest" value={f.interest} onChange={(v) => set("interest", v)} isOptional placeholder="Example: ASMS-CHN-0001 or roofing materials" />
+        <TextInput label="Property or product of interest" htmlName="interest" startIcon={Tag} value={f.interest} onChange={(v) => set("interest", v)} isOptional placeholder="Example: ASMS-CHN-0001 or roofing materials" />
         <TextArea label="How can we help?" htmlName="message" rows={6} maxLength={4000} value={f.message} onChange={(v) => set("message", v)} isRequired
           placeholder="Share your preferred location, budget, product quantity or specification." status={status("message")} />
         <div className="hp-field" aria-hidden="true">

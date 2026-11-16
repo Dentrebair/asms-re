@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { Boxes, Building2, Mail, Phone, Truck, User } from "lucide-react";
 import { TextArea } from "@astryxdesign/core/TextArea";
 import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
 import { Banner } from "@astryxdesign/core/Banner";
@@ -88,12 +89,12 @@ export default function QuoteForm({ slug, name }: { slug: string; name: string }
           <Text type="supporting" as="p">Quantity and delivery location give you the most useful answer.</Text>
         </VStack>
         <Grid columns={{ minWidth: 200, repeat: "fit" }} gap={3}>
-          <TextInput label="Full name" htmlName="name" value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
-          <TextInput label="Organisation" htmlName="organisation" value={f.organisation} onChange={(v) => set("organisation", v)} isOptional autoComplete="organization" />
-          <TextInput label="Phone number" htmlName="phone" type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
-          <TextInput label="Email address" htmlName="email" type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" status={status("email")} />
-          <TextInput label="Quantity" htmlName="quantity" value={f.quantity} onChange={(v) => set("quantity", v)} isRequired placeholder="Amount and unit, e.g. 10 tonnes" status={status("quantity")} />
-          <TextInput label="Delivery location" htmlName="location" value={f.location} onChange={(v) => set("location", v)} isRequired placeholder="e.g. Tambaram, Chennai" status={status("location")} />
+          <TextInput label="Full name" htmlName="name" startIcon={User} value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
+          <TextInput label="Organisation" htmlName="organisation" startIcon={Building2} value={f.organisation} onChange={(v) => set("organisation", v)} isOptional autoComplete="organization" />
+          <TextInput label="Phone number" htmlName="phone" startIcon={Phone} type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
+          <TextInput label="Email address" htmlName="email" startIcon={Mail} type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" status={status("email")} />
+          <TextInput label="Quantity" htmlName="quantity" startIcon={Boxes} value={f.quantity} onChange={(v) => set("quantity", v)} isRequired placeholder="Amount and unit, e.g. 10 tonnes" status={status("quantity")} />
+          <TextInput label="Delivery location" htmlName="location" startIcon={Truck} value={f.location} onChange={(v) => set("location", v)} isRequired placeholder="e.g. Tambaram, Chennai" status={status("location")} />
         </Grid>
         <TextArea label="Specification or notes" htmlName="message" rows={4} maxLength={4000} value={f.message} onChange={(v) => set("message", v)} isOptional placeholder="Grade, size, brand preference, date needed on site." />
         <div className="hp-field" aria-hidden="true">

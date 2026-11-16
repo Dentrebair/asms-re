@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { Mail, Phone, User } from "lucide-react";
 import { TextArea } from "@astryxdesign/core/TextArea";
 import { Selector } from "@astryxdesign/core/Selector";
 import { DateInput } from "@astryxdesign/core/DateInput";
@@ -146,9 +147,9 @@ export function PropertyEnquiry({ listing }: { listing: Listing }) {
           <SegmentedControlItem value="enquire" label="Enquire" />
           <SegmentedControlItem value="visit" label="Request a visit" />
         </SegmentedControl>
-        <TextInput label="Full name" htmlName="name" value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
-        <TextInput label="Phone or WhatsApp number" htmlName="phone" type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
-        <TextInput label="Email" htmlName="email" type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" status={status("email")} />
+        <TextInput label="Full name" htmlName="name" startIcon={User} value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
+        <TextInput label="Phone or WhatsApp number" htmlName="phone" startIcon={Phone} type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
+        <TextInput label="Email" htmlName="email" startIcon={Mail} type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" status={status("email")} />
         {mode === "visit" && (
           <Grid columns={2} gap={3}>
             <DateInput label="Preferred day" value={(f.date || undefined) as ISODateString | undefined} onChange={(v) => set("date", v ?? "")} min={(today || undefined) as ISODateString | undefined} isOptional />

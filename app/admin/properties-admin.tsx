@@ -2,6 +2,7 @@
 
 import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { formatINR, formatINRShort } from "@/lib/format";
 import { AMENITY_PRESETS, FACINGS, NEARBY_GROUPS, slugify } from "@/lib/presets";
@@ -68,7 +69,7 @@ export function PropertiesAdmin({ notify }: { notify: Notify }) {
     <section>
       <div className="adm-toolbar">
         <h2>Properties <small>{rows ? rows.length : "…"}</small></h2>
-        <TextInput type="search" label="Search properties" isLabelHidden placeholder="Search title, reference, location" value={query} onChange={setQuery} hasClear />
+        <TextInput type="search" label="Search properties" isLabelHidden placeholder="Search title, reference, location" value={query} onChange={setQuery} hasClear startIcon={Search} />
         <Button type="button" onClick={() => setEditing(emptyProperty())} variant="primary" label="+ New property" />
       </div>
       {rows === null ? <p className="adm-muted">Loading…</p> : visible.length === 0 ? (

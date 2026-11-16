@@ -26,8 +26,13 @@ export const asmsTheme = defineTheme({
     body: { family: "var(--font-manrope)", fallbacks: "Manrope, ui-sans-serif, system-ui, sans-serif" },
     heading: { family: "var(--font-albert)", fallbacks: "\"Albert Sans\", ui-sans-serif, system-ui, sans-serif", weights: { 1: "600", 2: "600", 3: "600", 4: "700" } },
   },
-  radius: { base: 10, multiplier: 1.2 },
   tokens: {
+    // Crisp corners: small on controls, a little more on cards, never pill-shaped fields.
+    "--radius-inner": "3px",
+    "--radius-element": "6px",
+    "--radius-container": "10px",
+    "--radius-page": "16px",
+    "--radius-chat": "16px",
     "--color-background-body": [c.paper, c.forest],
     "--color-background-surface": [c.paper, c.forest],
     "--color-background-card": [c.white, c.forestDeep],

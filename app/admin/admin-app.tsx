@@ -15,6 +15,7 @@ import { Card } from "@astryxdesign/core/Card";
 import { Spinner } from "@astryxdesign/core/Spinner";
 import { Tab as TabItem, TabList } from "@astryxdesign/core/TabList";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { LockKeyhole, Mail } from "lucide-react";
 import { Heading, Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/Layout";
 
@@ -167,8 +168,8 @@ function SignIn({ notify }: { notify: (m: string, t?: "ok" | "error") => void })
           {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
           <img className="adm-brand-mark" src="/brand/logo-script.webp" alt="ASMS-ROUNAQH" width={260} height={160} />
           <Heading level={1}>{mode === "password" ? "Staff sign in" : "Reset password"}</Heading>
-          <TextInput label="Email" type="email" autoComplete="username" isRequired value={email} onChange={setEmail} />
-          {mode === "password" && <TextInput label="Password" type="password" autoComplete="current-password" isRequired value={password} onChange={setPassword} />}
+          <TextInput label="Email" type="email" autoComplete="username" isRequired value={email} onChange={setEmail} startIcon={Mail} />
+          {mode === "password" && <TextInput label="Password" type="password" autoComplete="current-password" isRequired value={password} onChange={setPassword} startIcon={LockKeyhole} />}
           <Button type="submit" variant="primary" size="lg" width="100%" isLoading={busy} label={busy ? "Please wait…" : mode === "password" ? "Sign in" : "Send reset link"} />
           <div><Button variant="ghost" onClick={() => setMode(mode === "password" ? "reset" : "password")} label={mode === "password" ? "Forgot your password?" : "Back to sign in"} /></div>
         </VStack>

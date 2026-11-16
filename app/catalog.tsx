@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { TabList, Tab } from "@astryxdesign/core/TabList";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { Search } from "lucide-react";
 import { Selector } from "@astryxdesign/core/Selector";
 import { Token } from "@astryxdesign/core/Token";
 import { Button } from "@astryxdesign/core/Button";
@@ -209,7 +210,7 @@ export default function Catalog({ label, tabs, search, filters = [], sorts = [],
         <div role="search" aria-label={`Filter ${label}`}>
           <Grid columns={{ minWidth: 190, repeat: "fit" }} gap={3}>
             {search && (
-              <TextInput label="Search" type="search" value={state.q} placeholder={search} hasClear
+              <TextInput label="Search" type="search" startIcon={Search} value={state.q} placeholder={search} hasClear
                 onChange={(v) => update({ q: v.slice(0, 80) }, "replace")} />
             )}
             {visibleFilters.map((f) => (

@@ -13,6 +13,7 @@ import { Badge } from "@astryxdesign/core/Badge";
 import { Banner } from "@astryxdesign/core/Banner";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { mediaUrl, uploadPhoto, type ImageRef } from "./lib";
+import { iconFor } from "./field-icons";
 
 /** Wraps a field in the admin form grid; `wide` spans the full row. */
 function Cell({ wide, children }: { wide?: boolean; children: ReactNode }) {
@@ -30,11 +31,11 @@ export function Text({ label, value, onChange, required, hint, placeholder, wide
   return (
     <Cell wide={wide}>
       {grow ? (
-        <AstryxTextArea label={label} description={hint} value={value ?? ""} isRequired={required} placeholder={placeholder} rows={3}
+        <AstryxTextArea label={label} description={hint} value={value ?? ""} isRequired={required} placeholder={placeholder} rows={3} startIcon={iconFor(label)}
           controlClassName="adm-grow" hasSpellCheck onChange={(v) => emit(v.replace(/\s*\n\s*/g, " "))} />
       ) : (
         <>
-          <TextInput label={label} description={hint} value={value ?? ""} isRequired={required} placeholder={placeholder}
+          <TextInput label={label} description={hint} value={value ?? ""} isRequired={required} placeholder={placeholder} startIcon={iconFor(label)}
             {...(list ? { list: listId } : {})} onChange={emit} />
           {list && <datalist id={listId}>{list.map((o) => <option key={o} value={o} />)}</datalist>}
         </>
@@ -48,7 +49,7 @@ export function NumberInput({ label, value, onChange, hint, placeholder, min = 0
 }) {
   return (
     <Cell>
-      <AstryxNumberInput label={label} description={hint} value={value} placeholder={placeholder} min={min} hasClear
+      <AstryxNumberInput label={label} description={hint} value={value} placeholder={placeholder} min={min} hasClear startIcon={iconFor(label)}
         onChange={(v: number | null) => onChange(v ?? null)} />
     </Cell>
   );
@@ -68,7 +69,7 @@ export function Select({ label, value, options, onChange, required, allowEmpty }
   ];
   return (
     <Cell>
-      <Selector label={label} isRequired={required} placeholder="Select…" options={all}
+      <Selector label={label} isRequired={required} placeholder="Select…" options={all} startIcon={iconFor(label)}
         value={value ?? (allowEmpty ? EMPTY : "")} onChange={(v) => onChange(v === EMPTY || v === "" ? null : v)} />
     </Cell>
   );

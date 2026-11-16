@@ -202,10 +202,10 @@ export const asmsTheme = {
     "--color-icon-gray": "light-dark(#474747, #9e9e9e)",
     "--color-text-gray": "light-dark(#1b1b1b, #d4d4d4)",
     "--radius-none": "0px",
-    "--radius-inner": "12px",
-    "--radius-element": "24px",
-    "--radius-container": "36px",
-    "--radius-page": "84px",
+    "--radius-inner": "3px",
+    "--radius-element": "6px",
+    "--radius-container": "10px",
+    "--radius-page": "16px",
     "--radius-full": "9999px",
     "--shadow-low": "0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 25%)), 0 4px 8px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 40%)), inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 8%))",
     "--shadow-med": "0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 35%)), 0 4px 12px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 50%)), inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 12%))",
@@ -215,7 +215,7 @@ export const asmsTheme = {
     "--shadow-inset-success": "inset 0px 0px 0px 2px #2f7d334D",
     "--shadow-inset-warning": "inset 0px 0px 0px 2px #f8d36a4D",
     "--shadow-inset-error": "inset 0px 0px 0px 2px #de47454D",
-    "--radius-chat": "84px",
+    "--radius-chat": "16px",
     "--color-background-inverted": "light-dark(#0F3E33, #F8F5EE)",
     "--color-track": "light-dark(#E2DCCE, #3B6357)"
   },
@@ -504,10 +504,6 @@ export const asmsTheme = {
         "family": "ui-monospace",
         "fallbacks": "\"SF Mono\", Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace"
       }
-    },
-    "radius": {
-      "base": 10,
-      "multiplier": 1.2
     },
     "motion": {
       "fast": 125,

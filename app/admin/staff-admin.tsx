@@ -3,6 +3,7 @@
 import { Button } from "@astryxdesign/core/Button";
 import { Selector } from "@astryxdesign/core/Selector";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { Mail, User } from "lucide-react";
 
 const ROLE_OPTIONS = [
   { value: "editor", label: "Editor — properties & products" },
@@ -68,8 +69,8 @@ export function StaffAdmin({ me, notify }: { me: StaffRow; notify: Notify }) {
       )}
       <form className="adm-form adm-staff-add" onSubmit={add}>
         <fieldset><legend>Add a staff member</legend>
-          <div className="adm-field"><TextInput label="Email" type="email" isRequired value={email} onChange={setEmail} /></div>
-          <div className="adm-field"><TextInput label="Name" isOptional value={name} onChange={setName} /></div>
+          <div className="adm-field"><TextInput label="Email" type="email" isRequired value={email} onChange={setEmail} startIcon={Mail} /></div>
+          <div className="adm-field"><TextInput label="Name" isOptional value={name} onChange={setName} startIcon={User} /></div>
           <div className="adm-field"><Selector label="Role" value={role} options={[{ value: "editor", label: "Editor" }, { value: "owner", label: "Owner" }]} onChange={(v) => setRole(v as StaffRow["role"])} /></div>
           <div className="adm-inline adm-wide"><Button type="submit" variant="primary" label="Add to staff" /></div>
         </fieldset>
