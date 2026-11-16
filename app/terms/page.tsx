@@ -1,4 +1,4 @@
-import { BRAND, Footer, Header } from "../site-components";
+import { BRAND, Footer, Header, PageHead } from "../site-components";
 
 export const dynamic = "force-static";
 
@@ -13,19 +13,14 @@ export default function TermsPage() {
     <>
       <Header />
       <main id="main">
-        <section className="page-head" aria-labelledby="page-title">
-          <div className="container page-head-grid">
-            <h1 id="page-title">Terms of use</h1>
-            <p className="lead">The terms for using this website, its listings and its forms.</p>
-          </div>
-        </section>
-        <section className="sec sec--list" aria-label="Terms of use">
-          <div className="container prose">
+        <PageHead title="Terms of use" lead="The terms for using this website, its listings and its forms." />
+        <section className="band band--tight" aria-label="Terms of use">
+          <div className="page prose prose--doc">
             <h2>Who we are</h2>
             <p>This website is run by {BRAND}, Chennai, Tamil Nadu. It presents properties for sale, construction products and related services, and lets you send enquiries to our team.</p>
 
             <h2>Listings and information</h2>
-            <p>Property and product details are provided by property owners and by {BRAND}, and are reviewed before publication. They are offered in good faith but can change, and they are not an offer or a contract. Read the <a className="link" href="/disclaimer">disclaimer</a> before relying on any listing.</p>
+            <p>Property and product details are provided by property owners and by {BRAND}, and are reviewed before publication. They are offered in good faith but can change, and they are not an offer or a contract. Read the <a href="/disclaimer">disclaimer</a> before relying on any listing.</p>
 
             <h2>Enquiries and site visits</h2>
             <p>Sending an enquiry or a site visit request does not reserve a property or book an appointment. Our team will contact you to confirm next steps. Please give accurate contact details and use the forms only for genuine enquiries.</p>
@@ -43,7 +38,7 @@ export default function TermsPage() {
             <p>These terms are governed by the laws of India, and the courts at Chennai have jurisdiction.</p>
 
             <h2>Changes</h2>
-            <p>If these terms change, the new version will be published on this page. Questions can be sent through the <a className="link" href="/contact">contact page</a>.</p>
+            <p>If these terms change, the new version will be published on this page. Questions can be sent through the <a href="/contact">contact page</a>.</p>
           </div>
         </section>
       </main>

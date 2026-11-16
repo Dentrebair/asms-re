@@ -1,3 +1,10 @@
+import { ClickableCard } from "@astryxdesign/core/ClickableCard";
+import { AspectRatio } from "@astryxdesign/core/AspectRatio";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { MetadataList, MetadataListItem } from "@astryxdesign/core/MetadataList";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
+
 /**
  * The one card skeleton for properties and products: a photo with a tag, the
  * title, an optional line, a short list of facts, and a footer with the value
@@ -18,22 +25,31 @@ export type ListingCardData = {
 export function ListingCard({ card, priority = false }: { card: ListingCardData; priority?: boolean }) {
   const { href, title, image, tag, summary, facts, value, meta, ariaLabel } = card;
   return (
-    <a className="card" href={href} aria-label={ariaLabel}>
-      <figure className="card-photo">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image.src} alt={image.alt || title} width={800} height={600} loading={priority ? "eager" : "lazy"} decoding="async" />
-        ) : <span className="photo-missing" aria-hidden="true" />}
-        {tag && <span className="tag">{tag}</span>}
-      </figure>
-      <h3>{title}</h3>
-      {summary && <p className="card-summary">{summary}</p>}
-      {facts.length > 0 && (
-        <dl className="card-facts">
-          {facts.map((f) => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
-        </dl>
-      )}
-      <p className="card-foot"><span className="num">{value}</span>{meta && <small>{meta}</small>}</p>
-    </a>
+    <ClickableCard href={href} label={ariaLabel ?? title} padding={3} className="listing-card">
+      <VStack gap={4} height="100%">
+        <div className="card-photo">
+          <AspectRatio ratio={4 / 3}>
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image.src} alt={image.alt || title} width={800} height={600} loading={priority ? "eager" : "lazy"} decoding="async" />
+            ) : <span className="photo-missing" aria-hidden="true" />}
+          </AspectRatio>
+          {tag && <Badge label={tag} variant="neutral" />}
+        </div>
+        <VStack gap={3} padding={1}>
+          <Heading level={3} maxLines={2}>{title}</Heading>
+          {summary && <Text color="secondary" maxLines={2} as="p">{summary}</Text>}
+          {facts.length > 0 && (
+            <MetadataList orientation="horizontal">
+              {facts.map((f) => <MetadataListItem key={f.label} label={f.label}>{f.value}</MetadataListItem>)}
+            </MetadataList>
+          )}
+          <HStack gap={2} vAlign="center" hAlign="between" wrap="wrap">
+            <Text type="large" weight="bold" hasTabularNumbers>{value}</Text>
+            {meta && <Text type="supporting">{meta}</Text>}
+          </HStack>
+        </VStack>
+      </VStack>
+    </ClickableCard>
   );
 }

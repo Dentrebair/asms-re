@@ -1,5 +1,12 @@
 import { SERVICES } from "@/lib/company";
-import { Footer, Header } from "../site-components";
+import { Footer, Header, PageHead } from "../site-components";
+import { ForestTheme } from "../astryx/themes";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Grid } from "@astryxdesign/core/Grid";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
+
 
 export const dynamic = "force-static";
 
@@ -14,33 +21,33 @@ export default function ServicesPage() {
     <>
       <Header />
       <main id="main">
-        <section className="page-head" aria-labelledby="page-title">
-          <div className="container page-head-grid">
-            <h1 id="page-title">Development, construction and engineering</h1>
-            <p className="lead">Six lines of work, carried by decades of practical building experience.</p>
+        <PageHead title="Development, construction and engineering" lead="Six lines of work, carried by decades of practical building experience." />
+
+        <section className="band band--tight" aria-label="Services" style={{ paddingTop: 0 }}>
+          <div className="page">
+            <Grid columns={{ minWidth: 320, repeat: "fit" }} gap={4}>
+              {SERVICES.map((s) => (
+                <Card key={s.id} padding={6}>
+                  <VStack gap={3}><Heading level={2} id={s.id}>{s.title}</Heading><Text color="secondary" as="p">{s.text}</Text></VStack>
+                </Card>
+              ))}
+            </Grid>
           </div>
         </section>
 
-        <section className="sec sec--list" aria-label="Services">
-          <div className="container">
-            <ul className="rows rows--two service-rows">
-              {SERVICES.map((s) => <li key={s.id} id={s.id}><h2>{s.title}</h2><p>{s.text}</p></li>)}
-            </ul>
-          </div>
-        </section>
-
-        <section className="band on-field" aria-labelledby="next-title">
-          <div className="container close-plain">
-            <div>
-              <h2 id="next-title">Planning a project?</h2>
-              <p>Tell us the site, the scale and the timeline, and the team will set up a conversation.</p>
+        <ForestTheme>
+          <section className="band band--forest" aria-labelledby="next-title">
+            <div className="page">
+              <HStack gap={6} hAlign="between" vAlign="center" wrap="wrap">
+                <VStack gap={2} className="measure">
+                  <Heading level={2} type="display-3" id="next-title">Planning a project?</Heading>
+                  <Text type="large" color="secondary" as="p">Tell us the site, the scale and the timeline, and the team will set up a conversation.</Text>
+                </VStack>
+                <HStack gap={2} wrap="wrap"><Button href={`/contact?category=${encodeURIComponent("General enquiry")}&interest=${encodeURIComponent("Construction project")}`} label="Discuss a project" variant="primary" /><Button href="/products" label="See construction products" variant="ghost" /></HStack>
+              </HStack>
             </div>
-            <div className="actions">
-              <a className="btn" href={`/contact?category=${encodeURIComponent("General enquiry")}&interest=${encodeURIComponent("Construction project")}`}>Discuss a project</a>
-              <a className="link" href="/products">See construction products</a>
-            </div>
-          </div>
-        </section>
+          </section>
+        </ForestTheme>
       </main>
       <Footer />
     </>

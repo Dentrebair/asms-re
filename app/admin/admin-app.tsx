@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@astryxdesign/core/Button";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { explain, isConfigured, supabase, type StaffRow } from "./lib";
@@ -8,6 +9,14 @@ import { ProductsAdmin } from "./products-admin";
 import { PropertiesAdmin } from "./properties-admin";
 import { StaffAdmin } from "./staff-admin";
 import { Toast } from "./ui";
+import { ForestTheme } from "../astryx/themes";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Card } from "@astryxdesign/core/Card";
+import { Spinner } from "@astryxdesign/core/Spinner";
+import { Tab as TabItem, TabList } from "@astryxdesign/core/TabList";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { VStack } from "@astryxdesign/core/Layout";
 
 type Tab = "enquiries" | "properties" | "products" | "staff";
 const TAB_LABELS: Record<Tab, string> = { enquiries: "Enquiries", properties: "Properties", products: "Products", staff: "Staff" };
@@ -66,42 +75,45 @@ export default function AdminApp() {
   }, [toast]);
 
   if (!isConfigured) {
-    return <Shell><div className="adm-card"><h1>Admin panel not connected</h1><p>Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> for the build, then redeploy. See <code>supabase/README.md</code>.</p></div></Shell>;
+    return <Shell><div className="adm-card"><Card padding={8}><VStack gap={3}><Heading level={1}>Admin panel not connected</Heading><Text as="p">Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> for the build, then redeploy. See <code>supabase/README.md</code>.</Text></VStack></Card></div></Shell>;
   }
-  if (state === "loading") return <Shell><p className="adm-muted adm-center">Loading…</p></Shell>;
+  if (state === "loading") return <Shell><div className="adm-center"><Spinner label="Loading" /></div></Shell>;
   if (state === "signed-out") return <Shell><SignIn notify={notify} /><Toast message={toast?.message ?? null} tone={toast?.tone} onClose={() => setToast(null)} /></Shell>;
   if (state === "set-password") return <Shell><SetPassword onDone={() => { pendingPassword.current = false; history.replaceState(null, "", "/admin"); void resolve(session); }} notify={notify} /><Toast message={toast?.message ?? null} tone={toast?.tone} onClose={() => setToast(null)} /></Shell>;
   if (state === "not-staff" || !me) {
     return (
       <Shell>
-        <div className="adm-card">
-          <h1>No editing access</h1>
-          <p>You’re signed in as <strong>{session?.user.email}</strong>, but this email isn’t on the staff list. Ask an owner to add it.</p>
-          <button type="button" className="adm-btn" onClick={() => supabase().auth.signOut()}>Sign out</button>
-        </div>
+        <div className="adm-card"><Card padding={8}><VStack gap={4}>
+          <Heading level={1}>No editing access</Heading>
+          <Text as="p">You’re signed in as <strong>{session?.user.email}</strong>, but this email isn’t on the staff list. Ask an owner to add it.</Text>
+          <Button type="button" onClick={() => supabase().auth.signOut()} variant="primary" label="Sign out" />
+        </VStack></Card></div>
       </Shell>
     );
   }
 
   return (
     <Shell>
-      <header className="adm-header">
-        <a className="adm-brand" href="/">
-          {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
-          <img src="/icon.png" alt="" width={34} height={34} /> ASMS–ROUNAQH <small>Admin</small></a>
-        <nav aria-label="Admin sections">
-          {(["enquiries", "properties", "products", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => (
-            <button key={t} type="button" aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>
-              {TAB_LABELS[t]}{t === "enquiries" && newEnquiries > 0 && <span className="adm-count" aria-label={`${newEnquiries} new`}>{newEnquiries}</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="adm-user">
-          <PublishNow notify={notify} />
-          <span>{me.name || me.email}</span>
-          <button type="button" className="adm-link" onClick={() => supabase().auth.signOut()}>Sign out</button>
-        </div>
-      </header>
+      <ForestTheme>
+        <header className="adm-header">
+          <a className="adm-brand" href="/">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+            <img src="/icon.png" alt="" width={34} height={34} /> ASMS–ROUNAQH <Badge label="Admin" variant="warning" /></a>
+          <nav aria-label="Admin sections" className="adm-tabs">
+            <TabList value={tab} onChange={(v) => setTab(v as Tab)} overflow="auto">
+              {(["enquiries", "properties", "products", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => (
+                <TabItem key={t} value={t} label={TAB_LABELS[t]}
+                  endContent={t === "enquiries" && newEnquiries > 0 ? <span className="adm-count" aria-label={`${newEnquiries} new`}><Badge label={String(newEnquiries)} variant="warning" /></span> : undefined} />
+              ))}
+            </TabList>
+          </nav>
+          <div className="adm-user">
+            <PublishNow notify={notify} />
+            <Text>{me.name || me.email}</Text>
+            <Button variant="ghost" label="Sign out" onClick={() => supabase().auth.signOut()} />
+          </div>
+        </header>
+      </ForestTheme>
       <main className="adm-main">
         {tab === "enquiries" && <EnquiriesAdmin me={me} notify={notify} onNewCount={setNewEnquiries} />}
         {tab === "properties" && <PropertiesAdmin notify={notify} />}
@@ -125,7 +137,7 @@ function PublishNow({ notify }: { notify: (m: string, t?: "ok" | "error") => voi
     setBusy(false);
     notify(error ? explain(error) : "Website update started. It will be live in about 3 minutes.", error ? "error" : "ok");
   }
-  return <button type="button" className="adm-btn adm-btn-ghost" disabled={busy} onClick={run} title="Changes publish automatically; use this to force an update.">{busy ? "Starting…" : "Update website now"}</button>;
+  return <Button type="button" isDisabled={busy} onClick={run} tooltip="Changes publish automatically; use this to force an update." variant="secondary" label={busy ? "Starting…" : "Update website now"} />;
 }
 
 function SignIn({ notify }: { notify: (m: string, t?: "ok" | "error") => void }) {
@@ -150,17 +162,17 @@ function SignIn({ notify }: { notify: (m: string, t?: "ok" | "error") => void })
 
   return (
     <form className="adm-card" onSubmit={submit}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
-      <img className="adm-brand-mark" src="/brand/logo-script.webp" alt="ASMS-ROUNAQH" width={260} height={160} />
-      <h1>{mode === "password" ? "Staff sign in" : "Reset password"}</h1>
-      <label className="adm-field"><span className="adm-label">Email</span><input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-      {mode === "password" && (
-        <label className="adm-field"><span className="adm-label">Password</span><input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-      )}
-      <button type="submit" className="adm-btn adm-btn-block" disabled={busy}>{busy ? "Please wait…" : mode === "password" ? "Sign in" : "Send reset link"}</button>
-      <button type="button" className="adm-link" onClick={() => setMode(mode === "password" ? "reset" : "password")}>
-        {mode === "password" ? "Forgot your password?" : "Back to sign in"}
-      </button>
+      <Card padding={8} elevation="high">
+        <VStack gap={5}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+          <img className="adm-brand-mark" src="/brand/logo-script.webp" alt="ASMS-ROUNAQH" width={260} height={160} />
+          <Heading level={1}>{mode === "password" ? "Staff sign in" : "Reset password"}</Heading>
+          <TextInput label="Email" type="email" autoComplete="username" isRequired value={email} onChange={setEmail} />
+          {mode === "password" && <TextInput label="Password" type="password" autoComplete="current-password" isRequired value={password} onChange={setPassword} />}
+          <Button type="submit" variant="primary" size="lg" width="100%" isLoading={busy} label={busy ? "Please wait…" : mode === "password" ? "Sign in" : "Send reset link"} />
+          <div><Button variant="ghost" onClick={() => setMode(mode === "password" ? "reset" : "password")} label={mode === "password" ? "Forgot your password?" : "Back to sign in"} /></div>
+        </VStack>
+      </Card>
     </form>
   );
 }
@@ -172,6 +184,7 @@ function SetPassword({ onDone, notify }: { onDone: () => void; notify: (m: strin
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (password.length < 8) return notify("Use at least 8 characters.", "error");
     if (password !== confirmPw) return notify("The passwords don’t match.", "error");
     setBusy(true);
     const { error } = await supabase().auth.updateUser({ password });
@@ -183,12 +196,16 @@ function SetPassword({ onDone, notify }: { onDone: () => void; notify: (m: strin
 
   return (
     <form className="adm-card" onSubmit={submit}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
-      <img className="adm-brand-mark" src="/brand/logo-script.webp" alt="ASMS-ROUNAQH" width={260} height={160} />
-      <h1>Choose your password</h1>
-      <label className="adm-field"><span className="adm-label">New password</span><input type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-      <label className="adm-field"><span className="adm-label">Repeat password</span><input type="password" autoComplete="new-password" minLength={8} required value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} /></label>
-      <button type="submit" className="adm-btn adm-btn-block" disabled={busy}>{busy ? "Saving…" : "Save password"}</button>
+      <Card padding={8} elevation="high">
+        <VStack gap={5}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+          <img className="adm-brand-mark" src="/brand/logo-script.webp" alt="ASMS-ROUNAQH" width={260} height={160} />
+          <Heading level={1}>Choose your password</Heading>
+          <TextInput label="New password" type="password" autoComplete="new-password" isRequired value={password} onChange={setPassword} description="At least 8 characters." />
+          <TextInput label="Repeat password" type="password" autoComplete="new-password" isRequired value={confirmPw} onChange={setConfirmPw} />
+          <Button type="submit" variant="primary" size="lg" width="100%" isLoading={busy} label={busy ? "Saving…" : "Save password"} />
+        </VStack>
+      </Card>
     </form>
   );
 }

@@ -1,5 +1,15 @@
 "use client";
 
+import { Button } from "@astryxdesign/core/Button";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
+import { DateInput } from "@astryxdesign/core/DateInput";
+import type { ISODateString } from "@astryxdesign/core/Calendar";
+import { EmptyState } from "@astryxdesign/core/EmptyState";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Selector } from "@astryxdesign/core/Selector";
+import { TextArea } from "@astryxdesign/core/TextArea";
+
+const NOBODY = "__nobody__";
 import { useEffect, useState } from "react";
 import { explain, supabase, type EnquiryHistoryRow, type EnquiryRow, type EnquiryStatus, type StaffRow } from "./lib";
 
@@ -90,19 +100,17 @@ export function EnquiriesAdmin({ me, notify, onNewCount }: { me: StaffRow; notif
     <section>
       <div className="adm-toolbar">
         <h2>Enquiries <small>{rows ? rows.length : "…"}</small></h2>
-        <div className="adm-filter" role="group" aria-label="Show enquiries">
-          {VIEWS.map((v) => (
-            <button key={v.value} type="button" aria-pressed={view === v.value} onClick={() => setView(v.value)}>
-              {v.label} <span>{count(v.value)}</span>
-            </button>
-          ))}
+        <div className="adm-filter">
+          <SegmentedControl label="Show enquiries" value={view} onChange={(v) => setView(v as typeof view)} size="sm">
+            {VIEWS.map((v) => <SegmentedControlItem key={v.value} value={v.value} label={`${v.label} ${count(v.value)}`} />)}
+          </SegmentedControl>
         </div>
-        <label className="adm-check"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />Assigned to me</label>
-        <button type="button" className="adm-btn adm-btn-ghost" onClick={() => void load()}>Refresh</button>
+        <CheckboxInput label="Assigned to me" value={mine} onChange={(v) => setMine(v)} />
+        <Button type="button" onClick={() => void load()} variant="secondary" label="Refresh" />
       </div>
 
       {rows && shown.length === 0 && (
-        <p className="adm-empty">{view === "fresh" ? "No new enquiries. Anything sent from the website appears here." : "Nothing here."}</p>
+        <div className="adm-empty"><EmptyState isCompact title={view === "fresh" ? "No new enquiries" : "Nothing here"} description={view === "fresh" ? "Anything sent from the website appears here." : undefined} /></div>
       )}
 
       <ul className="adm-enquiries">
@@ -114,14 +122,12 @@ export function EnquiriesAdmin({ me, notify, onNewCount }: { me: StaffRow; notif
                 <span className="adm-muted">{when(r.created_at)} · {KIND_LABEL[r.kind]}{r.source === "property_page" ? " from the property page" : r.source === "product_page" ? " from the product page" : ""}</span>
                 {r.repeat_contact && <span className="adm-flag">Sent another enquiry in the last 30 days</span>}
               </div>
-              <select aria-label={`Status for ${r.name}`} value={r.status} onChange={(e) => void save(r, { status: e.target.value as EnquiryStatus })}>
-                {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              <Selector label={`Status for ${r.name}`} isLabelHidden size="sm" value={r.status} options={STATUSES} onChange={(v) => void save(r, { status: v as EnquiryStatus })} />
             </div>
             <div className="adm-enquiry-contact">
-              <a className="adm-btn" href={`tel:${r.phone.replace(/[^\d+]/g, "")}`}>Call {r.phone}</a>
-              <a className="adm-btn adm-btn-ghost" href={whatsapp(r.phone)} target="_blank" rel="noopener noreferrer">WhatsApp</a>
-              {r.email && <a className="adm-btn adm-btn-ghost" href={`mailto:${r.email}?subject=${encodeURIComponent(`Your enquiry to ASMS-ROUNAQH${r.property_ref ? `: ${r.property_ref}` : r.interest ? `: ${r.interest}` : ""}`)}`}>Email {r.email}</a>}
+              <Button variant="primary" size="sm" href={`tel:${r.phone.replace(/[^\d+]/g, "")}`} label={`Call ${r.phone}`} />
+              <Button size="sm" href={whatsapp(r.phone)} target="_blank" rel="noopener noreferrer" label="WhatsApp" />
+              {r.email && <Button size="sm" label={`Email ${r.email}`} href={`mailto:${r.email}?subject=${encodeURIComponent(`Your enquiry to ASMS-ROUNAQH${r.property_ref ? `: ${r.property_ref}` : r.interest ? `: ${r.interest}` : ""}`)}`} />}
             </div>
             <dl className="adm-enquiry-facts">
               {r.property_ref && <div><dt>Property</dt><dd><a className="adm-link" href={`/properties?q=${encodeURIComponent(r.property_ref)}`} target="_blank" rel="noopener noreferrer">{r.property_ref}</a>{!r.property_id && " (reference not found)"}{r.interest && r.interest !== r.property_ref ? `, ${r.interest}` : ""}</dd></div>}
@@ -134,22 +140,16 @@ export function EnquiriesAdmin({ me, notify, onNewCount }: { me: StaffRow; notif
             </dl>
             {r.message && <p className="adm-enquiry-message">{r.message}</p>}
             <div className="adm-enquiry-work">
-              <label className="adm-field">
-                <span className="adm-label">Handled by</span>
-                <select value={r.assigned_to ?? ""} onChange={(e) => void save(r, { assigned_to: e.target.value || null })}>
-                  <option value="">Nobody yet</option>
-                  {staff.map((s) => <option key={s.email} value={s.email}>{s.name || s.email}{s.email === me.email ? " (you)" : ""}</option>)}
-                </select>
-              </label>
-              <label className="adm-field">
-                <span className="adm-label">Follow up on</span>
-                <input type="date" value={r.follow_up_on ?? ""} onChange={(e) => void save(r, { follow_up_on: e.target.value || null })} />
-              </label>
+              <Selector label="Handled by" size="sm" value={r.assigned_to ?? NOBODY}
+                options={[{ value: NOBODY, label: "Nobody yet" }, ...staff.map((s) => ({ value: s.email, label: `${s.name || s.email}${s.email === me.email ? " (you)" : ""}` }))]}
+                onChange={(v) => void save(r, { assigned_to: v === NOBODY ? null : v })} />
+              <DateInput label="Follow up on" size="sm" hasClear value={(r.follow_up_on || undefined) as ISODateString | undefined}
+                onChange={(v) => void save(r, { follow_up_on: v || null })} />
             </div>
             <Notes row={r} onSave={(notes) => save(r, { notes }, "Note saved.")} />
             <div className="adm-enquiry-foot">
               <History row={r} staffName={staffName} />
-              <button type="button" className="adm-btn adm-btn-danger" onClick={() => void remove(r)}>Delete</button>
+              <Button type="button" onClick={() => void remove(r)} variant="destructive" label="Delete" />
             </div>
           </li>
         ))}
@@ -163,11 +163,8 @@ function Notes({ row, onSave }: { row: EnquiryRow; onSave: (notes: string | null
   const dirty = value.trim() !== (row.notes ?? "");
   return (
     <div className="adm-enquiry-notes">
-      <label className="adm-field">
-        <span className="adm-label">Staff notes (only staff see these)</span>
-        <textarea rows={2} maxLength={4000} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Example: Called 12 Nov, site visit on Saturday" />
-      </label>
-      <button type="button" className="adm-btn adm-btn-ghost" disabled={!dirty} onClick={() => void onSave(value.trim() || null)}>Save note</button>
+      <TextArea label="Staff notes" description="Only staff see these." rows={2} maxLength={4000} value={value} onChange={setValue} placeholder="Example: Called 12 Nov, site visit on Saturday" />
+      <Button type="button" isDisabled={!dirty} onClick={() => void onSave(value.trim() || null)} variant="secondary" label="Save note" />
     </div>
   );
 }

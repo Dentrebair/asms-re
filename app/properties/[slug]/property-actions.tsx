@@ -1,7 +1,21 @@
 "use client";
 
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Button } from "@astryxdesign/core/Button";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { TextArea } from "@astryxdesign/core/TextArea";
+import { Selector } from "@astryxdesign/core/Selector";
+import { DateInput } from "@astryxdesign/core/DateInput";
+import type { ISODateString } from "@astryxdesign/core/Calendar";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Link } from "@astryxdesign/core/Link";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
+import { Grid } from "@astryxdesign/core/Grid";
 import { WHATSAPP_NUMBER, enquiriesConnected, sendEnquiry, track } from "@/lib/enquiry";
+import { checkContact, type FieldErrors } from "../../form-checks";
 
 type Listing = { reference: string; title: string };
 
@@ -23,13 +37,11 @@ export function ViewTracker({ reference }: { reference: string }) {
 }
 
 /** Opens a WhatsApp chat with a property-specific message. A click is counted as a click, never as an enquiry. */
-export function WhatsAppButton({ listing, className = "btn btn--quiet" }: { listing: Listing; className?: string }) {
+export function WhatsAppButton({ listing, variant = "secondary" }: { listing: Listing; variant?: "primary" | "secondary" }) {
   if (!WHATSAPP_NUMBER) return null;
   return (
-    <a className={className} href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer"
-      onClick={(e) => { e.currentTarget.href = whatsappHref(listing); track("whatsapp_click", listing.reference); }}>
-      WhatsApp us
-    </a>
+    <Button label="WhatsApp us" variant={variant} href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer"
+      onClick={(e) => { (e.currentTarget as unknown as HTMLAnchorElement).href = whatsappHref(listing); track("whatsapp_click", listing.reference); }} />
   );
 }
 
@@ -44,109 +56,117 @@ export function ShareButton({ listing }: { listing: Listing }) {
       track("property_shared", listing.reference);
     } catch { /* the visitor closed the share sheet */ }
   }
-  return (
-    <button type="button" className="link share-link" onClick={share}>
-      {copied ? "Link copied" : "Share this property"}
-    </button>
-  );
+  return <Button label={copied ? "Link copied" : "Share this property"} variant="ghost" onClick={share} />;
 }
 
 type Mode = "enquire" | "visit";
+const TIMES = [{ value: "", label: "Any time" }, { value: "Morning", label: "Morning" }, { value: "Afternoon", label: "Afternoon" }, { value: "Evening", label: "Evening" }];
 
 /** The enquiry rail on the property page: a short enquiry, or a site visit request (a request, never a booking). */
 export function PropertyEnquiry({ listing }: { listing: Listing }) {
-  const id = useId();
+  const defaultMessage = `I am interested in ${listing.title} (Ref. ${listing.reference}). Please share more details.`;
   const [mode, setMode] = useState<Mode>("enquire");
+  const [f, setF] = useState({ name: "", phone: "", email: "", message: defaultMessage, date: "", time: "", consent: false, hp: "" });
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<{ mode: Mode; name: string; phone: string } | null>(null);
   const [today, setToday] = useState("");
   // eslint-disable-next-line react-hooks/set-state-in-effect -- the date comes from the visitor's clock, after hydration
   useEffect(() => setToday(new Date().toLocaleDateString("en-CA")), []);
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => { setF((cur) => ({ ...cur, [k]: v })); setErrors((e) => ({ ...e, [k]: undefined })); };
+  const status = (k: string) => (errors[k] ? { type: "error" as const, message: errors[k] } : undefined);
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setF((cur) => ({ ...cur, message: next === "enquire" ? defaultMessage : "" }));
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = event.currentTarget;
-    const invalid = [...form.elements].find((el): el is HTMLInputElement => "checkValidity" in el && !(el as HTMLInputElement).checkValidity());
-    form.querySelectorAll("[aria-invalid]").forEach((el) => el.removeAttribute("aria-invalid"));
-    if (invalid) {
-      invalid.setAttribute("aria-invalid", "true");
-      invalid.focus();
-      return setError(invalid.validationMessage || "Please complete the required fields.");
+    const found = checkContact({ ...f, messageRequired: mode === "enquire" });
+    setErrors(found);
+    const first = Object.keys(found)[0];
+    if (first) {
+      setError(found[first] ?? "Please complete the required fields.");
+      (event.currentTarget.querySelector(`[name="${first}"]`) as HTMLElement | null)?.focus();
+      return;
     }
-    const data = new FormData(form);
-    const value = (k: string) => String(data.get(k) ?? "").trim();
-    if (value("company_site")) return setError("Your request could not be sent. Please call us instead.");
+    if (f.hp) return setError("Your request could not be sent. Please call us instead.");
     setBusy(true);
     setError(null);
     const failure = await sendEnquiry({
       kind: mode === "visit" ? "visit" : "property",
       source: "property_page",
-      name: value("name"),
-      phone: value("phone"),
-      email: value("email") || null,
+      name: f.name.trim(),
+      phone: f.phone.trim(),
+      email: f.email.trim() || null,
       property_ref: listing.reference,
       interest: listing.title,
-      message: value("message") || null,
-      preferred_date: mode === "visit" ? value("date") || null : null,
-      preferred_time: mode === "visit" ? value("time") || null : null,
-      consent: data.get("consent") === "on",
+      message: f.message.trim() || null,
+      preferred_date: mode === "visit" ? f.date || null : null,
+      preferred_time: mode === "visit" ? f.time || null : null,
+      consent: f.consent,
     });
     setBusy(false);
     if (failure) return setError(failure);
-    setSent({ mode, name: value("name"), phone: value("phone") });
+    setSent({ mode, name: f.name.trim(), phone: f.phone.trim() });
   }
 
   if (sent) {
     return (
-      <div className="rail-sent" role="status" tabIndex={-1} ref={(el) => el?.focus()}>
-        <h3>{sent.mode === "visit" ? "Visit request sent" : "Enquiry sent"}</h3>
-        <p>
-          {sent.mode === "visit"
-            ? <>Thank you, {sent.name}. This is a request, not a booking: the team will call <strong className="num">{sent.phone}</strong> to agree a time.</>
-            : <>Thank you, {sent.name}. The team will call you on <strong className="num">{sent.phone}</strong> about Ref. {listing.reference}.</>}
-        </p>
-        <button type="button" className="link" onClick={() => setSent(null)}>Send another request</button>
+      <div role="status" tabIndex={-1} ref={(el) => el?.focus()} className="rail-sent">
+        <VStack gap={3}>
+          <Heading level={3}>{sent.mode === "visit" ? "Visit request sent" : "Enquiry sent"}</Heading>
+          <Text as="p">
+            {sent.mode === "visit"
+              ? <>Thank you, {sent.name}. This is a request, not a booking: the team will call <strong className="num">{sent.phone}</strong> to agree a time.</>
+              : <>Thank you, {sent.name}. The team will call you on <strong className="num">{sent.phone}</strong> about Ref. {listing.reference}.</>}
+          </Text>
+          <div><Button label="Send another request" variant="ghost" onClick={() => setSent(null)} /></div>
+        </VStack>
       </div>
     );
   }
 
   if (!enquiriesConnected) {
     return (
-      <div className="rail-actions">
-        <a className="btn" href={`/contact?ref=${encodeURIComponent(listing.reference)}`}>Enquire about property</a>
-        <a className="btn btn--quiet" href={`/contact?ref=${encodeURIComponent(listing.reference)}&interest=${encodeURIComponent(`${listing.reference} site visit`)}`}>Request a site visit</a>
-      </div>
+      <VStack gap={2}>
+        <Button href={`/contact?ref=${encodeURIComponent(listing.reference)}`} label="Enquire about property" variant="primary" width="100%" />
+        <Button href={`/contact?ref=${encodeURIComponent(listing.reference)}&interest=${encodeURIComponent(`${listing.reference} site visit`)}`} label="Request a site visit" width="100%" />
+      </VStack>
     );
   }
 
   return (
     <form className="rail-form" onSubmit={submit} noValidate aria-label={mode === "visit" ? "Request a site visit" : "Enquire about this property"} aria-busy={busy}>
-      <div className="rail-modes" role="group" aria-label="What would you like to do?">
-        <button type="button" aria-pressed={mode === "enquire"} onClick={() => { setMode("enquire"); setError(null); }}>Enquire</button>
-        <button type="button" aria-pressed={mode === "visit"} onClick={() => { setMode("visit"); setError(null); }}>Request a visit</button>
-      </div>
-      <div className="field"><label htmlFor={`${id}-name`}>Full name *</label><input id={`${id}-name`} name="name" autoComplete="name" required maxLength={120} /></div>
-      <div className="field"><label htmlFor={`${id}-phone`}>Phone or WhatsApp number *</label><input id={`${id}-phone`} name="phone" type="tel" inputMode="tel" autoComplete="tel" required pattern="[0-9+() \-]{7,20}" placeholder="+91 00000 00000" /></div>
-      <div className="field"><label htmlFor={`${id}-email`}>Email (optional)</label><input id={`${id}-email`} name="email" type="email" autoComplete="email" maxLength={200} /></div>
-      {mode === "visit" && (
-        <div className="field-row field-row--tight">
-          <div className="field"><label htmlFor={`${id}-date`}>Preferred day</label><input id={`${id}-date`} name="date" type="date" min={today || undefined} /></div>
-          <div className="field">
-            <label htmlFor={`${id}-time`}>Time of day</label>
-            <select id={`${id}-time`} name="time" defaultValue=""><option value="">Any time</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select>
-          </div>
+      <VStack gap={4}>
+        <SegmentedControl label="What would you like to do?" value={mode} onChange={(v) => switchMode(v as Mode)} layout="fill">
+          <SegmentedControlItem value="enquire" label="Enquire" />
+          <SegmentedControlItem value="visit" label="Request a visit" />
+        </SegmentedControl>
+        <TextInput label="Full name" htmlName="name" value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
+        <TextInput label="Phone or WhatsApp number" htmlName="phone" type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
+        <TextInput label="Email" htmlName="email" type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" status={status("email")} />
+        {mode === "visit" && (
+          <Grid columns={2} gap={3}>
+            <DateInput label="Preferred day" value={(f.date || undefined) as ISODateString | undefined} onChange={(v) => set("date", v ?? "")} min={(today || undefined) as ISODateString | undefined} isOptional />
+            <Selector label="Time of day" value={f.time} options={TIMES} onChange={(v) => set("time", v)} />
+          </Grid>
+        )}
+        <TextArea label={mode === "visit" ? "Anything we should know" : "Your question"} htmlName="message" rows={3} maxLength={4000}
+          value={f.message} onChange={(v) => set("message", v)} isRequired={mode === "enquire"} isOptional={mode === "visit"} status={status("message")} />
+        <div className="hp-field" aria-hidden="true">
+          <label>Leave this empty<input name="company_site" tabIndex={-1} autoComplete="off" value={f.hp} onChange={(e) => set("hp", e.target.value)} /></label>
         </div>
-      )}
-      <div className="field">
-        <label htmlFor={`${id}-message`}>{mode === "visit" ? "Anything we should know (optional)" : "Your question *"}</label>
-        <textarea key={mode} id={`${id}-message`} name="message" rows={3} maxLength={4000} required={mode === "enquire"}
-          defaultValue={mode === "enquire" ? `I am interested in ${listing.title} (Ref. ${listing.reference}). Please share more details.` : ""} />
-      </div>
-      <div className="hp-field" aria-hidden="true"><label htmlFor={`${id}-hp`}>Leave this empty</label><input id={`${id}-hp`} name="company_site" tabIndex={-1} autoComplete="off" /></div>
-      <label className="consent"><input type="checkbox" name="consent" required /><span>I agree to be contacted about this request, as described in the <a className="link" href="/privacy">privacy notice</a>.</span></label>
-      <button type="submit" className="btn" disabled={busy}>{busy ? "Sending…" : mode === "visit" ? "Send visit request" : "Send enquiry"}</button>
-      <p className="form-help" role="status" aria-live="polite" data-tone={error ? "error" : undefined}>{error}</p>
+        <VStack gap={1}>
+          <CheckboxInput label="I agree to be contacted about this request" htmlName="consent" value={f.consent} onChange={(v) => set("consent", v)} isRequired status={status("consent")} />
+          <Text type="supporting" as="p">As described in the <Link href="/privacy">privacy notice</Link>.</Text>
+        </VStack>
+        <Button type="submit" variant="primary" size="lg" width="100%" isLoading={busy} label={busy ? "Sending…" : mode === "visit" ? "Send visit request" : "Send enquiry"} />
+        {error && <Banner status="error" title={error} />}
+      </VStack>
     </form>
   );
 }
@@ -155,8 +175,8 @@ export function PropertyEnquiry({ listing }: { listing: Listing }) {
 export function MobileActionBar({ listing }: { listing: Listing }) {
   return (
     <div className="action-bar" role="region" aria-label="Quick actions">
-      <a className="btn" href="#enquire">Enquire</a>
-      <WhatsAppButton listing={listing} className="btn btn--quiet" />
+      <Button href="#enquire" label="Enquire" variant="primary" width="100%" />
+      <HStack><WhatsAppButton listing={listing} /></HStack>
     </div>
   );
 }

@@ -2,6 +2,17 @@ import { notFound } from "next/navigation";
 import { isSample, productCategories } from "@/lib/content";
 import { BRAND, Footer, Header, ListingCardFor, creditsFor } from "../../site-components";
 import QuoteForm from "./quote-form";
+import { ForestTheme } from "../../astryx/themes";
+import { AspectRatio } from "@astryxdesign/core/AspectRatio";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Banner } from "@astryxdesign/core/Banner";
+import { BreadcrumbItem, Breadcrumbs } from "@astryxdesign/core/Breadcrumbs";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Grid } from "@astryxdesign/core/Grid";
+import { MetadataList, MetadataListItem } from "@astryxdesign/core/MetadataList";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
 
 export const dynamic = "force-static";
 export const dynamicParams = false;
@@ -38,49 +49,68 @@ export default async function ProductPage({ params }: { params: Params }) {
     <>
       <Header />
       <main id="main">
-        <section className="container detail-top">
-          <nav className="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/products">Products</a><span>/</span><a href={`/products?category=${category.id}`}>{category.name}</a></nav>
-        </section>
-
-        <section className="container product-top" aria-labelledby="product-title">
-          <figure className="product-photo">
-            {p.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.image.src} alt={p.image.alt || p.name} width={1200} height={900} fetchPriority="high" />
-            ) : <span className="photo-missing" aria-hidden="true" />}
-          </figure>
-          <div className="product-intro">
-            <span className="tag">{category.name}</span>
-            <h1 id="product-title">{p.name}</h1>
-            <p className="lead">{p.summary}</p>
-            <dl className="spec-table">
-              {p.specs.map((s) => <div key={s.label}><dt>{s.label}</dt><dd>{s.value}</dd></div>)}
-              {p.unit && <div><dt>Priced</dt><dd>{p.unit}, quoted per enquiry</dd></div>}
-              {p.availability && <div><dt>Availability</dt><dd>{p.availability} (indicative)</dd></div>}
-            </dl>
-            {p.suitableUse && <p><strong>Suitable for:</strong> {p.suitableUse}</p>}
-            <div className="actions"><a className="btn" href="#quote">Request a quote</a></div>
-            {isSample && <p className="notice">Design preview: specifications are typical industry values, not confirmed stock, and the photograph is illustrative.</p>}
+        <section className="band band--tight" aria-labelledby="product-title">
+          <div className="page">
+            <VStack gap={6}>
+              <Breadcrumbs label="Breadcrumb">
+                <BreadcrumbItem href="/">Home</BreadcrumbItem>
+                <BreadcrumbItem href="/products">Products</BreadcrumbItem>
+                <BreadcrumbItem href={`/products?category=${category.id}`} isCurrent>{category.name}</BreadcrumbItem>
+              </Breadcrumbs>
+              <Grid columns={{ minWidth: 340, repeat: "fit" }} gap={10} align="start">
+                <div className="card-photo">
+                  <AspectRatio ratio={4 / 3}>
+                    {p.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.image.src} alt={p.image.alt || p.name} width={1200} height={900} fetchPriority="high" />
+                    ) : <span className="photo-missing" aria-hidden="true" />}
+                  </AspectRatio>
+                </div>
+                <VStack gap={5}>
+                  <div><Badge label={category.name} variant="warning" /></div>
+                  <Heading level={1} type="display-2" id="product-title" textWrap="balance">{p.name}</Heading>
+                  <Text type="large" color="secondary" as="p">{p.summary}</Text>
+                  <Card padding={5}>
+                    <MetadataList>
+                      {p.specs.map((x) => <MetadataListItem key={x.label} label={x.label}>{x.value}</MetadataListItem>)}
+                      {p.unit && <MetadataListItem label="Priced">{p.unit}, quoted per enquiry</MetadataListItem>}
+                      {p.availability && <MetadataListItem label="Availability">{p.availability} (indicative)</MetadataListItem>}
+                    </MetadataList>
+                  </Card>
+                  {p.suitableUse && <Text as="p"><strong>Suitable for:</strong> {p.suitableUse}</Text>}
+                  <div><Button href="#quote" label="Request a quote" variant="primary" size="lg" /></div>
+                  {isSample && <Banner status="info" title="Design preview" description="Specifications are typical industry values, not confirmed stock, and the photograph is illustrative." />}
+                </VStack>
+              </Grid>
+            </VStack>
           </div>
         </section>
 
-        <section className="sec sec--list" id="quote" aria-label="Quote request">
-          <div className="container contact-split">
-            <div className="contact-facts">
-              <h2>What a useful quote needs</h2>
-              <p>Tell us the grade or size, the quantity, and where it should be delivered. We reply with itemised pricing, taxes, delivery and lead time.</p>
+        <ForestTheme>
+          <section className="band band--forest" id="quote" aria-label="Quote request">
+            <div className="page">
+              <Grid columns={{ minWidth: 320, repeat: "fit" }} gap={10} align="start">
+                <VStack gap={3}>
+                  <Heading level={2} type="display-3">What a useful quote needs</Heading>
+                  <Text type="large" color="secondary" as="p">Tell us the grade or size, the quantity, and where it should be delivered. We reply with itemised pricing, taxes, delivery and lead time.</Text>
+                </VStack>
+                <Card padding={6} elevation="med"><QuoteForm slug={p.slug} name={p.name} /></Card>
+              </Grid>
             </div>
-            <QuoteForm slug={p.slug} name={p.name} />
-          </div>
-        </section>
+          </section>
+        </ForestTheme>
 
         {related.length > 0 && (
-          <section className="container similar-section" aria-labelledby="related-title">
-            <div className="head-split">
-              <h2 id="related-title">More in {category.name.toLowerCase()}</h2>
-              <div><a className="link" href={`/products?category=${category.id}`}>See the whole category</a></div>
+          <section className="band band--tight" aria-labelledby="related-title">
+            <div className="page">
+              <VStack gap={6}>
+                <HStack gap={4} hAlign="between" vAlign="end" wrap="wrap">
+                  <Heading level={2} type="display-3" id="related-title">More in {category.name.toLowerCase()}</Heading>
+                  <Button href={`/products?category=${category.id}`} label="See the whole category" variant="secondary" />
+                </HStack>
+                <ul className="card-grid">{related.map((x) => <li key={x.slug}><ListingCardFor product={x} categoryName={category.name} /></li>)}</ul>
+              </VStack>
             </div>
-            <ul className="card-grid">{related.map((x) => <li key={x.slug}><ListingCardFor product={x} categoryName={category.name} /></li>)}</ul>
           </section>
         )}
       </main>

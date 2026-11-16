@@ -1,4 +1,4 @@
-import { BRAND, Footer, Header } from "../site-components";
+import { BRAND, Footer, Header, PageHead } from "../site-components";
 
 export const dynamic = "force-static";
 
@@ -13,14 +13,9 @@ export default function DisclaimerPage() {
     <>
       <Header />
       <main id="main">
-        <section className="page-head" aria-labelledby="page-title">
-          <div className="container page-head-grid">
-            <h1 id="page-title">Disclaimer</h1>
-            <p className="lead">What the information on this website does, and does not, confirm.</p>
-          </div>
-        </section>
-        <section className="sec sec--list" aria-label="Disclaimer">
-          <div className="container prose">
+        <PageHead title="Disclaimer" lead="What the information on this website does, and does not, confirm." />
+        <section className="band band--tight" aria-label="Disclaimer">
+          <div className="page prose prose--doc">
             <h2>Check before you buy</h2>
             <p>Listings describe a property as provided by its owner and reviewed by {BRAND}. They do not certify title, ownership, boundaries or legal status. Before any payment or agreement, arrange your own legal review of the title documents, a site inspection and any survey you need.</p>
 

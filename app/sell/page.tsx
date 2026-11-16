@@ -1,4 +1,11 @@
-import { Footer, Header } from "../site-components";
+import { Footer, Header, PageHead } from "../site-components";
+import { ForestTheme } from "../astryx/themes";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Grid } from "@astryxdesign/core/Grid";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
+
 
 export const dynamic = "force-static";
 
@@ -15,45 +22,54 @@ export default function SellPage() {
     <>
       <Header />
       <main id="main">
-        <section className="page-head" aria-labelledby="page-title">
-          <div className="container page-head-grid">
-            <h1 id="page-title">Sell your property with ASMS&#8209;ROUNAQH</h1>
-            <p className="lead">Homes, plots and commercial space, reviewed before buyers see them.</p>
+        <PageHead title="Sell your property with ASMS‑ROUNAQH" lead="Homes, plots and commercial space, reviewed before buyers see them." />
+
+        <section className="band band--tight" aria-labelledby="steps-title" style={{ paddingTop: 0 }}>
+          <div className="page">
+            <VStack gap={6}>
+              <Heading level={2} type="display-3" id="steps-title">How listing works</Heading>
+              <Grid columns={{ minWidth: 240, repeat: "fit" }} gap={4}>
+                  {STEPS.map((c, i) => (
+                    <Card key={c.title} padding={6}>
+                      <VStack gap={2}>{"step" in c && <Text type="supporting" weight="bold" color="accent">Step {i + 1}</Text>}<Heading level={3}>{c.title}</Heading><Text color="secondary" as="p">{c.text}</Text></VStack>
+                    </Card>
+                  ))}
+                </Grid>
+            </VStack>
           </div>
         </section>
 
-        <section className="sec sec--list" aria-labelledby="steps-title">
-          <div className="container">
-            <div className="head-split"><h2 id="steps-title">How listing works</h2></div>
-            <ol className="steps">
-              <li><h3>Describe the property</h3><p>Type, location, price, area and the facts buyers of that type ask about: bedrooms for a home, road width and frontage for a plot, usable area for commercial space.</p></li>
-              <li><h3>Add photos and documents</h3><p>Real photographs of the property. Patta, EC and approvals stay private: only our reviewers see them, never visitors.</p></li>
-              <li><h3>We review, then publish</h3><p>We check the details and documents, ask for corrections where needed, and publish once everything is in order. Submitted is not the same as live.</p></li>
-            </ol>
-          </div>
-        </section>
-
-        <section className="sec sec--field on-field" aria-labelledby="after-title">
-          <div className="container rows-layout">
-            <div className="rows-head">
-              <h2 id="after-title">After it goes live</h2>
-              <p>Buyers enquire through ASMS&#8209;ROUNAQH. We follow up every enquiry and keep you informed; buyers&rsquo; personal details are shared only with their permission.</p>
+        <ForestTheme>
+          <section className="band band--forest" aria-labelledby="after-title">
+            <div className="page">
+              <VStack gap={8}>
+                <VStack gap={3} className="measure">
+                  <Heading level={2} type="display-3" id="after-title">After it goes live</Heading>
+                  <Text type="large" color="secondary" as="p">Buyers enquire through ASMS&#8209;ROUNAQH. We follow up every enquiry and keep you informed; buyers&rsquo; personal details are shared only with their permission.</Text>
+                </VStack>
+                <Grid columns={{ minWidth: 240, repeat: "fit" }} gap={4}>
+                  {AFTER.map((c, i) => (
+                    <Card key={c.title} padding={6}>
+                      <VStack gap={2}>{"step" in c && <Text type="supporting" weight="bold" color="accent">Step {i + 1}</Text>}<Heading level={3}>{c.title}</Heading><Text color="secondary" as="p">{c.text}</Text></VStack>
+                    </Card>
+                  ))}
+                </Grid>
+              </VStack>
             </div>
-            <ul className="rows rows--two">
-              <li><h3>See how it performs</h3><p>Views, saves and enquiries for your listing, counted the same way for every property.</p></li>
-              <li><h3>Keep it current</h3><p>Price changes are reviewed before they appear, and we ask you to reconfirm availability regularly so nothing stale stays online.</p></li>
-              <li><h3>Mark it sold</h3><p>Once it sells, the listing leaves search and stops taking enquiries.</p></li>
-            </ul>
-          </div>
-        </section>
+          </section>
+        </ForestTheme>
 
         <section className="band" aria-labelledby="start-title">
-          <div className="container close-plain">
-            <div>
-              <h2 id="start-title">Start with a call</h2>
-              <p>Online seller accounts are not open yet. Tell us about the property and the team will call you to take the details.</p>
-            </div>
-            <div className="actions"><a className="btn" href={sellHref}>Request a callback</a></div>
+          <div className="page">
+            <Card padding={8} variant="muted">
+              <HStack gap={6} hAlign="between" vAlign="center" wrap="wrap">
+                <VStack gap={2} className="measure">
+                  <Heading level={2} type="display-3" id="start-title">Start with a call</Heading>
+                  <Text color="secondary" as="p">Online seller accounts are not open yet. Tell us about the property and the team will call you to take the details.</Text>
+                </VStack>
+                <Button href={sellHref} label="Request a callback" variant="primary" size="lg" />
+              </HStack>
+            </Card>
           </div>
         </section>
       </main>
@@ -61,3 +77,14 @@ export default function SellPage() {
     </>
   );
 }
+
+const STEPS = [
+  { step: true, title: "Describe the property", text: "Type, location, price, area and the facts buyers of that type ask about: bedrooms for a home, road width and frontage for a plot, usable area for commercial space." },
+  { step: true, title: "Add photos and documents", text: "Real photographs of the property. Patta, EC and approvals stay private: only our reviewers see them, never visitors." },
+  { step: true, title: "We review, then publish", text: "We check the details and documents, ask for corrections where needed, and publish once everything is in order. Submitted is not the same as live." },
+];
+const AFTER = [
+  { title: "See how it performs", text: "Views, saves and enquiries for your listing, counted the same way for every property." },
+  { title: "Keep it current", text: "Price changes are reviewed before they appear, and we ask you to reconfirm availability regularly so nothing stale stays online." },
+  { title: "Mark it sold", text: "Once it sells, the listing leaves search and stops taking enquiries." },
+];

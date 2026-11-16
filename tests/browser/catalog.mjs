@@ -19,11 +19,21 @@ const cdp = (method, params = {}) => new Promise((res) => { const id = ++seq; pe
 const js = async (expression) => (await cdp("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result?.result?.value;
 const go = async (url) => { await cdp("Page.navigate", { url }); await sleep(1500); };
 const visible = `[...document.querySelectorAll('.card-grid > li')].filter(li => !li.hidden).map(li => li.querySelector('h3').textContent)`;
-const setSelect = (label, value) => js(`(() => { const l=[...document.querySelectorAll('.catalog-controls label')].find(x=>x.textContent===${JSON.stringify(label)}); const el=document.getElementById(l.htmlFor); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('change',{bubbles:true})); })()`);
-const type = (value) => js(`(() => { const el = document.querySelector('.field--search input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input',{bubbles:true})); })()`);
-const tab = (label) => js(`[...document.querySelectorAll('.catalog-tabs button')].find(b=>b.textContent===${JSON.stringify(label)}).click()`);
+// Astryx controls: a Selector is a combobox button whose options (role=option) open in a
+// popover; a Tab is a button with data-tab-value (its label is rendered twice, once hidden
+// for sizing, hence the half-length slice).
+const tabLabel = `(t) => t.textContent.slice(0, t.textContent.length / 2)`;
+const setSelect = async (label, option) => {
+  await js(`(() => { const l=[...document.querySelectorAll('[role=search] label')].find(x=>x.textContent===${JSON.stringify(label)}); document.getElementById(l.htmlFor).click(); })()`);
+  await sleep(250);
+  await js(`[...document.querySelectorAll('[role=option]')].find(o=>o.textContent.trim()===${JSON.stringify(option)}).click()`);
+};
+const type = (value) => js(`(() => { const el = document.querySelector('[role=search] input[type=search]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+const tab = (label) => js(`[...document.querySelectorAll('.catalog .astryx-tab')].find(t=>(${tabLabel})(t)===${JSON.stringify(label)}).click()`);
+const activeTab = () => js(`(${tabLabel})(document.querySelector('.catalog .astryx-tab[data-selected]'))`);
 const url = () => js(`location.search`);
-const labels = () => js(`[...document.querySelectorAll('.catalog-controls label')].map(l=>l.textContent)`);
+const labels = () => js(`[...document.querySelectorAll('[role=search] label')].map(l=>l.textContent)`);
+const pagerText = () => js(`[...document.querySelectorAll('.catalog [aria-live=polite]')].map(e=>e.textContent).find(t=>t.startsWith('Showing'))`);
 
 try {
   await cdp("Page.enable"); await cdp("Runtime.enable");
@@ -32,13 +42,13 @@ try {
   await go(`${BASE}/products`);
   let v = await js(visible);
   check("products page 1 shows 6 (3 x 2)", v.length === 6, v.join(", "));
-  check("pager reads 1 to 6 of 12", (await js(`document.querySelector('.pager p')?.textContent`)) === "Showing 1 to 6 of 12");
+  check("pager reads 1 to 6 of 12", (await pagerText()) === "Showing 1 to 6 of 12");
   check("grid is 3 columns at 1440", (await js(`getComputedStyle(document.querySelector('.card-grid')).gridTemplateColumns.split(' ').length`)) === 3);
-  await js(`[...document.querySelectorAll('.pager button')].find(b=>b.textContent==='Next').click()`); await sleep(400);
+  await js(`document.querySelector('.astryx-pagination [aria-label="Go to next page"]').click()`); await sleep(400);
   check("Next shows the other 6 and puts page=2 in the URL", (await js(visible)).length === 6 && (await url()) === "?page=2", await url());
   await go(`${BASE}/products?category=roofing`);
   v = await js(visible);
-  check("?category=roofing opens the roofing tab", v.length === 4 && v.includes("AAC blocks") && (await js(`document.querySelector('.catalog-tabs [aria-pressed=true]').textContent`)).startsWith("Roofing"), v.join(", "));
+  check("?category=roofing opens the roofing tab", v.length === 4 && v.includes("AAC blocks") && (await activeTab()).startsWith("Roofing"), v.join(", "));
   check("category intro shown", ((await js(`document.querySelector('.catalog-note')?.textContent`)) ?? "").startsWith("Roofing sheets"));
   await go(`${BASE}/products#steel-peb`);
   check("old #steel-peb links still work", (await js(visible)).length === 4 && (await js(visible)).includes("PEB frames"));
@@ -51,17 +61,17 @@ try {
   await go(`${BASE}/properties`);
   v = await js(visible);
   check("properties shows the 6 live listings, not the sold one", v.length === 6 && !v.includes("Corner residential plot"), v.join(", "));
-  check("type tabs per PRD", (await js(`[...document.querySelectorAll('.catalog-tabs button')].map(b=>b.textContent).join('|')`)) === "All|Apartments and houses|Plots and land|Commercial|Agricultural");
+  check("type tabs per PRD", (await js(`[...document.querySelectorAll('.catalog .astryx-tab')].map(${tabLabel}).join('|')`)) === "All|Apartments and houses|Plots and land|Commercial|Agricultural");
   check("no Bedrooms filter on All", !(await labels()).includes("Bedrooms"), (await labels()).join(","));
   await tab("Plots and land"); await sleep(300);
   check("Plots tab: 2 listings, ?type=plot", (await js(visible)).length === 2 && (await url()) === "?type=plot", await url());
   check("Plots tab: road width, no bedrooms", (await labels()).includes("Road width") && !(await labels()).includes("Bedrooms"), (await labels()).join(","));
   await tab("Apartments and houses"); await sleep(300);
   check("Homes tab: bedrooms filter appears", (await labels()).includes("Bedrooms") && !(await labels()).includes("Road width"), (await labels()).join(","));
-  await setSelect("Bedrooms", "3"); await sleep(300);
+  await setSelect("Bedrooms", "3 BHK"); await sleep(300);
   v = await js(visible);
   check("3 BHK filter", v.length === 1 && v[0] === "Independent house" && (await url()) === "?type=residential&bhk=3", `${await url()} ${v.join(",")}`);
-  check("applied filter chip shown", (await js(`document.querySelector('.chips')?.textContent ?? ''`)).includes("Bedrooms: 3 BHK"));
+  check("applied filter chip shown", (await js(`document.querySelector('[aria-label="Applied filters"]')?.textContent ?? ''`)).includes("Bedrooms: 3 BHK"));
   await js(`history.back()`); await sleep(500);
   check("Back undoes the last filter", (await js(visible)).length === 2 && (await url()) === "?type=residential", await url());
   await type("PREVIEW-04"); await sleep(300);
@@ -70,14 +80,14 @@ try {
   check("shared URL restores the tab", (await js(visible)).length === 1 && (await labels()).includes("Area"));
   await go(`${BASE}/properties?budget=empty`);
   check("budget: price on request = 5", (await js(visible)).length === 5);
-  await js(`[...document.querySelectorAll('.chips .link')].find(b=>b.textContent==='Clear all').click()`); await sleep(300);
+  await js(`[...document.querySelectorAll('[aria-label="Applied filters"] button')].find(b=>b.textContent.trim()==='Clear all').click()`); await sleep(300);
   check("Clear all", (await js(visible)).length === 6 && (await url()) === "");
-  await setSelect("Sort by", "area"); await sleep(300);
+  await setSelect("Sort by", "Area, largest first"); await sleep(300);
   check("sort by area puts the 2.5 acres first", (await js(visible))[0] === "Agricultural land");
   await go(`${BASE}/properties`);
   await js(`document.querySelectorAll('.card-grid > li[data-category="commercial"]').forEach((li) => li.remove())`);
   await tab("Commercial"); await sleep(300);
-  check("an empty type still has its tab and says to check again later", (await js(`document.querySelector('.empty-state')?.textContent ?? ''`)).includes("please check again later"));
+  check("an empty type still has its tab and says to check again later", (await js(`document.querySelector('.astryx-empty-state')?.textContent ?? ''`)).includes("please check again later"));
   await go(`${BASE}/properties/sold-plot-sample`);
   check("sold page says sold, no enquiry button", await js(`document.body.textContent.includes('This property has been sold') && !document.body.textContent.includes('Enquire about property')`));
 
@@ -86,7 +96,7 @@ try {
 
   await cdp("Emulation.setDeviceMetricsOverride", { width: 375, height: 800, deviceScaleFactor: 1, mobile: true });
   await go(`${BASE}/properties`);
-  check("phone: filters folded into a drawer", await js(`!document.querySelector('.catalog-drawer').open`));
+  check("phone: filters stack in one column", await js(`(() => { const f = [...document.querySelectorAll('[role=search] label')].map(l => l.getBoundingClientRect().left); return f.length > 1 && f.every(x => Math.abs(x - f[0]) < 2); })()`));
   check("phone: no sideways scroll", await js(`document.documentElement.scrollWidth <= 375`), String(await js(`document.documentElement.scrollWidth`)));
 } catch (e) { check("crashed", false, e.message); }
 console.log(out.join("\n"));

@@ -1,5 +1,13 @@
 "use client";
 
+import { Button } from "@astryxdesign/core/Button";
+import { Selector } from "@astryxdesign/core/Selector";
+import { TextInput } from "@astryxdesign/core/TextInput";
+
+const ROLE_OPTIONS = [
+  { value: "editor", label: "Editor — properties & products" },
+  { value: "owner", label: "Owner — also manages staff" },
+];
 import { useEffect, useState, type FormEvent } from "react";
 import { explain, supabase, type StaffRow } from "./lib";
 
@@ -51,11 +59,8 @@ export function StaffAdmin({ me, notify }: { me: StaffRow; notify: Notify }) {
             <li key={r.email}>
               <div className="adm-list-main"><strong>{r.name || r.email}</strong><span>{r.email}{r.email === me.email && " (you)"}</span></div>
               <div className="adm-list-actions">
-                <select aria-label={`Role for ${r.email}`} value={r.role} disabled={r.email === me.email} onChange={(e) => changeRole(r, e.target.value as StaffRow["role"])}>
-                  <option value="editor">Editor — properties &amp; products</option>
-                  <option value="owner">Owner — also manages staff</option>
-                </select>
-                <button type="button" className="adm-btn adm-btn-danger" disabled={r.email === me.email} onClick={() => remove(r)}>Remove</button>
+                <Selector label={`Role for ${r.email}`} isLabelHidden size="sm" value={r.role} isDisabled={r.email === me.email} options={ROLE_OPTIONS} onChange={(v) => changeRole(r, v as StaffRow["role"])} />
+                <Button type="button" isDisabled={r.email === me.email} onClick={() => remove(r)} variant="destructive" label="Remove" />
               </div>
             </li>
           ))}
@@ -63,12 +68,10 @@ export function StaffAdmin({ me, notify }: { me: StaffRow; notify: Notify }) {
       )}
       <form className="adm-form adm-staff-add" onSubmit={add}>
         <fieldset><legend>Add a staff member</legend>
-          <label className="adm-field"><span className="adm-label">Email *</span><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-          <label className="adm-field"><span className="adm-label">Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
-          <label className="adm-field"><span className="adm-label">Role</span>
-            <select value={role} onChange={(e) => setRole(e.target.value as StaffRow["role"])}><option value="editor">Editor</option><option value="owner">Owner</option></select>
-          </label>
-          <div className="adm-inline adm-wide"><button type="submit" className="adm-btn">Add to staff</button></div>
+          <div className="adm-field"><TextInput label="Email" type="email" isRequired value={email} onChange={setEmail} /></div>
+          <div className="adm-field"><TextInput label="Name" isOptional value={name} onChange={setName} /></div>
+          <div className="adm-field"><Selector label="Role" value={role} options={[{ value: "editor", label: "Editor" }, { value: "owner", label: "Owner" }]} onChange={(v) => setRole(v as StaffRow["role"])} /></div>
+          <div className="adm-inline adm-wide"><Button type="submit" variant="primary" label="Add to staff" /></div>
         </fieldset>
       </form>
       <p className="adm-note">

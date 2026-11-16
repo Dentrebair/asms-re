@@ -40,17 +40,52 @@ const waitFor = async (expr, label, ms = 8000) => {
 const text = (s) => `[...document.querySelectorAll('button,a,legend,h1,h2,strong')].find(e => e.textContent.trim().startsWith(${JSON.stringify(s)}))`;
 const click = (s) => js(`(() => { const el = ${text(s)}; if (!el) throw new Error('no element: ' + ${JSON.stringify(s)}); el.click(); })()`);
 // Sets a React-controlled input by its label text.
-const fill = (label, value) => js(`(() => {
+// Sets a field by its label text. Astryx inputs are React-controlled, so the value is set
+// through the native setter plus an input event; an Astryx Selector (a combobox button) is
+// opened and the option whose text starts with `value` is clicked; an Astryx DateInput is a
+// typed field that commits on Enter.
+const fieldOf = (label) => `(() => {
   const l = [...document.querySelectorAll('label')].find(x => x.textContent.replace('*','').trim().startsWith(${JSON.stringify(label)}));
-  const el = l?.htmlFor ? document.getElementById(l.htmlFor) : l?.querySelector('input,select,textarea');
-  if (!el) throw new Error('no field ' + ${JSON.stringify(label)});
-  const proto = el.tagName === 'SELECT' ? HTMLSelectElement : el.tagName === 'TEXTAREA' ? HTMLTextAreaElement : HTMLInputElement;
-  Object.getOwnPropertyDescriptor(proto.prototype, 'value').set.call(el, ${JSON.stringify(value)});
-  el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
-})()`);
+  return l?.htmlFor ? document.getElementById(l.htmlFor) : l?.querySelector('input,select,textarea,button');
+})()`;
+const fill = async (label, value) => {
+  const kind = await js(`(() => { const el = ${fieldOf(label)}; if (!el) throw new Error('no field ' + ${JSON.stringify(label)}); return el.getAttribute('role') === 'combobox' && el.tagName === 'BUTTON' ? 'selector' : el.tagName; })()`);
+  if (kind === 'selector') {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await js(`${fieldOf(label)}.click()`);
+      await sleep(300);
+      // Every Selector keeps its listbox in the page; use the one this trigger controls.
+      await js(`(() => { const t = ${fieldOf(label)}; const list = document.getElementById(t.getAttribute('aria-controls')) ?? document;
+        [...list.querySelectorAll('[role=option]')].find(o => o.textContent.trim().startsWith(${JSON.stringify(value)}))?.click(); })()`);
+      await sleep(400); // let the popover finish closing before the next field
+      // Done when the trigger shows the choice, or when the field is gone (the choice moved its row away).
+      if (await js(`(() => { const el = ${fieldOf(label)}; return !el || el.textContent.includes(${JSON.stringify(value)}); })()`)) return;
+    }
+    throw new Error(`could not choose ${value} in ${label}`);
+  }
+  await js(`(() => {
+    const el = ${fieldOf(label)};
+    const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement : HTMLInputElement;
+    el.focus();
+    Object.getOwnPropertyDescriptor(proto.prototype, 'value').set.call(el, ${JSON.stringify(value)});
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.blur(); // Astryx NumberInput commits its value on blur
+  })()`);
+};
+const fillDate = async (label, iso) => {
+  const text = new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  await js(`${fieldOf(label)}.focus()`);
+  await fill(label, text);
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  await js(`${fieldOf(label)}.blur()`);
+  await sleep(200);
+};
+const checkBox = (label) => js(`[...document.querySelectorAll('label')].find(l => l.textContent.trim().startsWith(${JSON.stringify(label)}))?.click()`);
+const tabValues = `[...document.querySelectorAll('.adm-header .astryx-tab')].map(t => t.dataset.tabValue + (t.querySelector('.adm-count')?.textContent ?? '')).join(',')`;
 const shot = async (name) => { const r = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }); writeFileSync(`${shots}/${name}.png`, Buffer.from(r.result.data, "base64")); };
 const backend = async () => (await fetch(`${BASE}/__log`)).json();
-const toast = () => js(`document.querySelector('.adm-toast span')?.textContent ?? ''`);
+const toast = () => js(`document.querySelector('.adm-toast [data-toast-message]')?.textContent.trim() ?? ''`);
 
 let b;
 try {
@@ -69,8 +104,7 @@ try {
   await fill("Password", "correct-horse");
   await click("Sign in");
   await waitFor(`!!document.querySelector('.adm-header')`, "admin header");
-  check("owner sees all four tabs, Enquiries first with 1 new", await js(`[...document.querySelectorAll('.adm-header nav button')].map(b=>b.textContent).join(',') === 'Enquiries1,Properties,Products,Staff'`),
-    await js(`[...document.querySelectorAll('.adm-header nav button')].map(b=>b.textContent).join(',')`));
+  check("owner sees all four tabs, Enquiries first with 1 new", (await js(tabValues)) === 'enquiries1,properties,products,staff', await js(tabValues));
 
   // 1b. enquiries inbox: contact links, status, notes
   await waitFor(`document.body.textContent.includes('Ravi Kumar')`, "enquiry listed");
@@ -78,7 +112,7 @@ try {
     return a[0] === 'tel:9840012345' && a[1] === 'https://wa.me/919840012345' && a[2].startsWith('mailto:ravi@example.com?subject='); })()`));
   check("message keeps its line breaks", await js(`getComputedStyle(document.querySelector('.adm-enquiry-message')).whiteSpace === 'pre-wrap'`));
   await shot("1b-enquiries");
-  await js(`(() => { const el = document.querySelector('.adm-enquiry-head select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el, 'contacted'); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await fill("Status for Ravi Kumar", "Contacted");
   await waitFor(`document.body.textContent.includes('No new enquiries')`, "moved out of New");
   b = await backend();
   check("status change patches only status", JSON.stringify(b.log.filter((l) => l.op === "update" && l.table === "enquiries").pop()) === JSON.stringify({ op: "update", table: "enquiries", filter: [["id", "eq.enq-1"]], change: { status: "contacted" } }));
@@ -87,16 +121,16 @@ try {
   await waitFor(`!!document.querySelector('.adm-enquiry-notes textarea')`, "enquiry in All");
   await js(`(() => { const el = document.querySelector('.adm-enquiry-notes textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el, 'Called, visit on Saturday'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   await click("Save note");
-  await waitFor(`(document.querySelector('.adm-toast span')?.textContent ?? '') === 'Note saved.'`, "note saved");
+  await waitFor(`(document.querySelector('.adm-toast')?.textContent ?? '').includes('Note saved.')`, "note saved");
   b = await backend();
   check("note saved", b.db.enquiries[0].notes === "Called, visit on Saturday");
-  await js(`(() => { const el = document.querySelector('.adm-enquiry-work select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el, 'owner@asms.test'); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
-  await js(`(() => { const el = document.querySelector('.adm-enquiry-work input[type=date]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, '2026-12-01'); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await fill("Handled by", "Owner");
+  await fillDate("Follow up on", "2026-12-01");
   await sleep(500);
   b = await backend();
   check("assign to a staff member and set a follow-up date", b.db.enquiries[0].assigned_to === "owner@asms.test" && b.db.enquiries[0].follow_up_on === "2026-12-01", JSON.stringify(b.db.enquiries[0]).slice(0, 200));
   check("repeat contact flag shown", await js(`!!document.querySelector('.adm-flag')`));
-  await js(`document.querySelector('.adm-filter input, .adm-toolbar .adm-check input').click()`);
+  await checkBox("Assigned to me");
   check("assigned-to-me filter keeps it", await js(`document.querySelectorAll('.adm-enquiries > li').length === 1`));
 
   // 2. create a property with a photo
@@ -110,11 +144,11 @@ try {
   await fill("Price (₹)", "5200000");
   await fill("Area (sq ft)", "1200");
   await fill("Facing", "East");
-  await fill("Corner plot", "yes");
-  check("slug auto-generated", (await js(`[...document.querySelectorAll('input')].find(i=>i.value.includes('tambaram'))?.value`)) === "east-facing-plot-in-tambaram-asms-0001");
+  await fill("Corner plot", "Yes");
+  check("slug auto-generated", (await js(`[...document.querySelectorAll('input,textarea')].find(i=>i.value.includes('tambaram'))?.value`)) === "east-facing-plot-in-tambaram-asms-0001");
   check("price preview shows lakhs", await js(`document.body.textContent.includes('₹52 L · ₹52,00,000 · ₹4,333/sq ft')`));
-  await js(`[...document.querySelectorAll('.adm-check')].find(l=>l.textContent.startsWith('Water supply')).querySelector('input').click()`);
-  await fill("Stage", "live");
+  await checkBox("Water supply");
+  await fill("Stage", "Live");
   check("plot shows land fields, not home fields", await js(`document.body.textContent.includes('Land details') && !document.body.textContent.includes('Home details')`));
   await click("+ Add place");
   await js(`(() => { const row = document.querySelector('.adm-row'); const inp = row.querySelectorAll('input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
@@ -151,7 +185,7 @@ try {
   await click("Edit");
   await waitFor(`document.querySelectorAll('.adm-photo-grid figure').length === 2`, "edit form photos");
   const removedPath = ins.images[0].path;
-  await js(`document.querySelector('.adm-photo-grid figure button[aria-label="Remove photo"]').click()`);
+  await js(`[...document.querySelectorAll('.adm-photo-grid figure button')].find(b => b.textContent.trim() === 'Remove').click()`);
   await click("Save changes");
   await waitFor(`!document.querySelector('.adm-form')`, "saved edit");
   b = await backend();
@@ -166,11 +200,11 @@ try {
   check("pause patches stage=paused", JSON.stringify(b.log.filter((l) => l.op === "update").pop()?.change) === '{"stage":"paused"}');
   await click("+ New property");
   await waitFor(`!!document.querySelector('.adm-form')`, "property form 3");
-  await fill("Show area in", "acre");
+  await fill("Show area in", "acres");
   await fill("Area (acres)", "2.5");
   check("acres stored as sq ft", await js(`document.body.textContent.includes('= 1,08,900 sq ft')`));
-  await fill("Category", "residential");
-  check("residential shows home fields and subtypes", await js(`document.body.textContent.includes('Home details') && !document.body.textContent.includes('Land details') && [...document.querySelectorAll('select')].some(s => s.value === 'Apartment')`));
+  await fill("Category", "Residential");
+  check("residential shows home fields and subtypes", await js(`document.body.textContent.includes('Home details') && !document.body.textContent.includes('Land details') && [...document.querySelectorAll('button[role=combobox]')].some(s => s.textContent.includes('Apartment'))`));
   await click("Cancel");
   await waitFor(`!document.querySelector('.adm-form')`, "list after cancel");
 
@@ -204,12 +238,12 @@ try {
   await waitFor(`document.body.textContent.includes('editor@asms.test')`, "staff listed");
   b = await backend();
   check("staff email lower-cased", b.log.find((l) => l.op === "insert" && l.table === "staff")?.rows[0].email === "editor@asms.test");
-  check("own role/remove disabled", await js(`[...document.querySelectorAll('.adm-staff li')].find(li=>li.textContent.includes('(you)')).querySelector('button').disabled`));
+  check("own role/remove disabled", await js(`[...document.querySelectorAll('.adm-staff li')].find(li=>li.textContent.includes('(you)')).querySelector('button[role=combobox]').matches(':disabled, [aria-disabled=true]') && [...document.querySelectorAll('.adm-staff li')].find(li=>li.textContent.includes('(you)')).querySelector('.astryx-button').matches(':disabled, [aria-disabled=true]')`));
   await shot("5-staff");
 
   // 8. publish now + sign out
   await click("Update website now");
-  await waitFor(`(document.querySelector('.adm-toast span')?.textContent ?? '').startsWith('Website update started')`, "publish toast");
+  await waitFor(`(document.querySelector('.adm-toast')?.textContent ?? '').includes('Website update started')`, "publish toast");
   b = await backend();
   check("publish button calls RPC", b.log.some((l) => l.op === "rpc-rebuild"));
   await click("Sign out");
@@ -218,16 +252,16 @@ try {
 
   // 9. public contact form sends a real enquiry
   await cdp("Page.navigate", { url: `${BASE}/contact?ref=ASMS-0001` });
-  await waitFor(`document.getElementById('f-interest')?.value === 'ASMS-0001'`, "contact form prefilled");
+  await waitFor(`${fieldOf('Property or product of interest')}?.value === 'ASMS-0001'`, "contact form prefilled");
   check("form is connected", await js(`document.querySelector('form.enquiry-form').dataset.endpoint === 'http://127.0.0.1:54401/rest/v1/enquiries'`));
   const before = (await backend()).db.enquiries.length;
   await click("Send enquiry");
   await sleep(300);
-  check("empty form is not sent", (await backend()).db.enquiries.length === before && await js(`document.querySelector('.form-help[data-tone="error"]') !== null`));
+  check("empty form is not sent", (await backend()).db.enquiries.length === before && await js(`document.querySelector('.form-help [data-status=error]') !== null`));
   await fill("Full name", "Meena S"); await fill("Phone number", "+91 98840 55555"); await fill("Email address", "meena@example.com");
   await fill("How can we help?", "Need 2 tonnes of TMT bars.");
-  check("category preset from the link", await js(`document.getElementById('f-category').value === 'Property purchase'`));
-  await js(`document.querySelector('.consent input').click()`);
+  check("category preset from the link", await js(`${fieldOf('Enquiry category')}.textContent.includes('Property purchase')`));
+  await checkBox("I agree to be contacted");
   await click("Send enquiry");
   await waitFor(`!!document.querySelector('.enquiry-sent')`, "thank-you message");
   check("thank-you names the visitor and phone", (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("Thank you, Meena S.") && (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("reached our team") && (await js(`document.querySelector('.enquiry-sent').textContent`)).includes("+91 98840 55555"));
@@ -248,8 +282,8 @@ try {
   await click("Request a visit");
   await fill("Full name", "Karthik R"); await fill("Phone or WhatsApp number", "9884022222");
   const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString("en-CA");
-  await fill("Preferred day", tomorrow); await fill("Time of day", "Morning");
-  await js(`document.querySelector('.rail-form .consent input').click()`);
+  await fillDate("Preferred day", tomorrow); await fill("Time of day", "Morning");
+  await checkBox("I agree to be contacted");
   await click("Send visit request");
   await waitFor(`!!document.querySelector('.rail-sent')`, "visit request sent");
   check("visit confirmation says request, not booking", (await js(`document.querySelector('.rail-sent').textContent`)).includes("This is a request, not a booking"));
@@ -257,14 +291,14 @@ try {
   const visit = b.log.filter((l) => l.op === "insert" && l.table === "enquiries").pop()?.rows[0];
   check("visit request sent with property and preference", visit && visit.kind === "visit" && visit.source === "property_page" && visit.property_ref === "ASMS-PREVIEW-01" && visit.preferred_date === tomorrow && visit.preferred_time === "Morning" && !("message" in visit), JSON.stringify(visit));
   check("visit lands in the inbox as Visit requested", b.db.enquiries.find((e) => e.name === "Karthik R")?.status === "visit_requested");
-  await js(`(() => { const a = [...document.querySelectorAll('.rail-secondary a')].find(x => x.textContent === 'WhatsApp us'); a.addEventListener('click', (e) => e.preventDefault()); a.click(); window.__wa = a.href; })()`);
+  await js(`(() => { const a = [...document.querySelectorAll('.detail-rail a')].find(x => x.textContent === 'WhatsApp us'); a.addEventListener('click', (e) => e.preventDefault()); a.click(); window.__wa = a.href; })()`);
   await sleep(400);
   b = await backend();
   check("WhatsApp click tracked separately from enquiries", b.log.some((l) => l.op === "track" && l.event_type === "whatsapp_click") && (await js(`window.__wa`)).startsWith("https://wa.me/919800000000?text=Hello"));
   await cdp("Emulation.setFocusEmulationEnabled", { enabled: true });  // the clipboard needs a focused page
   await js(`Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })`);  // test the copy-link path
   await click("Share this property");
-  await waitFor(`document.querySelector('.share-link')?.textContent === 'Link copied'`, "link copied");
+  await waitFor(`[...document.querySelectorAll('.detail-rail button')].some(b => b.textContent.trim() === 'Link copied')`, "link copied");
   b = await backend();
   check("share tracked", b.log.some((l) => l.op === "track" && l.event_type === "property_shared"));
   await cdp("Page.navigate", { url: `${BASE}/properties/sold-plot-sample` });
@@ -275,10 +309,11 @@ try {
   // 9c. product page quote request
   await cdp("Page.navigate", { url: `${BASE}/products/aac-blocks` });
   await waitFor(`!!document.querySelector('form.enquiry-form')`, "quote form");
+  await sleep(1000); // let React hydrate before typing
   check("product page shows specs and suitable use", await js(`document.querySelector('h1').textContent === 'AAC blocks' && document.body.textContent.includes('IS 2185') && document.body.textContent.includes('Suitable for:')`));
   await fill("Full name", "Arun"); await fill("Organisation", "Arun Builders"); await fill("Phone number", "9884011111");
   await fill("Quantity", "20 cubic metres"); await fill("Delivery location", "Tambaram");
-  await js(`document.querySelector('.consent input').click()`);
+  await checkBox("I agree to be contacted");
   await click("Request quote");
   await waitFor(`!!document.querySelector('.enquiry-sent')`, "quote sent");
   b = await backend();

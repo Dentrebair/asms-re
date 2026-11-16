@@ -1,11 +1,13 @@
 "use client";
 
+import { Button } from "@astryxdesign/core/Button";
+import { TextInput } from "@astryxdesign/core/TextInput";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { formatINR, formatINRShort } from "@/lib/format";
 import { AMENITY_PRESETS, FACINGS, NEARBY_GROUPS, slugify } from "@/lib/presets";
 import { AREA_UNITS, CATEGORIES, SUBTYPES, areaIn } from "@/lib/property";
 import { deletePhotos, emptyProperty, explain, mediaUrl, supabase, type PropertyRow, type PropertyStage } from "./lib";
-import { Check, NumberInput, Photos, Rows, Select, Text, TextArea, YesNo } from "./ui";
+import { Check, DateField, NumberInput, Photos, Rows, Select, Text, TextArea, YesNo } from "./ui";
 
 type Notify = (message: string, tone?: "ok" | "error") => void;
 
@@ -66,8 +68,8 @@ export function PropertiesAdmin({ notify }: { notify: Notify }) {
     <section>
       <div className="adm-toolbar">
         <h2>Properties <small>{rows ? rows.length : "…"}</small></h2>
-        <input type="search" placeholder="Search title, reference, location" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search properties" />
-        <button type="button" className="adm-btn" onClick={() => setEditing(emptyProperty())}>+ New property</button>
+        <TextInput type="search" label="Search properties" isLabelHidden placeholder="Search title, reference, location" value={query} onChange={setQuery} hasClear />
+        <Button type="button" onClick={() => setEditing(emptyProperty())} variant="primary" label="+ New property" />
       </div>
       {rows === null ? <p className="adm-muted">Loading…</p> : visible.length === 0 ? (
         <p className="adm-empty">{rows.length === 0 ? "No properties yet. Add your first listing." : "No properties match your search."}</p>
@@ -91,13 +93,13 @@ export function PropertiesAdmin({ notify }: { notify: Notify }) {
               </div>
               <div className="adm-list-actions">
                 {r.stage === "live"
-                  ? <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { stage: "paused" })}>Pause</button>
-                  : r.stage !== "sold" && <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { stage: "live", last_confirmed_on: todayIso() })}>Publish</button>}
-                {r.stage === "live" && <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { last_confirmed_on: todayIso() })} title="Record that the details were checked today">Still available</button>}
-                {r.stage === "live" && <button type="button" className="adm-btn adm-btn-ghost" onClick={() => confirm(`Mark ${r.reference} as sold? It leaves search and stops taking enquiries.`) && patch(r, { stage: "sold" })}>Mark sold</button>}
-                <button type="button" className="adm-btn adm-btn-ghost" onClick={() => patch(r, { featured: !r.featured })}>{r.featured ? "Unfeature" : "Feature"}</button>
-                <button type="button" className="adm-btn" onClick={() => setEditing(r)}>Edit</button>
-                <button type="button" className="adm-btn adm-btn-danger" onClick={() => remove(r)}>Delete</button>
+                  ? <Button type="button" onClick={() => patch(r, { stage: "paused" })} variant="secondary" label="Pause" />
+                  : r.stage !== "sold" && <Button type="button" onClick={() => patch(r, { stage: "live", last_confirmed_on: todayIso() })} variant="secondary" label="Publish" />}
+                {r.stage === "live" && <Button type="button" onClick={() => patch(r, { last_confirmed_on: todayIso() })} tooltip="Record that the details were checked today" variant="secondary" label="Still available" />}
+                {r.stage === "live" && <Button type="button" onClick={() => confirm(`Mark ${r.reference} as sold? It leaves search and stops taking enquiries.`) && patch(r, { stage: "sold" })} variant="secondary" label="Mark sold" />}
+                <Button type="button" onClick={() => patch(r, { featured: !r.featured })} variant="secondary" label={r.featured ? "Unfeature" : "Feature"} />
+                <Button type="button" onClick={() => setEditing(r)} variant="primary" label="Edit" />
+                <Button type="button" onClick={() => remove(r)} variant="destructive" label="Delete" />
               </div>
             </li>
           ))}
@@ -153,23 +155,23 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
   return (
     <form className="adm-form" onSubmit={save}>
       <div className="adm-form-head">
-        <button type="button" className="adm-link" onClick={cancel}>← All properties</button>
+        <Button type="button" onClick={cancel} variant="ghost" label="← All properties" />
         <h2>{isNew ? "New property" : `Edit ${initial.reference}`}</h2>
       </div>
 
       <fieldset><legend>Listing</legend>
         <Text label="Title" value={p.title} onChange={setTitle} required placeholder="e.g. East-facing plot in Tambaram" wide />
         <Text label="Reference" value={p.reference} onChange={setReference} required placeholder="e.g. ASMS-0001" hint="Shown to buyers; must be unique." />
-        <Text label="Web address (slug)" value={p.slug} onChange={(v) => { setSlugTouched(true); set("slug", slugify(v ?? "")); }} required hint={`asmsrounaqh.com/properties/${p.slug || "…"}`} />
+        <Text label="Web address (slug)" value={p.slug} onChange={(v) => { setSlugTouched(true); set("slug", slugify(v ?? "")); }} required grow hint={`asmsrounaqh.com/properties/${p.slug || "…"}`} />
         <Select label="Category" value={p.category} options={CATEGORIES.map((c) => ({ value: c.id, label: c.label }))} required
           onChange={(v) => { const c = (v ?? "plot") as PropertyRow["category"]; setP((cur) => ({ ...cur, category: c, property_type: SUBTYPES[c].includes(cur.property_type) ? cur.property_type : SUBTYPES[c][0] })); }} />
         <Select label="Property type" value={p.property_type} options={SUBTYPES[p.category]} onChange={(v) => set("property_type", v ?? SUBTYPES[p.category][0])} required />
         <Select label="Stage" value={p.stage} options={p.stage in STAGE_LABEL && !STAGES.some((x) => x.value === p.stage) ? [...STAGES, { value: p.stage, label: STAGE_LABEL[p.stage] }] : STAGES} onChange={(v) => set("stage", (v ?? "draft") as PropertyStage)} required />
-        <Text label="Location" value={p.location} onChange={(v) => set("location", v ?? "")} required placeholder="e.g. Tambaram, Chennai" />
+        <Text label="Location" value={p.location} onChange={(v) => set("location", v ?? "")} required grow placeholder="e.g. Tambaram, Chennai" />
         <Text label="Locality / landmark" value={p.locality} onChange={(v) => set("locality", v)} placeholder="e.g. Near Tambaram railway station" />
         <Text label="Google Maps link" value={p.map_url} onChange={(v) => set("map_url", v)} hint="Paste the share link from Google Maps (starts with https://)" placeholder="https://maps.app.goo.gl/…" />
-        <Field2 label="Posted on"><input type="date" value={p.posted_on ?? ""} onChange={(e) => set("posted_on", e.target.value || null)} /></Field2>
-        <Field2 label="Details last confirmed"><input type="date" value={p.last_confirmed_on ?? ""} onChange={(e) => set("last_confirmed_on", e.target.value || null)} /></Field2>
+        <DateField label="Posted on" value={p.posted_on} onChange={(v) => set("posted_on", v)} />
+        <DateField label="Details last confirmed" value={p.last_confirmed_on} onChange={(v) => set("last_confirmed_on", v)} />
         <div className="adm-checks adm-wide">
           <Check label="Featured" hint="Show on the home page" checked={p.featured} onChange={(v) => set("featured", v)} />
         </div>
@@ -193,9 +195,9 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
           <NumberInput label="Bedrooms (BHK)" value={p.bhk} onChange={(v) => set("bhk", v === null ? null : Math.round(v))} />
           <NumberInput label="Bathrooms" value={p.bathrooms} onChange={(v) => set("bathrooms", v === null ? null : Math.round(v))} />
           <NumberInput label="Carpet area (sq ft)" value={p.carpet_area_sqft} onChange={(v) => set("carpet_area_sqft", v)} />
-          <Text label="Floor" value={p.floor_info} onChange={(v) => set("floor_info", v)} placeholder="e.g. 3rd of 6 floors" />
+          <Text label="Floor" value={p.floor_info} onChange={(v) => set("floor_info", v)} placeholder="e.g. 3rd of 6 floors" grow />
           <Text label="Furnishing" value={p.furnishing} onChange={(v) => set("furnishing", v)} list={["Unfurnished", "Semi-furnished", "Furnished"]} />
-          <Text label="Parking" value={p.parking} onChange={(v) => set("parking", v)} placeholder="e.g. 1 covered car park" />
+          <Text label="Parking" value={p.parking} onChange={(v) => set("parking", v)} placeholder="e.g. 1 covered car park" grow />
           <Select label="Possession" value={p.possession} options={["Ready to move", "Under construction"]} onChange={(v) => set("possession", v)} allowEmpty />
         </fieldset>
       )}
@@ -215,10 +217,10 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
       {p.category === "commercial" && (
         <fieldset><legend>Commercial details</legend>
           <NumberInput label="Usable area (sq ft)" value={p.usable_area_sqft} onChange={(v) => set("usable_area_sqft", v)} />
-          <Text label="Floor" value={p.floor_info} onChange={(v) => set("floor_info", v)} placeholder="e.g. Ground floor" />
-          <Text label="Parking" value={p.parking} onChange={(v) => set("parking", v)} placeholder="e.g. 6 car parks, truck access" />
+          <Text label="Floor" value={p.floor_info} onChange={(v) => set("floor_info", v)} placeholder="e.g. Ground floor" grow />
+          <Text label="Parking" value={p.parking} onChange={(v) => set("parking", v)} placeholder="e.g. 6 car parks, truck access" grow />
           <Text label="Access" value={p.access_notes} onChange={(v) => set("access_notes", v)} placeholder="e.g. Direct access from a 40 ft road" />
-          <Text label="Zoning notes" value={p.zoning_notes} onChange={(v) => set("zoning_notes", v)} />
+          <Text label="Zoning notes" value={p.zoning_notes} onChange={(v) => set("zoning_notes", v)} grow />
           <Select label="Possession" value={p.possession} options={["Ready to move", "Under construction"]} onChange={(v) => set("possession", v)} allowEmpty />
         </fieldset>
       )}
@@ -242,8 +244,8 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
           {customAmenities.map((a) => <Check key={a} label={a} checked onChange={() => toggleAmenity(a)} />)}
         </div>
         <div className="adm-inline adm-wide">
-          <input placeholder="Other amenity" aria-label="Other amenity" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)} />
-          <button type="button" className="adm-btn adm-btn-ghost" disabled={!customAmenity.trim()} onClick={() => { toggleAmenity(customAmenity.trim()); setCustomAmenity(""); }}>Add</button>
+          <TextInput label="Other amenity" isLabelHidden placeholder="Other amenity" value={customAmenity} onChange={setCustomAmenity} />
+          <Button type="button" isDisabled={!customAmenity.trim()} onClick={() => { toggleAmenity(customAmenity.trim()); setCustomAmenity(""); }} variant="secondary" label="Add" />
         </div>
       </fieldset>
 
@@ -257,13 +259,9 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
       </fieldset>
 
       <div className="adm-form-foot">
-        <button type="button" className="adm-btn adm-btn-ghost" onClick={cancel}>Cancel</button>
-        <button type="submit" className="adm-btn" disabled={saving}>{saving ? "Saving…" : isNew ? "Create property" : "Save changes"}</button>
+        <Button type="button" onClick={cancel} variant="secondary" label="Cancel" />
+        <Button type="submit" isDisabled={saving} variant="primary" label={saving ? "Saving…" : isNew ? "Create property" : "Save changes"} />
       </div>
     </form>
   );
-}
-
-function Field2({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="adm-field"><span className="adm-label">{label}</span>{children}</label>;
 }

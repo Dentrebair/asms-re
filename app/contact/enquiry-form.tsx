@@ -2,6 +2,17 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { ENQUIRY_ENDPOINT, sendEnquiry, type EnquiryKind } from "@/lib/enquiry";
+import { Button } from "@astryxdesign/core/Button";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { TextArea } from "@astryxdesign/core/TextArea";
+import { Selector } from "@astryxdesign/core/Selector";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Grid } from "@astryxdesign/core/Grid";
+import { Link } from "@astryxdesign/core/Link";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
+import { checkContact, type FieldErrors } from "../form-checks";
 
 const CATEGORIES: { label: string; kind: EnquiryKind }[] = [
   { label: "Property purchase", kind: "property" },
@@ -31,100 +42,107 @@ function readPrefill(): Prefill {
  */
 export default function EnquiryForm() {
   const [prefill, setPrefill] = useState<Prefill>({ category: "", interest: "", ref: "", product: "" });
+  const [f, setF] = useState({ name: "", phone: "", email: "", category: "", interest: "", message: "", consent: false, hp: "" });
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [help, setHelp] = useState<{ text: string; tone: "info" | "error" } | null>(null);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<{ name: string; phone: string } | null>(null);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the URL after hydration
-  useEffect(() => setPrefill(readPrefill()), []);
-  const { category, interest: defaultInterest } = prefill;
+  useEffect(() => {
+    const pre = readPrefill();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the URL after hydration
+    setPrefill(pre);
+    setF((cur) => ({ ...cur, category: pre.category, interest: pre.interest }));
+  }, []);
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => { setF((cur) => ({ ...cur, [k]: v })); setErrors((e) => ({ ...e, [k]: undefined })); };
+  const status = (k: string) => (errors[k] ? { type: "error" as const, message: errors[k] } : undefined);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    const invalid = [...form.elements].find((el): el is HTMLInputElement => "checkValidity" in el && !(el as HTMLInputElement).checkValidity());
-    form.querySelectorAll("[aria-invalid]").forEach((el) => el.removeAttribute("aria-invalid"));
-    if (invalid) {
-      invalid.setAttribute("aria-invalid", "true");
-      invalid.focus();
-      setHelp({ text: invalid.validationMessage || "Please complete the required fields.", tone: "error" });
+    const found = checkContact({ ...f, messageRequired: true, extra: { category: f.category ? undefined : "Please choose a category." } });
+    setErrors(found);
+    const first = Object.keys(found)[0];
+    if (first) {
+      (form.querySelector(`[name="${first}"]`) as HTMLElement | null)?.focus();
+      setHelp({ text: found[first] ?? "Please complete the required fields.", tone: "error" });
       return;
     }
     if (!form.dataset.endpoint) {
       setHelp({ text: "Nothing was sent: online enquiries are not connected yet. Please call or WhatsApp +91 97897 86467, or email reach@asmsrounaqh.com.", tone: "info" });
       return;
     }
-    const data = new FormData(form);
-    const value = (k: string) => String(data.get(k) ?? "").trim();
     // Hidden field that people never see; automated spam fills it in.
-    if (value("company_site")) {
+    if (f.hp) {
       setHelp({ text: "Your enquiry could not be sent. Please contact us by phone or email.", tone: "error" });
       return;
     }
-    const kind = CATEGORIES.find((c) => c.label === value("category"))?.kind ?? "general";
-    const interest = value("interest");
+    const kind = CATEGORIES.find((c) => c.label === f.category)?.kind ?? "general";
+    const interest = f.interest.trim();
     setBusy(true);
     setHelp({ text: "Sending your enquiry…", tone: "info" });
     const failure = await sendEnquiry({
       kind,
       source: "contact_page",
-      name: value("name"),
-      phone: value("phone"),
-      email: value("email") || null,
+      name: f.name.trim(),
+      phone: f.phone.trim(),
+      email: f.email.trim() || null,
       // The reference travels only while the visitor kept the prefilled text.
       property_ref: kind === "property" && prefill.ref && interest.includes(prefill.ref) ? prefill.ref : null,
       product_slug: kind === "product" && prefill.product ? prefill.product : null,
       interest: interest || null,
-      message: value("message"),
-      consent: data.get("consent") === "on",
+      message: f.message.trim(),
+      consent: f.consent,
     });
     setBusy(false);
     if (failure) return setHelp({ text: failure, tone: "error" });
     setHelp(null);
-    setSent({ name: value("name"), phone: value("phone") });
+    setSent({ name: f.name.trim(), phone: f.phone.trim() });
   }
 
   if (sent) {
     return (
-      <div className="enquiry-form enquiry-sent" role="status" tabIndex={-1} ref={(el) => el?.focus()}>
-        <h2>Thank you, {sent.name}.</h2>
-        <p>Your enquiry has reached our team. We will call you on <strong className="num">{sent.phone}</strong>, usually within one working day.</p>
-        <div className="actions">
-          <a className="btn btn--quiet" href="/properties">Back to properties</a>
-          <button type="button" className="link" onClick={() => setSent(null)}>Send another enquiry</button>
-        </div>
+      <div className="enquiry-sent" role="status" tabIndex={-1} ref={(el) => el?.focus()}>
+        <VStack gap={4}>
+          <Heading level={2}>Thank you, {sent.name}.</Heading>
+          <Text as="p">Your enquiry has reached our team. We will call you on <strong className="num">{sent.phone}</strong>, usually within one working day.</Text>
+          <HStack gap={2} wrap="wrap">
+            <Button href="/properties" label="Back to properties" />
+            <Button label="Send another enquiry" variant="ghost" onClick={() => setSent(null)} />
+          </HStack>
+        </VStack>
       </div>
     );
   }
 
   return (
-    <form key={`${category}|${defaultInterest}`} className="enquiry-form" onSubmit={handleSubmit} data-endpoint={ENQUIRY_ENDPOINT} noValidate aria-labelledby="form-title" aria-busy={busy}>
-      <div>
-        <h2 id="form-title">Tell us what you are looking for.</h2>
-        <p className="form-help">Fields marked with an asterisk are required.</p>
-      </div>
-      <div className="field-row">
-        <div className="field"><label htmlFor="f-name">Full name *</label><input id="f-name" name="name" type="text" autoComplete="name" required maxLength={120} /></div>
-        <div className="field"><label htmlFor="f-phone">Phone number *</label><input id="f-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" required pattern="[0-9+() \-]{7,20}" placeholder="+91 00000 00000" /></div>
-      </div>
-      <div className="field-row">
-        <div className="field"><label htmlFor="f-email">Email address</label><input id="f-email" name="email" type="email" autoComplete="email" maxLength={200} placeholder="you@example.com" /></div>
-        <div className="field">
-          <label htmlFor="f-category">Enquiry category *</label>
-          <select id="f-category" name="category" required defaultValue={category}>
-            <option value="" disabled>Select a category</option>
-            {CATEGORIES.map((c) => <option key={c.label}>{c.label}</option>)}
-          </select>
+    <form className="enquiry-form" onSubmit={handleSubmit} data-endpoint={ENQUIRY_ENDPOINT} noValidate aria-labelledby="form-title" aria-busy={busy}>
+      <VStack gap={4}>
+        <VStack gap={1}>
+          <Heading level={2} id="form-title">Tell us what you are looking for.</Heading>
+          <Text type="supporting" as="p">Required fields are marked.</Text>
+        </VStack>
+        <Grid columns={{ minWidth: 200, repeat: "fit" }} gap={3}>
+          <TextInput label="Full name" htmlName="name" value={f.name} onChange={(v) => set("name", v)} isRequired autoComplete="name" status={status("name")} />
+          <TextInput label="Phone number" htmlName="phone" type="tel" inputMode="tel" value={f.phone} onChange={(v) => set("phone", v)} isRequired autoComplete="tel" placeholder="+91 00000 00000" status={status("phone")} />
+          <TextInput label="Email address" htmlName="email" type="email" value={f.email} onChange={(v) => set("email", v)} isOptional autoComplete="email" placeholder="you@example.com" status={status("email")} />
+          <Selector label="Enquiry category" htmlName="category" value={f.category} placeholder="Select a category" isRequired
+            options={CATEGORIES.map((c) => ({ value: c.label, label: c.label }))} onChange={(v) => set("category", v)} status={status("category")} />
+        </Grid>
+        <TextInput label="Property or product of interest" htmlName="interest" value={f.interest} onChange={(v) => set("interest", v)} isOptional placeholder="Example: ASMS-CHN-0001 or roofing materials" />
+        <TextArea label="How can we help?" htmlName="message" rows={6} maxLength={4000} value={f.message} onChange={(v) => set("message", v)} isRequired
+          placeholder="Share your preferred location, budget, product quantity or specification." status={status("message")} />
+        <div className="hp-field" aria-hidden="true">
+          <label>Leave this empty<input name="company_site" tabIndex={-1} autoComplete="off" value={f.hp} onChange={(e) => set("hp", e.target.value)} /></label>
         </div>
-      </div>
-      <div className="field"><label htmlFor="f-interest">Property or product of interest</label><input id="f-interest" name="interest" type="text" maxLength={200} defaultValue={defaultInterest} placeholder="Example: ASMS-PREVIEW-01 or roofing materials" /></div>
-      <div className="field"><label htmlFor="f-message">How can we help? *</label><textarea id="f-message" name="message" required maxLength={4000} rows={6} placeholder="Share your preferred location, budget, product quantity or specification." /></div>
-      <div className="hp-field" aria-hidden="true"><label htmlFor="f-company-site">Leave this empty</label><input id="f-company-site" name="company_site" type="text" tabIndex={-1} autoComplete="off" /></div>
-      <label className="consent"><input type="checkbox" name="consent" required /><span>I agree to be contacted about this enquiry and understand that my details will be handled according to the <a className="link" href="/privacy">privacy notice</a>.</span></label>
-      <div className="actions">
-        <button className="btn" type="submit" disabled={busy}>{busy ? "Sending…" : "Send enquiry"}</button>
-        <small>We use your information only to respond to this enquiry.</small>
-      </div>
-      <p className="form-help" role="status" aria-live="polite" data-tone={help?.tone}>{help?.text}</p>
+        <VStack gap={1}>
+          <CheckboxInput label="I agree to be contacted about this enquiry" htmlName="consent" value={f.consent} onChange={(v) => set("consent", v)} isRequired status={status("consent")} />
+          <Text type="supporting" as="p">My details will be handled according to the <Link href="/privacy">privacy notice</Link>, and used only to respond to this enquiry.</Text>
+        </VStack>
+        <div><Button type="submit" variant="primary" size="lg" isLoading={busy} label={busy ? "Sending…" : "Send enquiry"} /></div>
+        <div role="status" aria-live="polite" className="form-help">
+          {help && <Banner status={help.tone === "error" ? "error" : "info"} title={help.text} />}
+        </div>
+      </VStack>
     </form>
   );
 }

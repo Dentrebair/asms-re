@@ -1,4 +1,12 @@
-import { Footer, Header } from "../site-components";
+import { Footer, Header, PageHead } from "../site-components";
+import { ForestTheme } from "../astryx/themes";
+import { Card } from "@astryxdesign/core/Card";
+import { Grid } from "@astryxdesign/core/Grid";
+import { Link } from "@astryxdesign/core/Link";
+import { MetadataList, MetadataListItem } from "@astryxdesign/core/MetadataList";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { VStack } from "@astryxdesign/core/Layout";
+
 import { COMPANY } from "@/lib/company";
 import EnquiryForm from "./enquiry-form";
 
@@ -15,40 +23,57 @@ export default function ContactPage() {
     <>
       <Header />
       <main id="main">
-        <section className="page-head" aria-labelledby="page-title">
-          <div className="container page-head-grid">
-            <h1 id="page-title">Ask about a property or a product</h1>
-            <p className="lead">Share the essentials and the team will guide the next conversation.</p>
+        <PageHead title="Ask about a property or a product" lead="Share the essentials and the team will guide the next conversation." />
+
+        <section className="band band--tight" aria-label="Enquiry" style={{ paddingTop: 0 }}>
+          <div className="page">
+            <Grid columns={{ minWidth: 320, repeat: "fit" }} gap={10} align="start">
+              <VStack gap={5}>
+                <Heading level={2} type="display-3">Clear answers begin with the right details</Heading>
+                <Text color="secondary" as="p">Tell us your intended use, location or product specification. We respond with relevant information and no artificial urgency.</Text>
+                <Card padding={5}>
+                  <MetadataList>
+                    <MetadataListItem label="Call or WhatsApp">
+                      <VStack gap={1}><Link href={COMPANY.phoneHref}>{COMPANY.phone}</Link><Text type="supporting">For property and product enquiries. <Link href={`https://wa.me/${COMPANY.whatsapp}`} target="_blank" rel="noopener noreferrer">Chat on WhatsApp</Link></Text></VStack>
+                    </MetadataListItem>
+                    <MetadataListItem label="Email">
+                      <VStack gap={1}><Link href={`mailto:${COMPANY.email}`}>{COMPANY.email}</Link><Text type="supporting">For detailed requirements and documents</Text></VStack>
+                    </MetadataListItem>
+                    <MetadataListItem label="Registered office">
+                      <VStack gap={1}><address style={{ fontStyle: "normal" }}>{COMPANY.address.join(", ")}</address><Text type="supporting">Visits by prior appointment. <Link href={COMPANY.mapHref} target="_blank" rel="noopener noreferrer">Open in Maps</Link></Text></VStack>
+                    </MetadataListItem>
+                  </MetadataList>
+                </Card>
+              </VStack>
+              <Card padding={6} elevation="med"><EnquiryForm /></Card>
+            </Grid>
           </div>
         </section>
 
-        <section className="sec sec--list" aria-label="Enquiry">
-          <div className="container contact-split">
-            <div className="contact-facts">
-              <h2>Clear answers begin with the right details</h2>
-              <p>Tell us your intended use, location or product specification. We respond with relevant information and no artificial urgency.</p>
-              <dl>
-                <div><dt>Call or WhatsApp</dt><dd><a className="link" href={COMPANY.phoneHref}>{COMPANY.phone}</a><small>For property and product enquiries. <a className="link" href={`https://wa.me/${COMPANY.whatsapp}`} target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a></small></dd></div>
-                <div><dt>Email</dt><dd><a className="link" href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a><small>For detailed requirements and documents</small></dd></div>
-                <div><dt>Registered office</dt><dd><address>{COMPANY.address.map((line) => <span key={line}>{line}<br /></span>)}</address><small>Visits by prior appointment. <a className="link" href={COMPANY.mapHref} target="_blank" rel="noopener noreferrer">Open in Maps</a></small></dd></div>
-              </dl>
+        <ForestTheme>
+          <section className="band band--forest" aria-labelledby="assure-title">
+            <div className="page">
+              <VStack gap={8}>
+                <Heading level={2} type="display-3" id="assure-title">How we handle your enquiry</Heading>
+                <Grid columns={{ minWidth: 240, repeat: "fit" }} gap={4}>
+                  {ASSURANCES.map((c, i) => (
+                    <Card key={c.title} padding={6}>
+                      <VStack gap={2}>{"step" in c && <Text type="supporting" weight="bold" color="accent">Step {i + 1}</Text>}<Heading level={3}>{c.title}</Heading><Text color="secondary" as="p">{c.text}</Text></VStack>
+                    </Card>
+                  ))}
+                </Grid>
+              </VStack>
             </div>
-            <EnquiryForm />
-          </div>
-        </section>
-
-        <section className="sec sec--field on-field" aria-labelledby="assure-title">
-          <div className="container">
-            <div className="head-split"><h2 id="assure-title">How we handle your enquiry</h2></div>
-            <ul className="assurances">
-              <li><h3>Reference-led conversations</h3><p>Include the property reference so details, documents and site visits stay specific.</p></li>
-              <li><h3>Specification-led quotations</h3><p>Share product type, dimensions, quantity and delivery location for a useful response.</p></li>
-              <li><h3>Purpose-limited contact</h3><p>Your information is used only to understand and respond to the enquiry you submit.</p></li>
-            </ul>
-          </div>
-        </section>
+          </section>
+        </ForestTheme>
       </main>
       <Footer />
     </>
   );
 }
+
+const ASSURANCES = [
+  { title: "Reference-led conversations", text: "Include the property reference so details, documents and site visits stay specific." },
+  { title: "Specification-led quotations", text: "Share product type, dimensions, quantity and delivery location for a useful response." },
+  { title: "Purpose-limited contact", text: "Your information is used only to understand and respond to the enquiry you submit." },
+];

@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { TabList, Tab } from "@astryxdesign/core/TabList";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Selector } from "@astryxdesign/core/Selector";
+import { Token } from "@astryxdesign/core/Token";
+import { Button } from "@astryxdesign/core/Button";
+import { Pagination } from "@astryxdesign/core/Pagination";
+import { EmptyState } from "@astryxdesign/core/EmptyState";
+import { Grid } from "@astryxdesign/core/Grid";
+import { Text } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
 
 /**
  * The shared listing framework for properties and products: tabs, a keyword
@@ -55,13 +65,7 @@ export default function Catalog({ label, tabs, search, filters = [], sorts = [],
   total: number;
   children: ReactNode;
 }) {
-  const id = useId();
   const grid = useRef<HTMLUListElement>(null);
-  const drawer = useRef<HTMLDetailsElement>(null);
-  // Filters start folded away on phones (a drawer), open on wider screens.
-  useEffect(() => {
-    if (drawer.current && matchMedia("(max-width: 40rem)").matches) drawer.current.open = false;
-  }, []);
   const defaults = useCallback((): State => ({
     tab: ALL, q: "", sort: sorts[0]?.value ?? "order", page: 0,
     values: Object.fromEntries(filters.map((f) => [f.name, ALL])),
@@ -191,81 +195,61 @@ export default function Catalog({ label, tabs, search, filters = [], sorts = [],
     })),
   ];
   const clearAll = () => update({ q: "", values: Object.fromEntries(filters.map((f) => [f.name, ALL])) });
-  const hasControls = Boolean(tabs || search || filters.length || sorts.length > 1);
+  const hasControls = Boolean(search || filters.length || sorts.length > 1);
+  const emptyType = tabs?.options.find((o) => o.value === state.tab)?.label.toLowerCase();
 
   return (
-    <div className="catalog">
+    <VStack gap={6} className="catalog">
       {tabs && (
-        <div className="catalog-tabs" role="group" aria-label={tabs.label}>
-          {[{ value: ALL, label: tabs.allLabel }, ...tabs.options].map((o) => (
-            <button key={o.value} type="button" aria-pressed={state.tab === o.value} onClick={() => update({ tab: o.value })}>{o.label}</button>
-          ))}
-        </div>
+        <TabList value={state.tab} onChange={(v) => update({ tab: v })} hasDivider overflow="auto" aria-label={tabs.label}>
+          {[{ value: ALL, label: tabs.allLabel }, ...tabs.options].map((o) => <Tab key={o.value} value={o.value} label={o.label} />)}
+        </TabList>
       )}
       {hasControls && (
-        <details className="catalog-drawer" open ref={drawer}>
-          <summary>Filters{chips.length > 0 && ` (${chips.length})`}</summary>
-          <div className="catalog-controls" role="search" aria-label={`Filter ${label}`}>
+        <div role="search" aria-label={`Filter ${label}`}>
+          <Grid columns={{ minWidth: 190, repeat: "fit" }} gap={3}>
             {search && (
-              <div className="field field--search">
-                <label htmlFor={`${id}-q`}>Search</label>
-                <input id={`${id}-q`} type="search" value={state.q} placeholder={search} maxLength={80}
-                  onChange={(e) => update({ q: e.target.value }, "replace")} />
-              </div>
+              <TextInput label="Search" type="search" value={state.q} placeholder={search} hasClear
+                onChange={(v) => update({ q: v.slice(0, 80) }, "replace")} />
             )}
             {visibleFilters.map((f) => (
-              <div className="field" key={f.name}>
-                <label htmlFor={`${id}-${f.name}`}>{f.label}</label>
-                <select id={`${id}-${f.name}`} value={state.values[f.name] ?? ALL} onChange={(e) => update({ values: { [f.name]: e.target.value } })}>
-                  <option value={ALL}>Any</option>
-                  {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
+              <Selector key={f.name} label={f.label} value={state.values[f.name] ?? ALL}
+                options={[{ value: ALL, label: "Any" }, ...f.options]}
+                onChange={(v) => update({ values: { [f.name]: v } })} />
             ))}
             {sorts.length > 1 && (
-              <div className="field">
-                <label htmlFor={`${id}-sort`}>Sort by</label>
-                <select id={`${id}-sort`} value={state.sort} onChange={(e) => update({ sort: e.target.value })}>
-                  {sorts.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
+              <Selector label="Sort by" value={state.sort} options={sorts.map((s) => ({ value: s.value, label: s.label }))}
+                onChange={(v) => update({ sort: v })} />
             )}
-          </div>
-          <button type="button" className="btn btn--small catalog-apply" onClick={(e) => { (e.currentTarget.closest("details") as HTMLDetailsElement).open = false; }}>
-            Show {count} {count === 1 ? "result" : "results"}
-          </button>
-        </details>
+          </Grid>
+        </div>
       )}
-      <div className="catalog-summary">
-        <p className="result-count" role="status">{count === total ? `${total} listed` : `${count} of ${total} shown`}</p>
+      <HStack gap={3} vAlign="center" wrap="wrap">
+        <Text type="supporting" role="status" className="result-count">{count === total ? `${total} listed` : `${count} of ${total} shown`}</Text>
         {chips.length > 0 && (
-          <ul className="chips" aria-label="Applied filters">
-            {chips.map((c) => <li key={c.key}><button type="button" onClick={c.clear} aria-label={`Remove ${c.text}`}>{c.text}<span aria-hidden="true"> ×</span></button></li>)}
-            <li><button type="button" className="link" onClick={clearAll}>Clear all</button></li>
-          </ul>
+          <HStack gap={2} wrap="wrap" aria-label="Applied filters">
+            {chips.map((c) => <Token key={c.key} label={c.text} onRemove={c.clear} />)}
+            <Button label="Clear all" variant="ghost" size="sm" onClick={clearAll} />
+          </HStack>
         )}
-      </div>
-      {note && <p className="catalog-note">{note}</p>}
+      </HStack>
+      {note && <Text color="secondary" as="p" className="catalog-note">{note}</Text>}
       <ul className="card-grid" ref={grid} aria-label={label}>{children}</ul>
       {count === 0 && tabTotal === 0 && tabs && (
-        <p className="empty-state">
-          No {tabs.options.find((o) => o.value === state.tab)?.label.toLowerCase()} are listed right now. New listings are added as they are verified, so please check again later,
-          or <a className="link" href="/contact">tell us what you are looking for</a> and we will call you when one fits.
-        </p>
+        <EmptyState title={`No ${emptyType} listed right now`}
+          description="New listings are added as they are verified, so please check again later, or tell us what you are looking for and we will call you when one fits."
+          actions={<Button href="/contact" label="Tell us what you need" variant="primary" />} />
       )}
       {count === 0 && tabTotal > 0 && (
-        <p className="empty-state">
-          Nothing matches these choices. {chips.length > 0 && <><button type="button" className="link" onClick={clearAll}>Clear the filters</button> or </>}
-          <a className="link" href="/contact">tell us what you need</a>.
-        </p>
+        <EmptyState title="Nothing matches these choices" description="Try fewer filters, or tell us what you need."
+          actions={<HStack gap={2}>{chips.length > 0 && <Button label="Clear the filters" onClick={clearAll} />}<Button href="/contact" label="Tell us what you need" variant="primary" /></HStack>} />
       )}
       {ready && pages > 1 && (
-        <nav className="pager" aria-label={`${label} pages`}>
-          <button type="button" className="btn btn--quiet btn--small" disabled={state.page === 0} onClick={() => goTo(state.page - 1)}>Previous</button>
-          <p aria-live="polite">Showing {first} to {last} of {count}</p>
-          <button type="button" className="btn btn--quiet btn--small" disabled={state.page >= pages - 1} onClick={() => goTo(state.page + 1)}>Next</button>
-        </nav>
+        <VStack gap={2} hAlign="center">
+          <Pagination page={state.page + 1} totalPages={pages} onChange={(p) => goTo(p - 1)} label={`${label} pages`} />
+          <Text type="supporting" aria-live="polite">Showing {first} to {last} of {count}</Text>
+        </VStack>
       )}
-    </div>
+    </VStack>
   );
 }

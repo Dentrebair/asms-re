@@ -2,7 +2,15 @@ import { isSample, properties } from "@/lib/content";
 import { CATEGORIES, categoryLabel } from "@/lib/property";
 import type { PropertyCategory } from "@/lib/content-types";
 import Catalog, { type CatalogFilter, type CatalogSort, type CatalogTabs } from "../catalog";
-import { Footer, Header, PropertyCard } from "../site-components";
+import { Footer, Header, PageHead, PropertyCard } from "../site-components";
+import { ForestTheme } from "../astryx/themes";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { EmptyState } from "@astryxdesign/core/EmptyState";
+import { Grid } from "@astryxdesign/core/Grid";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
 
 const BUDGETS = [
   { value: "0-5000000", label: "Under ₹50 L" },
@@ -72,53 +80,62 @@ export default function PropertiesPage() {
     <>
       <Header />
       <main id="main">
-        <section className="page-head" aria-labelledby="page-title">
-          <div className="container page-head-grid">
-            <h1 id="page-title">Property for sale around Chennai</h1>
-            <p className="lead">Each listing shows price, area, location and document status upfront.</p>
+        <PageHead title="Property for sale around Chennai" lead="Each listing shows price, area, location and document status upfront." />
+
+        <section className="band band--tight" aria-label="Listings" style={{ paddingTop: 0 }}>
+          <div className="page">
+            <VStack gap={6}>
+              {isSample && <Banner status="info" title="Design preview" description="All listing details are placeholders. Only verified ASMS‑ROUNAQH inventory will be published." />}
+              {properties.length === 0 ? (
+                <EmptyState title="New listings are being prepared" description="Tell us what you are looking for and we will be in touch."
+                  actions={<Button href="/contact" label="Tell us what you need" variant="primary" />} />
+              ) : (
+                <Catalog label="Properties" tabs={tabs} search="Locality, landmark or reference" filters={filters} sorts={SORTS} total={properties.length}>
+                  {properties.map((p, i) => (
+                    <li key={p.slug} data-order={i} data-category={p.category} data-subtype={p.propertyType} data-location={p.location}
+                      data-price={p.price ?? ""} data-area={p.areaSqFt ?? ""} data-posted={p.postedOn ?? ""} data-bhk={p.bhk ?? ""}
+                      data-possession={p.possession ?? ""} data-facing={p.facing ?? ""} data-road={p.roadWidthFt ?? ""}
+                      data-search={[p.title, p.location, p.locality, p.propertyType, categoryLabel(p.category), p.reference].filter(Boolean).join(" ").toLowerCase()}>
+                      <PropertyCard property={p} priority={i < 3} />
+                    </li>
+                  ))}
+                </Catalog>
+              )}
+            </VStack>
           </div>
         </section>
 
-        <section className="sec sec--list" aria-label="Listings">
-          <div className="container">
-            {isSample && <p className="notice">Design preview: all listing details are placeholders. Only verified ASMS&#8209;ROUNAQH inventory will be published.</p>}
-            {properties.length === 0 ? (
-              <p className="empty-state">New listings are being prepared. <a className="link" href="/contact">Tell us what you are looking for</a> and we will be in touch.</p>
-            ) : (
-              <Catalog label="Properties" tabs={tabs} search="Locality, landmark or reference" filters={filters} sorts={SORTS} total={properties.length}>
-                {properties.map((p, i) => (
-                  <li key={p.slug} data-order={i} data-category={p.category} data-subtype={p.propertyType} data-location={p.location}
-                    data-price={p.price ?? ""} data-area={p.areaSqFt ?? ""} data-posted={p.postedOn ?? ""} data-bhk={p.bhk ?? ""}
-                    data-possession={p.possession ?? ""} data-facing={p.facing ?? ""} data-road={p.roadWidthFt ?? ""}
-                    data-search={[p.title, p.location, p.locality, p.propertyType, categoryLabel(p.category), p.reference].filter(Boolean).join(" ").toLowerCase()}>
-                    <PropertyCard property={p} priority={i < 3} />
-                  </li>
-                ))}
-              </Catalog>
-            )}
-          </div>
-        </section>
-
-        <section className="sec sec--field on-field" aria-labelledby="guide-title">
-          <div className="container rows-layout">
-            <div className="rows-head">
-              <h2 id="guide-title">What to check before you buy</h2>
-              <p>Every property should answer the important questions before a visit. Not sure which plot fits? Share your preferred location, intended use and budget range.</p>
-              <div className="actions">
-                <a className="btn btn--quiet" href="/contact">Speak with our team</a>
-                <a className="link" href="/">Return home</a>
-              </div>
+        <ForestTheme>
+          <section className="band band--forest" aria-labelledby="guide-title">
+            <div className="page">
+              <VStack gap={8}>
+                <VStack gap={3}>
+                  <Heading level={2} type="display-3" id="guide-title">What to check before you buy</Heading>
+                  <Text type="large" color="secondary" as="p">Every property should answer the important questions before a visit. Not sure which plot fits? Share your preferred location, intended use and budget range.</Text>
+                </VStack>
+                <Grid columns={{ minWidth: 240, repeat: "fit" }} gap={4}>
+                  {GUIDE.map((g) => (
+                    <Card key={g.title} padding={6}>
+                      <VStack gap={2}><Heading level={3}>{g.title}</Heading><Text color="secondary" as="p">{g.text}</Text></VStack>
+                    </Card>
+                  ))}
+                </Grid>
+                <HStack gap={3} wrap="wrap">
+                  <Button href="/contact" label="Speak with our team" variant="primary" />
+                  <Button href="/" label="Return home" variant="ghost" />
+                </HStack>
+              </VStack>
             </div>
-            <ul className="rows rows--two">
-              <li><h3>Know the essentials</h3><p>Location, dimensions, access, utilities and asking price, presented upfront.</p></li>
-              <li><h3>Understand documents</h3><p>Available approvals and document status, described without misleading guarantees.</p></li>
-              <li><h3>Visit with context</h3><p>Request a site visit with the listing reference, so every conversation stays specific.</p></li>
-            </ul>
-          </div>
-        </section>
-
+          </section>
+        </ForestTheme>
       </main>
       <Footer />
     </>
   );
 }
+
+const GUIDE = [
+  { title: "Know the essentials", text: "Location, dimensions, access, utilities and asking price, presented upfront." },
+  { title: "Understand documents", text: "Available approvals and document status, described without misleading guarantees." },
+  { title: "Visit with context", text: "Request a site visit with the listing reference, so every conversation stays specific." },
+];

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@astryxdesign/core/Button";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CATEGORY_ICONS, slugify } from "@/lib/presets";
 import { deletePhotos, emptyProduct, explain, mediaUrl, supabase, type CategoryRow, type ProductRow } from "./lib";
@@ -48,8 +49,8 @@ export function ProductsAdmin({ notify }: { notify: Notify }) {
     <section>
       <div className="adm-toolbar">
         <h2>Construction products <small>{products ? products.length : "…"}</small></h2>
-        <button type="button" className="adm-btn adm-btn-ghost" onClick={() => setManagingCategories(true)}>Categories</button>
-        <button type="button" className="adm-btn" disabled={categories.length === 0} onClick={() => setEditing(emptyProduct(categories[0]?.id))}>+ New product</button>
+        <Button type="button" onClick={() => setManagingCategories(true)} variant="secondary" label="Categories" />
+        <Button type="button" isDisabled={categories.length === 0} onClick={() => setEditing(emptyProduct(categories[0]?.id))} variant="primary" label="+ New product" />
       </div>
       {products === null ? <p className="adm-muted">Loading…</p> : categories.map((c) => {
         const items = products.filter((p) => p.category_id === c.id);
@@ -70,9 +71,9 @@ export function ProductsAdmin({ notify }: { notify: Notify }) {
                       <span className="adm-tags"><em className={p.published ? "adm-tag-live" : "adm-tag-draft"}>{p.published ? "Live" : "Draft"}</em></span>
                     </div>
                     <div className="adm-list-actions">
-                      <button type="button" className="adm-btn adm-btn-ghost" onClick={() => togglePublished(p)}>{p.published ? "Unpublish" : "Publish"}</button>
-                      <button type="button" className="adm-btn" onClick={() => setEditing(p)}>Edit</button>
-                      <button type="button" className="adm-btn adm-btn-danger" onClick={() => remove(p)}>Delete</button>
+                      <Button type="button" onClick={() => togglePublished(p)} variant="secondary" label={p.published ? "Unpublish" : "Publish"} />
+                      <Button type="button" onClick={() => setEditing(p)} variant="primary" label="Edit" />
+                      <Button type="button" onClick={() => remove(p)} variant="destructive" label="Delete" />
                     </div>
                   </li>
                 ))}
@@ -116,7 +117,7 @@ function ProductForm({ initial, categories, notify, onDone }: { initial: Product
   return (
     <form className="adm-form" onSubmit={save}>
       <div className="adm-form-head">
-        <button type="button" className="adm-link" onClick={cancel}>← All products</button>
+        <Button type="button" onClick={cancel} variant="ghost" label="← All products" />
         <h2>{isNew ? "New product" : `Edit ${initial.name}`}</h2>
       </div>
       <fieldset><legend>Product</legend>
@@ -138,8 +139,8 @@ function ProductForm({ initial, categories, notify, onDone }: { initial: Product
           blank={{ label: "", value: "" }} columns={[{ key: "label", label: "Label", placeholder: "e.g. Grade" }, { key: "value", label: "Value", placeholder: "e.g. Fe 500D" }]} />
       </fieldset>
       <div className="adm-form-foot">
-        <button type="button" className="adm-btn adm-btn-ghost" onClick={cancel}>Cancel</button>
-        <button type="submit" className="adm-btn" disabled={saving}>{saving ? "Saving…" : isNew ? "Create product" : "Save changes"}</button>
+        <Button type="button" onClick={cancel} variant="secondary" label="Cancel" />
+        <Button type="submit" isDisabled={saving} variant="primary" label={saving ? "Saving…" : isNew ? "Create product" : "Save changes"} />
       </div>
     </form>
   );
@@ -175,7 +176,7 @@ function CategoriesForm({ categories, notify, onDone }: { categories: CategoryRo
   return (
     <form className="adm-form" onSubmit={save}>
       <div className="adm-form-head">
-        <button type="button" className="adm-link" onClick={onDone}>← All products</button>
+        <Button type="button" onClick={onDone} variant="ghost" label="← All products" />
         <h2>Product categories</h2>
       </div>
       {rows.map((c, i) => (
@@ -185,18 +186,16 @@ function CategoriesForm({ categories, notify, onDone }: { categories: CategoryRo
           <Select label="Icon" value={c.icon} options={CATEGORY_ICONS} onChange={(v) => update(i, { icon: v ?? "layers" })} />
           <TextArea label="Intro" value={c.intro} onChange={(v) => update(i, { intro: v ?? "" })} rows={2} />
           <div className="adm-inline adm-wide">
-            <button type="button" className="adm-btn adm-btn-ghost" disabled={i === 0} onClick={() => setRows((rs) => { const n = [...rs]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; })}>Move up</button>
-            <button type="button" className="adm-btn adm-btn-danger" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>
-              {original.has(c.id) ? "Delete category" : "Remove"}
-            </button>
+            <Button type="button" isDisabled={i === 0} onClick={() => setRows((rs) => { const n = [...rs]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; })} variant="secondary" label="Move up" />
+            <Button type="button" variant="destructive" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))} label={original.has(c.id) ? "Delete category" : "Remove"} />
           </div>
         </fieldset>
       ))}
-      <button type="button" className="adm-btn adm-btn-ghost" onClick={() => setRows((rs) => [...rs, { id: "", name: "", intro: "", icon: "layers", sort_order: rs.length + 1 }])}>+ Add category</button>
+      <Button type="button" onClick={() => setRows((rs) => [...rs, { id: "", name: "", intro: "", icon: "layers", sort_order: rs.length + 1 }])} variant="secondary" label="+ Add category" />
       <p className="adm-muted">A category can only be deleted once it has no products.</p>
       <div className="adm-form-foot">
-        <button type="button" className="adm-btn adm-btn-ghost" onClick={onDone}>Cancel</button>
-        <button type="submit" className="adm-btn" disabled={saving}>{saving ? "Saving…" : "Save categories"}</button>
+        <Button type="button" onClick={onDone} variant="secondary" label="Cancel" />
+        <Button type="submit" isDisabled={saving} variant="primary" label={saving ? "Saving…" : "Save categories"} />
       </div>
     </form>
   );

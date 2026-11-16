@@ -1,34 +1,45 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { TextArea as AstryxTextArea } from "@astryxdesign/core/TextArea";
+import { NumberInput as AstryxNumberInput } from "@astryxdesign/core/NumberInput";
+import { Selector } from "@astryxdesign/core/Selector";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
+import { DateInput } from "@astryxdesign/core/DateInput";
+import type { ISODateString } from "@astryxdesign/core/Calendar";
+import { Button } from "@astryxdesign/core/Button";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Banner } from "@astryxdesign/core/Banner";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { mediaUrl, uploadPhoto, type ImageRef } from "./lib";
 
-export function Field({ label, hint, required, children, wide }: { label: string; hint?: string; required?: boolean; children: (id: string) => ReactNode; wide?: boolean }) {
-  const id = useId();
-  return (
-    <div className={`adm-field${wide ? " adm-wide" : ""}`}>
-      <label htmlFor={id}>{label}{required && <b aria-hidden="true"> *</b>}</label>
-      {children(id)}
-      {hint && <small>{hint}</small>}
-    </div>
-  );
+/** Wraps a field in the admin form grid; `wide` spans the full row. */
+function Cell({ wide, children }: { wide?: boolean; children: ReactNode }) {
+  return <div className={`adm-field${wide ? " adm-wide" : ""}`}>{children}</div>;
 }
 
-/** Text input bound to a nullable string ("" ⇄ null). */
-export function Text({ label, value, onChange, required, hint, placeholder, wide, list }: {
-  label: string; value: string | null; onChange: (v: string | null) => void; required?: boolean; hint?: string; placeholder?: string; wide?: boolean; list?: string[];
+/** Text input bound to a nullable string ("" ⇄ null).
+ *  `grow` renders a one-line value in an Astryx TextArea that wraps and grows with its
+ *  content (CSS field-sizing), so long values stay readable; line breaks are kept out of the value. */
+export function Text({ label, value, onChange, required, hint, placeholder, wide, list, grow }: {
+  label: string; value: string | null; onChange: (v: string | null) => void; required?: boolean; hint?: string; placeholder?: string; wide?: boolean; list?: string[]; grow?: boolean;
 }) {
   const listId = useId();
+  const emit = (v: string) => onChange(v === "" ? null : v);
   return (
-    <Field label={label} hint={hint} required={required} wide={wide}>
-      {(id) => (
+    <Cell wide={wide}>
+      {grow ? (
+        <AstryxTextArea label={label} description={hint} value={value ?? ""} isRequired={required} placeholder={placeholder} rows={3}
+          controlClassName="adm-grow" hasSpellCheck onChange={(v) => emit(v.replace(/\s*\n\s*/g, " "))} />
+      ) : (
         <>
-          <input id={id} value={value ?? ""} required={required} placeholder={placeholder} list={list ? listId : undefined}
-            onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)} />
+          <TextInput label={label} description={hint} value={value ?? ""} isRequired={required} placeholder={placeholder}
+            {...(list ? { list: listId } : {})} onChange={emit} />
           {list && <datalist id={listId}>{list.map((o) => <option key={o} value={o} />)}</datalist>}
         </>
       )}
-    </Field>
+    </Cell>
   );
 }
 
@@ -36,61 +47,62 @@ export function NumberInput({ label, value, onChange, hint, placeholder, min = 0
   label: string; value: number | null; onChange: (v: number | null) => void; hint?: string; placeholder?: string; min?: number;
 }) {
   return (
-    <Field label={label} hint={hint}>
-      {(id) => (
-        <input id={id} type="number" inputMode="decimal" min={min} step="any" value={value ?? ""} placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))} />
-      )}
-    </Field>
+    <Cell>
+      <AstryxNumberInput label={label} description={hint} value={value} placeholder={placeholder} min={min} hasClear
+        onChange={(v: number | null) => onChange(v ?? null)} />
+    </Cell>
   );
 }
+
+const EMPTY = "__empty__";
 
 export function Select({ label, value, options, onChange, required, allowEmpty }: {
   label: string; value: string | null; options: string[] | { value: string; label: string }[]; onChange: (v: string | null) => void; required?: boolean; allowEmpty?: boolean;
 }) {
   const opts = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
   const known = opts.some((o) => o.value === value);
+  const all = [
+    ...(allowEmpty ? [{ value: EMPTY, label: "—" }] : []),
+    ...(value && !known ? [{ value, label: value }] : []),
+    ...opts,
+  ];
   return (
-    <Field label={label} required={required}>
-      {(id) => (
-        <select id={id} value={value ?? ""} required={required} onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}>
-          {(allowEmpty || !value) && <option value="">{allowEmpty ? "—" : "Select…"}</option>}
-          {value && !known && <option value={value}>{value}</option>}
-          {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      )}
-    </Field>
+    <Cell>
+      <Selector label={label} isRequired={required} placeholder="Select…" options={all}
+        value={value ?? (allowEmpty ? EMPTY : "")} onChange={(v) => onChange(v === EMPTY || v === "" ? null : v)} />
+    </Cell>
   );
 }
 
 export function YesNo({ label, value, onChange }: { label: string; value: boolean | null; onChange: (v: boolean | null) => void }) {
   return (
-    <Field label={label}>
-      {(id) => (
-        <select id={id} value={value === null ? "" : value ? "yes" : "no"} onChange={(e) => onChange(e.target.value === "" ? null : e.target.value === "yes")}>
-          <option value="">Not specified</option>
-          <option value="yes">Yes</option>
-          <option value="no">No</option>
-        </select>
-      )}
-    </Field>
+    <Cell>
+      <Selector label={label} value={value === null ? EMPTY : value ? "yes" : "no"}
+        options={[{ value: EMPTY, label: "Not specified" }, { value: "yes", label: "Yes" }, { value: "no", label: "No" }]}
+        onChange={(v) => onChange(v === EMPTY ? null : v === "yes")} />
+    </Cell>
   );
 }
 
 export function Check({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
+  return <CheckboxInput label={label} description={hint} value={checked} onChange={(v) => onChange(v)} />;
+}
+
+export function TextArea({ label, value, onChange, hint, rows = 12 }: { label: string; value: string | null; onChange: (v: string | null) => void; hint?: string; rows?: number }) {
   return (
-    <label className="adm-check">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span>{label}{hint && <small>{hint}</small>}</span>
-    </label>
+    <Cell wide>
+      <AstryxTextArea label={label} description={hint} rows={rows} value={value ?? ""} controlClassName="adm-long"
+        onChange={(v) => onChange(v === "" ? null : v)} />
+    </Cell>
   );
 }
 
-export function TextArea({ label, value, onChange, hint, rows = 6 }: { label: string; value: string | null; onChange: (v: string | null) => void; hint?: string; rows?: number }) {
+/** A date field bound to an ISO date string or null. */
+export function DateField({ label, value, onChange }: { label: string; value: string | null; onChange: (v: string | null) => void }) {
   return (
-    <Field label={label} hint={hint} wide>
-      {(id) => <textarea id={id} rows={rows} value={value ?? ""} onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)} />}
-    </Field>
+    <Cell>
+      <DateInput label={label} value={(value || undefined) as ISODateString | undefined} hasClear onChange={(v) => onChange(v ?? null)} />
+    </Cell>
   );
 }
 
@@ -110,16 +122,14 @@ export function Rows<T extends Record<string, string>>({ label, rows, columns, o
       {rows.map((row, i) => (
         <div className="adm-row" key={i}>
           {columns.map((c) => c.options ? (
-            <select key={c.key} aria-label={c.label} value={row[c.key]} onChange={(e) => update(i, c.key, e.target.value)}>
-              {c.options.map((o) => <option key={o}>{o}</option>)}
-            </select>
+            <Selector key={c.key} label={c.label} isLabelHidden value={row[c.key]} options={c.options} onChange={(v) => update(i, c.key, v)} />
           ) : (
-            <input key={c.key} aria-label={c.label} placeholder={c.placeholder ?? c.label} value={row[c.key]} onChange={(e) => update(i, c.key, e.target.value)} />
+            <TextInput key={c.key} label={c.label} isLabelHidden placeholder={c.placeholder ?? c.label} value={row[c.key]} onChange={(v) => update(i, c.key, v)} />
           ))}
-          <button type="button" className="adm-icon-btn" aria-label={`Remove row ${i + 1}`} onClick={() => onChange(rows.filter((_, j) => j !== i))}>✕</button>
+          <IconButton label={`Remove row ${i + 1}`} icon={<span aria-hidden="true">✕</span>} variant="ghost" onClick={() => onChange(rows.filter((_, j) => j !== i))} />
         </div>
       ))}
-      <button type="button" className="adm-btn adm-btn-ghost" onClick={() => onChange([...rows, { ...blank }])}>+ {addLabel}</button>
+      <div><Button label={`+ ${addLabel}`} variant="secondary" size="sm" onClick={() => onChange([...rows, { ...blank }])} /></div>
     </fieldset>
   );
 }
@@ -169,12 +179,12 @@ export function Photos({ images, onChange, folder, max = 20, onUploaded }: {
           <figure key={img.path}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={mediaUrl(img.path)} alt="" />
-            {i === 0 && max > 1 && <span className="adm-cover">Cover</span>}
-            <input aria-label={`Caption for photo ${i + 1}`} placeholder="Caption (optional)" value={img.alt} onChange={(e) => onChange(images.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} />
+            {i === 0 && max > 1 && <span className="adm-cover"><Badge label="Cover" variant="warning" /></span>}
+            <TextInput label={`Caption for photo ${i + 1}`} isLabelHidden size="sm" placeholder="Caption (optional)" value={img.alt} onChange={(v) => onChange(images.map((x, j) => (j === i ? { ...x, alt: v } : x)))} />
             <div className="adm-photo-actions">
-              {max > 1 && <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move earlier">←</button>}
-              {max > 1 && <button type="button" disabled={i === images.length - 1} onClick={() => move(i, 1)} aria-label="Move later">→</button>}
-              <button type="button" onClick={() => onChange(images.filter((_, j) => j !== i))} aria-label="Remove photo">Remove</button>
+              {max > 1 && <IconButton size="sm" variant="ghost" isDisabled={i === 0} onClick={() => move(i, -1)} label="Move earlier" icon={<span aria-hidden="true">←</span>} />}
+              {max > 1 && <IconButton size="sm" variant="ghost" isDisabled={i === images.length - 1} onClick={() => move(i, 1)} label="Move later" icon={<span aria-hidden="true">→</span>} />}
+              <Button size="sm" variant="ghost" onClick={() => onChange(images.filter((_, j) => j !== i))} label="Remove" />
             </div>
           </figure>
         ))}
@@ -186,7 +196,7 @@ export function Photos({ images, onChange, folder, max = 20, onUploaded }: {
       </div>
       <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,image/heic" multiple={max > 1} hidden onChange={(e) => add(e.target.files)} />
       <small>Photos are resized automatically. {max > 1 && "The first photo is the cover. "}Use real photos of the property or product.</small>
-      {error && <p className="adm-error" role="alert">{error}</p>}
+      {error && <Banner status="error" title={error} />}
     </div>
   );
 }
@@ -195,8 +205,8 @@ export function Toast({ message, tone = "ok", onClose }: { message: string | nul
   if (!message) return null;
   return (
     <div className={`adm-toast adm-toast-${tone}`} role={tone === "error" ? "alert" : "status"}>
-      <span>{message}</span>
-      <button type="button" onClick={onClose} aria-label="Dismiss">✕</button>
+      <Banner status={tone === "error" ? "error" : "success"} container="card" elevation="high" isDismissable onDismiss={onClose} dismissLabel="Dismiss"
+        title={<span data-toast-message>{message}</span>} />
     </div>
   );
 }
