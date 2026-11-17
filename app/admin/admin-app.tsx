@@ -8,6 +8,8 @@ import { EnquiriesAdmin, isFresh } from "./enquiries-admin";
 import { ProductsAdmin } from "./products-admin";
 import { PropertiesAdmin } from "./properties-admin";
 import { StaffAdmin } from "./staff-admin";
+import { SubmissionsAdmin } from "./submissions-admin";
+import { SellersAdmin } from "./sellers-admin";
 import { Toast } from "./ui";
 import { Badge } from "@astryxdesign/core/Badge";
 import { Card } from "@astryxdesign/core/Card";
@@ -18,13 +20,13 @@ import { TopNav, TopNavHeading } from "@astryxdesign/core/TopNav";
 import { HStack } from "@astryxdesign/core/Layout";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { TextInput } from "@astryxdesign/core/TextInput";
-import { UploadCloud, Building2, ExternalLink, Inbox, LockKeyhole, LogOut, Mail, Package, Users, type LucideIcon } from "lucide-react";
+import { UploadCloud, Building2, ClipboardCheck, ExternalLink, Inbox, LockKeyhole, LogOut, Mail, Package, Store, Users, type LucideIcon } from "lucide-react";
 import { Heading, Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/Layout";
 
-type Tab = "enquiries" | "properties" | "products" | "staff";
-const TAB_LABELS: Record<Tab, string> = { enquiries: "Enquiries", properties: "Properties", products: "Products", staff: "Staff" };
-const TAB_ICONS: Record<Tab, LucideIcon> = { enquiries: Inbox, properties: Building2, products: Package, staff: Users };
+type Tab = "enquiries" | "submissions" | "properties" | "products" | "sellers" | "staff";
+const TAB_LABELS: Record<Tab, string> = { enquiries: "Enquiries", submissions: "Submissions", properties: "Properties", products: "Products", sellers: "Sellers", staff: "Staff" };
+const TAB_ICONS: Record<Tab, LucideIcon> = { enquiries: Inbox, submissions: ClipboardCheck, properties: Building2, products: Package, sellers: Store, staff: Users };
 type AuthState = "loading" | "signed-out" | "set-password" | "not-staff" | "ready";
 
 export default function AdminApp() {
@@ -33,6 +35,7 @@ export default function AdminApp() {
   const [me, setMe] = useState<StaffRow | null>(null);
   const [tab, setTab] = useState<Tab>("enquiries");
   const [newEnquiries, setNewEnquiries] = useState(0);
+  const [waiting, setWaiting] = useState(0);
   const [toast, setToast] = useState<{ message: string; tone: "ok" | "error" } | null>(null);
   const notify = useCallback((message: string, tone: "ok" | "error" = "ok") => setToast({ message, tone }), []);
 
@@ -70,6 +73,11 @@ export default function AdminApp() {
   useEffect(() => {
     if (state !== "ready") return;
     void supabase().from("enquiries").select("status").in("status", ["new", "visit_requested"]).limit(1000).then(({ data }) => setNewEnquiries((data ?? []).filter(isFresh).length));
+    // Seller listings and change requests waiting for a decision.
+    void Promise.all([
+      supabase().from("properties").select("id").in("stage", ["submitted", "under_review"]),
+      supabase().from("property_revisions").select("id").eq("status", "pending"),
+    ]).then(([a, b]) => setWaiting((a.data?.length ?? 0) + (b.data?.length ?? 0)));
   }, [state]);
 
   // Auto-dismiss success messages.
@@ -132,17 +140,22 @@ export default function AdminApp() {
           <SideNav
             footer={<SideNavItem label="View website" href="/" icon={ExternalLink} />}>
             <SideNavSection title="Manage">
-              {(["enquiries", "properties", "products", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => (
-                <SideNavItem key={t} label={TAB_LABELS[t]} icon={TAB_ICONS[t]} isSelected={tab === t} onClick={() => setTab(t)}
-                  endContent={t === "enquiries" && newEnquiries > 0 ? <span className="adm-count" aria-label={`${newEnquiries} new`}><Badge label={String(newEnquiries)} variant="warning" /></span> : undefined} />
-              ))}
+              {(["enquiries", "submissions", "properties", "products", "sellers", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => {
+                const n = t === "enquiries" ? newEnquiries : t === "submissions" ? waiting : 0;
+                return (
+                  <SideNavItem key={t} label={TAB_LABELS[t]} icon={TAB_ICONS[t]} isSelected={tab === t} onClick={() => setTab(t)}
+                    endContent={n > 0 ? <span className="adm-count" aria-label={t === "enquiries" ? `${n} new` : `${n} waiting`}><Badge label={String(n)} variant="warning" /></span> : undefined} />
+                );
+              })}
             </SideNavSection>
           </SideNav>
         }>
         <main className="adm-main" data-section={tab}>
           {tab === "enquiries" && <EnquiriesAdmin me={me} notify={notify} onNewCount={setNewEnquiries} />}
+          {tab === "submissions" && <SubmissionsAdmin notify={notify} onCount={setWaiting} />}
           {tab === "properties" && <PropertiesAdmin notify={notify} />}
           {tab === "products" && <ProductsAdmin notify={notify} />}
+          {tab === "sellers" && <SellersAdmin notify={notify} />}
           {tab === "staff" && me.role === "owner" && <StaffAdmin me={me} notify={notify} />}
         </main>
       </AppShell>

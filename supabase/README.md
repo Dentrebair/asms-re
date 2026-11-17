@@ -76,8 +76,9 @@ scheduled build keeps the free project from pausing.
    ```
    The "from" address must be on the domain you verified in Resend.
 
-10. **Later, for seller sign-in with Google (Phase 3).** In your own Google account
-    at [console.cloud.google.com](https://console.cloud.google.com):
+10. **Seller sign-in with Google (the seller portal at `/seller`).** Until this is
+    done the portal's "Continue with Google" button shows "provider is not enabled".
+    In your own Google account at [console.cloud.google.com](https://console.cloud.google.com):
     1. Create a project (e.g. "ASMS-ROUNAQH website").
     2. *APIs & Services → OAuth consent screen*: User type **External**, app name
        `ASMS-ROUNAQH`, support email `reach@asmsrounaqh.com`, authorised domain
@@ -89,6 +90,12 @@ scheduled build keeps the free project from pausing.
     4. Copy the Client ID and Client secret straight into that Supabase Google
        provider form and enable it. Don't send the secret to anyone.
     5. Back on the consent screen, **Publish app** so any Google user can sign in.
+    6. In Supabase, *Authentication → URL Configuration*: set the Site URL to
+       `https://asmsrounaqh.com` and add `https://asmsrounaqh.com/seller` under
+       *Redirect URLs*, so Google can send sellers back to the portal.
+
+    `schema.sql` already creates everything else the portal needs: seller profiles,
+    the review functions, the audit log and the private `seller-docs` storage bucket.
 
 ## Notes
 
@@ -109,6 +116,17 @@ scheduled build keeps the free project from pausing.
   clicks and shares are stored in `events` with a random browser code, never
   a name or phone. Repeats from one browser within 10 minutes and staff
   browsing are ignored. Seller and admin dashboards will read these.
+- **Seller portal:** anyone can sign in at `/seller` with Google, say who they are
+  (owner, broker or agent, developer or builder, other) and list a property. A
+  seller can only write the listing's own fields, and only while it is a draft or
+  sent back for changes; the reference, web address, stage and "featured" are set
+  by the database. Sending it for review, the review decisions (start, request
+  changes, reject, approve) and changes to live listings all go through database
+  functions, and every step is recorded in `audit_log`. Ownership documents go to
+  the private `seller-docs` bucket: only the seller and staff can open them, through
+  links that expire after 10 minutes. Seller photos go to `media/sellers/<their id>/`.
+  Drafts, autosaves and review steps never start a website rebuild; going live does.
+  Staff can suspend a seller from the *Sellers* tab, which stops new listings and changes.
 - **Testing the rules locally:** `npm run test:db` applies `schema.sql` to a throwaway
   Postgres and checks every permission (needs Postgres installed).
 

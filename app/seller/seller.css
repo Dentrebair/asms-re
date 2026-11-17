@@ -1,0 +1,31 @@
+/* Seller portal. It shares the admin panel's layout (admin.css) and adds only what is its own. */
+.sel .adm-main { width: min(980px, 100%); }
+.sel-note { margin-bottom: var(--spacing-4); }
+.sel-onboard { width: min(520px, calc(100% - 32px)); margin: 6vh auto; }
+.sel-signin a, .sel-onboard a { color: var(--color-text-accent); }
+
+/* Listings */
+.sel-listings { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--spacing-3); }
+.sel-listing-grid { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--spacing-4); align-items: start; }
+.sel-listing .adm-thumb { width: 96px; height: 72px; }
+.sel-listing h2 { font-size: var(--text-heading-3-size); }
+.sel-listing .sel-note { margin: var(--spacing-3) 0 0; }
+.sel-listing-actions { flex-wrap: nowrap; }
+@media (max-width: 640px) {
+  .sel-listing-grid { grid-template-columns: auto minmax(0, 1fr); }
+  .sel-listing-actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
+  .sel-listing .adm-thumb { width: 72px; height: 56px; }
+}
+.sel-history { margin: var(--spacing-3) 0 0; padding: var(--spacing-3) 0 0 var(--spacing-5); border-top: 1px solid var(--color-border); display: grid; gap: var(--spacing-2); }
+
+/* Wizard */
+.sel-wizard { display: grid; gap: var(--spacing-4); scroll-margin-top: 80px; }
+.sel-wizard .adm-section-head { margin-bottom: 0; }
+.sel-save { font-size: var(--text-supporting-size); color: var(--color-text-secondary); white-space: nowrap; }
+.sel-save[data-state="error"] { color: var(--color-text-error); font-weight: 600; }
+.sel-steps { overflow-x: auto; }
+.sel-form { gap: var(--spacing-4); }
+.sel-nav { position: sticky; bottom: 0; z-index: 2; padding: var(--spacing-4) 0; display: flex; justify-content: space-between; gap: var(--spacing-3); background: linear-gradient(transparent, var(--color-background-body) 30%); }
+/* Private documents (list styles shared from admin.css) */
+.sel-doc-add { display: grid; grid-template-columns: minmax(200px, 320px) auto; align-items: end; gap: var(--spacing-3); justify-content: start; }
+@media (max-width: 640px) { .sel-doc-add { grid-template-columns: 1fr; } }

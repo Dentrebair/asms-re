@@ -14,6 +14,9 @@ psql_ -f "$here/stubs.sql"
 grep -v "create extension if not exists pg_net" "$here/../schema.sql" > "$work/schema.sql"
 psql_ -f "$work/schema.sql" 2>/dev/null
 psql_ -f "$work/schema.sql" 2>/dev/null   # must be re-runnable
-out="$(psql -h "$work" -p 54330 -U postgres -d postgres -q -f "$here/rls-tests.sql" 2>/dev/null | grep -E '^(PASS|FAIL)')"
+out="$(psql -h "$work" -p 54330 -U postgres -d postgres -q -f "$here/rls-tests.sql" 2>"${RLS_ERR:-/dev/null}" | grep -E '^(PASS|FAIL)')"
 echo "$out"
-! grep -q '^FAIL' <<<"$out"
+# A check whose query errors prints nothing, so count them too.
+expected="$(grep -c "pg_temp.check('" "$here/rls-tests.sql")"
+got="$(grep -c '^PASS' <<<"$out" || true)"
+[ "$got" = "$expected" ] || { echo "Only $got of $expected checks passed"; exit 1; }

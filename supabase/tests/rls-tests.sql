@@ -74,7 +74,7 @@ insert into vault.decrypted_secrets values ('resend_api_key', 're_test'), ('enqu
 set role anon; set request.jwt.claims = '{}';
 insert into public.enquiries (kind, source, name, phone, email, property_ref, message, consent)
   values ('property', 'property_page', '  Priya  ', '+91 98400 12345', ' Priya@Example.COM ', 'r-1', 'Is the plot still available?', true);
-select pg_temp.check('anon cannot read enquiries back', (select count(*) from public.enquiries) = 0);
+select pg_temp.check('anon cannot read enquiries back', not has_table_privilege('anon', 'public.enquiries', 'select'));
 insert into public.enquiries (kind, name, phone, message, consent, status) values ('general', 'Sneaky', '9840012345', 'x', true, 'closed_won');
 insert into public.enquiries (kind, name, phone, message, consent, repeat_contact) values ('general', 'Sneaky2', '9840012399', 'x', true, true);
 insert into public.enquiries (kind, name, phone, message, consent) values ('general', 'No consent', '9840012346', 'x', false);
@@ -125,7 +125,7 @@ select pg_temp.check('each change is in the history with who made it',
   (select count(*) from public.enquiry_history where actor = 'editor@asms.test') = 4
   and (select new_value from public.enquiry_history where field = 'status') = 'contacted');
 set role anon; set request.jwt.claims = '{}';
-select pg_temp.check('visitors cannot read history', (select count(*) from public.enquiry_history) = 0);
+select pg_temp.check('visitors cannot read history', not has_table_privilege('anon', 'public.enquiry_history', 'select'));
 reset role;
 
 set role anon; set request.jwt.claims = '{}';
@@ -150,7 +150,7 @@ select public.track('property_view', 'R-2', '00000000-0000-0000-0000-00000000000
 select public.track('property_view', 'R-4', '00000000-0000-0000-0000-000000000003', 'detail');  -- sold: ignored
 select public.track('enquiry_created', 'R-1', '00000000-0000-0000-0000-000000000003', 'detail');  -- not a trackable type
 insert into public.events (type, property_id, visitor) select 'property_view', id, gen_random_uuid() from public.properties;
-select pg_temp.check('visitors cannot read events', (select count(*) from public.events) = 0);
+select pg_temp.check('visitors cannot read events', not has_table_privilege('anon', 'public.events', 'select'));
 reset role;
 select pg_temp.check('track records live views and clicks only, deduped per browser', (select count(*) from public.events) = 3
   and (select count(*) from public.events where type = 'property_view') = 2 and (select count(distinct visitor) from public.events) = 2);
@@ -159,3 +159,151 @@ set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
 select public.track('property_view', 'R-1', '00000000-0000-0000-0000-000000000009', 'detail');  -- staff browsing: ignored
 select pg_temp.check('staff read events', (select count(*) from public.events) = 3);
 reset role;
+
+-- ---------- seller portal
+insert into auth.users values ('aaaaaaaa-0000-0000-0000-00000000000a'), ('bbbbbbbb-0000-0000-0000-00000000000b');
+truncate net.calls;
+
+-- Asha signs in with Google but has no profile yet: she cannot list anything.
+set role authenticated; set request.jwt.claims = '{"email":"Asha@Gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+insert into public.properties (title) values ('Too early');
+insert into public.seller_profiles (user_id, email, name, phone, seller_type, status)
+  values ('bbbbbbbb-0000-0000-0000-00000000000b', 'someone@else.com', 'Asha', '98400 55555', 'owner', 'suspended');
+reset role;
+select pg_temp.check('no profile, no listing', (select count(*) from public.properties where title = 'Too early') = 0);
+select pg_temp.check('profile is always her own, active, with her sign-in email',
+  (select user_id = 'aaaaaaaa-0000-0000-0000-00000000000a' and email = 'asha@gmail.com' and status = 'active' from public.seller_profiles));
+
+-- She starts a draft and tries to set staff-only fields.
+set role authenticated; set request.jwt.claims = '{"email":"asha@gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+insert into public.properties (id, slug, reference, title, stage, featured, location)
+  values ('cccccccc-0000-0000-0000-00000000000c', 'hack', 'HACK-1', 'Corner plot in Porur', 'live', true, 'Porur, Chennai');
+select pg_temp.check('seller sees her own draft', (select count(*) from public.properties where seller_id = auth.uid()) = 1);
+update public.properties set title = 'East-facing corner plot in Porur', stage = 'live', featured = true, reference = 'X' where id = 'cccccccc-0000-0000-0000-00000000000c';
+select public.submit_listing('cccccccc-0000-0000-0000-00000000000c');  -- incomplete: refused
+reset role;
+select pg_temp.check('seller draft gets a generated reference and stays a draft, not featured',
+  (select reference ~ '^ASMS-S[0-9]{4}$' and slug = lower(reference) and stage = 'draft' and not featured and title = 'East-facing corner plot in Porur' and seller_id = 'aaaaaaaa-0000-0000-0000-00000000000a'
+   from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c'));
+select pg_temp.check('an incomplete listing cannot be submitted', (select stage from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'draft');
+select pg_temp.check('seller drafts start no rebuild', (select count(*) from net.calls) = 0);
+
+set role anon; set request.jwt.claims = '{}';
+select pg_temp.check('visitors cannot see seller drafts', (select count(*) from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 0);
+reset role;
+
+-- Bala, another seller, cannot see or touch it.
+insert into public.seller_profiles (user_id, email, name, phone, seller_type) values ('bbbbbbbb-0000-0000-0000-00000000000b', 'bala@gmail.com', 'Bala', '98400 66666', 'broker');
+set role authenticated; set request.jwt.claims = '{"email":"bala@gmail.com","sub":"bbbbbbbb-0000-0000-0000-00000000000b"}';
+select pg_temp.check('another seller cannot see it', (select count(*) from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 0);
+update public.properties set title = 'stolen' where id = 'cccccccc-0000-0000-0000-00000000000c';
+select public.submit_listing('cccccccc-0000-0000-0000-00000000000c');
+insert into storage.objects (bucket_id, name) values ('seller-docs', 'aaaaaaaa-0000-0000-0000-00000000000a/cccccccc/x.pdf');
+insert into public.seller_documents (property_id, seller_id, label, path) values ('cccccccc-0000-0000-0000-00000000000c', 'bbbbbbbb-0000-0000-0000-00000000000b', 'Patta', 'bbbbbbbb-0000-0000-0000-00000000000b/x.pdf');
+reset role;
+select pg_temp.check('another seller changed nothing', (select title from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'East-facing corner plot in Porur'
+  and (select count(*) from storage.objects where bucket_id = 'seller-docs') = 0 and (select count(*) from public.seller_documents) = 0);
+
+-- Asha completes it, uploads a private document and submits.
+set role authenticated; set request.jwt.claims = '{"email":"asha@gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+update public.properties set area_sqft = 2400, price = 9600000, description = 'A 2,400 sq ft corner plot on a 30 ft road, five minutes from Porur junction.',
+  images = '[{"path":"sellers/aaaaaaaa-0000-0000-0000-00000000000a/1.webp","alt":""},{"path":"sellers/aaaaaaaa-0000-0000-0000-00000000000a/2.webp","alt":""},{"path":"sellers/aaaaaaaa-0000-0000-0000-00000000000a/3.webp","alt":""}]'
+  where id = 'cccccccc-0000-0000-0000-00000000000c';
+insert into storage.objects (bucket_id, name) values ('media', 'sellers/aaaaaaaa-0000-0000-0000-00000000000a/1.webp');
+insert into storage.objects (bucket_id, name) values ('media', 'properties/not-mine.webp');
+insert into storage.objects (bucket_id, name) values ('seller-docs', 'aaaaaaaa-0000-0000-0000-00000000000a/cccccccc/patta.pdf');
+insert into public.seller_documents (property_id, seller_id, label, path, file_name) values ('cccccccc-0000-0000-0000-00000000000c', 'aaaaaaaa-0000-0000-0000-00000000000a', 'Patta', 'aaaaaaaa-0000-0000-0000-00000000000a/cccccccc/patta.pdf', 'patta.pdf');
+select public.submit_listing('cccccccc-0000-0000-0000-00000000000c');
+update public.properties set title = 'Changed after submitting' where id = 'cccccccc-0000-0000-0000-00000000000c';
+select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'approve');
+reset role;
+select pg_temp.check('seller uploads photos and documents only into her own folders',
+  (select array_agg(bucket_id || ':' || name order by name) from storage.objects where name like 'aaaa%' or name like 'sellers/%' or name = 'properties/not-mine.webp')
+  = array['seller-docs:aaaaaaaa-0000-0000-0000-00000000000a/cccccccc/patta.pdf', 'media:sellers/aaaaaaaa-0000-0000-0000-00000000000a/1.webp']);
+select pg_temp.check('complete listing is submitted and then locked', (select stage = 'submitted' and submitted_at is not null and title = 'East-facing corner plot in Porur' from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c'));
+select pg_temp.check('a seller cannot approve her own listing', (select stage from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'submitted');
+
+set role anon; set request.jwt.claims = '{}';
+select pg_temp.check('visitors cannot read private documents', not has_table_privilege('anon', 'public.seller_documents', 'select') and (select count(*) from storage.objects where bucket_id = 'seller-docs') = 0);
+reset role;
+
+-- Staff review: changes need a note; the seller fixes and resubmits; staff approve.
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+select pg_temp.check('staff see the document', (select count(*) from public.seller_documents) = 1 and (select count(*) from storage.objects where bucket_id = 'seller-docs') = 1);
+select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'start');
+select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'changes');  -- no note: refused
+select pg_temp.check('requesting changes needs a note', (select stage from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'under_review');
+select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'changes', 'Please add a photo of the road frontage.');
+reset role;
+select pg_temp.check('changes requested with the note for the seller', (select stage = 'changes_requested' and review_note = 'Please add a photo of the road frontage.' from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c'));
+
+set role authenticated; set request.jwt.claims = '{"email":"asha@gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+select pg_temp.check('seller sees the history with the note, not who reviewed it',
+  (select count(*) from public.listing_history('cccccccc-0000-0000-0000-00000000000c') where note = 'Please add a photo of the road frontage.' and not by_seller) = 1);
+select pg_temp.check('seller cannot read the audit log directly', (select count(*) from public.audit_log) = 0);
+update public.properties set images = images || '[{"path":"sellers/aaaaaaaa-0000-0000-0000-00000000000a/4.webp","alt":"Road frontage"}]' where id = 'cccccccc-0000-0000-0000-00000000000c';
+select public.submit_listing('cccccccc-0000-0000-0000-00000000000c');
+reset role;
+select pg_temp.check('corrected listing resubmitted', (select stage = 'submitted' and jsonb_array_length(images) = 4 from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c'));
+select pg_temp.check('review steps start no rebuild', (select count(*) from net.calls) = 0);
+
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'approve');
+reset role;
+select pg_temp.check('approved listing goes live with a web address and dates, note cleared',
+  (select stage = 'live' and slug = 'east-facing-corner-plot-in-porur-' || lower(reference) and posted_on = current_date and last_confirmed_on = current_date and review_note is null
+   from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c'));
+select pg_temp.check('going live starts one rebuild', (select count(*) from net.calls) = 1);
+set role anon; set request.jwt.claims = '{}';
+select pg_temp.check('visitors now see it', (select count(*) from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 1);
+reset role;
+
+-- Live edits wait for review.
+set role authenticated; set request.jwt.claims = '{"email":"asha@gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+update public.properties set price = 1 where id = 'cccccccc-0000-0000-0000-00000000000c';
+select public.submit_revision('cccccccc-0000-0000-0000-00000000000c', '{"price": 9200000, "featured": true, "stage": "sold"}');
+select public.submit_revision('cccccccc-0000-0000-0000-00000000000c', '{"price": 9100000, "price_negotiable": true}');
+reset role;
+select pg_temp.check('seller cannot edit a live listing directly', (select price from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 9600000);
+select pg_temp.check('a new change request replaces the pending one and keeps only seller fields',
+  (select count(*) from public.property_revisions where status = 'pending') = 1
+  and (select changes = '{"price": 9100000, "price_negotiable": true}'::jsonb from public.property_revisions where status = 'pending')
+  and (select count(*) from public.property_revisions where status = 'withdrawn') = 1);
+
+set role authenticated; set request.jwt.claims = '{"email":"bala@gmail.com","sub":"bbbbbbbb-0000-0000-0000-00000000000b"}';
+select public.review_revision((select id from public.property_revisions where status = 'pending'), 'approve');
+reset role;
+select pg_temp.check('a seller cannot approve a change request', (select count(*) from public.property_revisions where status = 'pending') = 1);
+
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+select public.review_revision((select id from public.property_revisions where status = 'pending'), 'approve');
+reset role;
+select pg_temp.check('approved change request is applied', (select price = 9100000 and price_negotiable and stage = 'live' from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c')
+  and (select status = 'approved' and reviewed_by = 'editor@asms.test' from public.property_revisions where changes ? 'price_negotiable'));
+
+-- Seller status actions.
+set role authenticated; set request.jwt.claims = '{"email":"asha@gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+select public.seller_listing_action('cccccccc-0000-0000-0000-00000000000c', 'resume');  -- not paused: refused
+select public.seller_listing_action('cccccccc-0000-0000-0000-00000000000c', 'pause');
+reset role;
+select pg_temp.check('seller pauses her live listing', (select stage from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'paused');
+set role authenticated; set request.jwt.claims = '{"email":"asha@gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+select public.seller_listing_action('cccccccc-0000-0000-0000-00000000000c', 'sold');
+reset role;
+select pg_temp.check('seller marks it sold', (select stage from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'sold');
+
+-- Suspension stops new listings.
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+update public.seller_profiles set status = 'suspended' where user_id = 'bbbbbbbb-0000-0000-0000-00000000000b';
+reset role;
+set role authenticated; set request.jwt.claims = '{"email":"bala@gmail.com","sub":"bbbbbbbb-0000-0000-0000-00000000000b"}';
+update public.seller_profiles set status = 'active';
+insert into public.properties (title) values ('Suspended seller listing');
+reset role;
+select pg_temp.check('a suspended seller cannot reactivate himself or add listings',
+  (select status from public.seller_profiles where user_id = 'bbbbbbbb-0000-0000-0000-00000000000b') = 'suspended'
+  and (select count(*) from public.properties where title = 'Suspended seller listing') = 0);
+select pg_temp.check('audit log records stages, the change request and the suspension',
+  (select count(*) from public.audit_log where property_id = 'cccccccc-0000-0000-0000-00000000000c' and action = 'stage') = 7
+  and (select count(*) from public.audit_log where action in ('revision_submitted', 'revision_approved')) = 3
+  and (select count(*) from public.audit_log where action = 'seller_status' and actor = 'editor@asms.test') = 1);

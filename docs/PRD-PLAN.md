@@ -77,12 +77,15 @@ order the rest gets built. Section numbers (§) refer to the PRD.
 - Cross-device wishlist, `/saved`, `/account`
 - Separate opt-in for WhatsApp messages, data deletion request
 
-**Phase 3: sellers and moderation.** Needs a Google OAuth client for Google sign-in.
-- `/sell`, then a 5-step seller wizard with autosave
-- Private documents bucket
-- Submit → review → changes requested / approved / live
-- Live-edit revisions
-- Admin submissions queue with checklist, audit log, seller management
+**Phase 3: sellers and moderation.** Built 17 Nov 2026 on branch `astryx-portal` and tested on the demo server. Going live needs the Supabase project, then the Google OAuth client (`supabase/README.md`, step 10).
+- `/seller`: Google sign-in, one-time "who are you" profile (owner, broker or agent, developer or builder, other), dashboard of the seller's listings
+- 5-step wizard (property, location, price and details, photos and documents, review and send); drafts save themselves
+- Private `seller-docs` bucket: only the seller and reviewers can open documents, through 10-minute links
+- Submit → under review → changes requested (with a note) / rejected / approved and live; sellers can withdraw, pause, resume, mark sold and reconfirm
+- Live-edit revisions: changes to a live listing wait for review; staff see a field-by-field diff
+- Admin *Submissions* queue with a checklist that gates approval, *Sellers* tab with suspend and reactivate, and an activity log
+- The database enforces it all (`supabase/schema.sql`; 31 seller checks in `supabase/tests`); `npm run test:seller` drives the whole loop in a browser
+- Still open: seller dashboard numbers wait for Phase 4; email alerts to sellers when a review decision is made
 
 **Phase 4: analytics.** The admin overview can start now from the events and enquiries already being recorded; the seller dashboard follows Phase 3.
 - Daily metrics rollup

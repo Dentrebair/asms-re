@@ -114,7 +114,61 @@ export type PropertyRow = {
   last_confirmed_on: string | null;
   sort_order: number;
   updated_at?: string;
+  created_at?: string;
+  /** Set for listings a seller created in the seller portal. */
+  seller_id?: string | null;
+  /** The reviewer's note to the seller when changes were requested or the listing was rejected. */
+  review_note?: string | null;
+  submitted_at?: string | null;
 };
+
+// ---------------------------------------------------------------- sellers --
+export type SellerType = "owner" | "broker" | "developer" | "other";
+export const SELLER_TYPES: { value: SellerType; label: string; description: string }[] = [
+  { value: "owner", label: "Owner", description: "I own the property, alone or with family." },
+  { value: "broker", label: "Broker or agent", description: "I sell on behalf of owners." },
+  { value: "developer", label: "Developer or builder", description: "I build and sell projects." },
+  { value: "other", label: "Other", description: "For example a trustee or an authorised representative." },
+];
+export type SellerProfile = {
+  user_id: string;
+  email: string;
+  name: string;
+  phone: string;
+  seller_type: SellerType;
+  company: string | null;
+  status: "active" | "suspended";
+  created_at?: string;
+};
+export type SellerDocument = { id: string; property_id: string; seller_id: string; label: string; path: string; file_name: string | null; size_bytes: number | null; created_at: string };
+export type RevisionRow = {
+  id: string; property_id: string; seller_id: string; changes: Partial<PropertyRow>;
+  status: "pending" | "approved" | "rejected" | "withdrawn"; note: string | null; created_at: string; reviewed_at: string | null; reviewed_by: string | null;
+};
+export type HistoryRow = { at: string; by_seller: boolean; action: string; note: string | null; detail: { from?: string; to?: string; fields?: string[] } | null };
+export type AuditRow = { id: number; at: string; actor: string | null; property_id: string | null; seller_id: string | null; action: string; note: string | null; detail: HistoryRow["detail"] };
+
+/** The fields a seller may fill in; the database keeps only these from a seller (supabase/schema.sql, private.seller_fields). */
+export const SELLER_FIELDS = [
+  "title", "category", "property_type", "transaction_type", "ownership", "location", "locality",
+  "price", "price_negotiable", "area_sqft", "area_unit", "dimensions", "facing", "bhk", "bathrooms", "carpet_area_sqft",
+  "furnishing", "floor_info", "parking", "possession", "road_width_ft", "frontage_ft", "land_use", "corner_plot",
+  "boundary_wall", "gated_layout", "floors_allowed", "usable_area_sqft", "access_notes", "map_url", "zoning_notes",
+  "approval", "rera", "availability", "description", "amenities", "nearby", "images",
+] as const satisfies readonly (keyof PropertyRow)[];
+export type SellerField = (typeof SELLER_FIELDS)[number];
+export const pickSellerFields = (p: PropertyRow) => Object.fromEntries(SELLER_FIELDS.map((k) => [k, p[k]])) as Pick<PropertyRow, SellerField>;
+
+/** What a listing still needs before it can go for review; the same rules as public.listing_gaps(). */
+export function listingGaps(p: PropertyRow): string[] {
+  return [
+    p.title.trim().length < 5 && "a title",
+    !p.location.trim() && "the location",
+    p.area_sqft === null && "the area",
+    (p.description ?? "").trim().length < 50 && "a description of at least 50 characters",
+    p.images.length < 3 && "at least 3 photos",
+  ].filter((x): x is string => Boolean(x));
+}
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -148,6 +202,7 @@ export function explain(error: { message?: string; code?: string } | null | unde
   if (/At least one owner/.test(m)) return "There must always be at least one owner.";
   if (/check constraint/.test(m)) return "Some values aren’t valid (check slug, price and area).";
   if (/Failed to fetch|NetworkError/.test(m)) return "Can’t reach the server. Check your internet connection.";
+  if (error.code === "P0001" || error.code === "P0002") return m; // written for people in supabase/schema.sql
   return m || "Something went wrong.";
 }
 
@@ -179,7 +234,7 @@ async function resize(file: File, maxWidth: number): Promise<Blob> {
 }
 
 /** Resizes a photo to a 1600px and an 800px version and uploads both. Returns the storage path. */
-export async function uploadPhoto(file: File, folder: "properties" | "products"): Promise<string> {
+export async function uploadPhoto(file: File, folder: string): Promise<string> {
   const [large, small] = await Promise.all([resize(file, 1600), resize(file, 800)]);
   const ext = large.type === "image/webp" ? "webp" : "jpg";
   const path = `${folder}/${crypto.randomUUID()}.${ext}`;
@@ -198,4 +253,30 @@ export async function uploadPhoto(file: File, folder: "properties" | "products")
 export async function deletePhotos(paths: string[]) {
   if (paths.length === 0) return;
   await supabase().storage.from(BUCKET).remove(paths.flatMap((p) => [p, smallPath(p)]));
+}
+
+// -------------------------------------------------------- seller documents --
+// Private bucket: only the seller who uploaded a file and staff can open it, through short-lived links.
+const DOCS = "seller-docs";
+export const DOCUMENT_TYPES = "application/pdf,image/jpeg,image/png,image/webp";
+const DOCUMENT_MAX = 10 * 1024 * 1024;
+
+export async function uploadDocument(file: File, sellerId: string, propertyId: string): Promise<string> {
+  if (!DOCUMENT_TYPES.split(",").includes(file.type)) throw new Error(`“${file.name}” isn’t a PDF or a photo.`);
+  if (file.size > DOCUMENT_MAX) throw new Error(`“${file.name}” is larger than 10 MB.`);
+  const ext = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1].replace("jpeg", "jpg");
+  const path = `${sellerId}/${propertyId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase().storage.from(DOCS).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw new Error(explain(error));
+  return path;
+}
+
+export async function documentLink(path: string): Promise<string> {
+  const { data, error } = await supabase().storage.from(DOCS).createSignedUrl(path, 600);
+  if (error || !data) throw new Error(explain(error));
+  return data.signedUrl;
+}
+
+export async function deleteDocuments(paths: string[]) {
+  if (paths.length) await supabase().storage.from(DOCS).remove(paths);
 }

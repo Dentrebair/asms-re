@@ -68,6 +68,27 @@ create table if not exists public.products (
   updated_at   timestamptz not null default now()
 );
 
+-- ------------------------------------------------------ seller profiles ----
+-- Anyone may list a property (PRD sections 9 to 11). A seller signs in with
+-- Google, then completes this profile once; it says who they are. Staff can
+-- suspend a seller, which stops new listings and submissions.
+create table if not exists public.seller_profiles (
+  user_id     uuid primary key references auth.users (id) on delete cascade,
+  email       text not null check (email = lower(email)),
+  name        text not null check (char_length(btrim(name)) between 1 and 120),
+  phone       text not null check (phone ~ '^[0-9+() -]{7,20}$'),
+  seller_type text not null check (seller_type in ('owner', 'broker', 'developer', 'other')),
+  company     text check (company is null or char_length(company) <= 120),
+  status      text not null default 'active' check (status in ('active', 'suspended')),
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create or replace function public.is_active_seller() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.seller_profiles where user_id = auth.uid() and status = 'active');
+$$;
+
 -- ----------------------------------------------------------- properties ----
 create table if not exists public.properties (
   id               uuid primary key default gen_random_uuid(),
@@ -129,6 +150,11 @@ create table if not exists public.properties (
   updated_at       timestamptz not null default now()
 );
 create index if not exists properties_stage on public.properties (stage);
+-- Seller listings: who listed it, what the reviewer asked for, and when it was sent for review.
+alter table public.properties add column if not exists seller_id uuid references public.seller_profiles (user_id) on delete set null;
+alter table public.properties add column if not exists review_note text check (review_note is null or char_length(review_note) <= 2000);
+alter table public.properties add column if not exists submitted_at timestamptz;
+create index if not exists properties_seller on public.properties (seller_id);
 
 create or replace function private.touch_updated_at() returns trigger
 language plpgsql set search_path = '' as $$
@@ -161,7 +187,8 @@ drop policy if exists "staff write products" on public.products;
 create policy "staff write products" on public.products for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
 drop policy if exists "public read published properties" on public.properties;
-create policy "public read published properties" on public.properties for select to anon, authenticated using (stage in ('live', 'sold') or public.is_staff());
+create policy "public read published properties" on public.properties for select to anon, authenticated
+  using (stage in ('live', 'sold') or public.is_staff() or (seller_id is not null and seller_id = auth.uid()));
 drop policy if exists "staff write properties" on public.properties;
 create policy "staff write properties" on public.properties for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
@@ -402,6 +429,365 @@ end $$;
 drop trigger if exists enquiries_notify on public.enquiries;
 create trigger enquiries_notify after insert on public.enquiries for each row execute function private.notify_enquiry();
 
+-- -------------------------------------------------------- seller portal ----
+-- Sellers write their own listings while they are drafts (or sent back for
+-- changes); everything after that goes through the functions below, so a
+-- listing reaches the website only when staff approve it (PRD section 11).
+
+-- The fields a seller may fill in. Reference, web address, stage, featured,
+-- dates and the public documents list stay with staff.
+create or replace function private.seller_fields() returns text[]
+language sql immutable set search_path = '' as $$
+  select array['title', 'category', 'property_type', 'transaction_type', 'ownership', 'location', 'locality',
+    'price', 'price_negotiable', 'area_sqft', 'area_unit', 'dimensions', 'facing', 'bhk', 'bathrooms', 'carpet_area_sqft',
+    'furnishing', 'floor_info', 'parking', 'possession', 'road_width_ft', 'frontage_ft', 'land_use', 'corner_plot',
+    'boundary_wall', 'gated_layout', 'floors_allowed', 'usable_area_sqft', 'access_notes', 'map_url', 'zoning_notes',
+    'approval', 'rera', 'availability', 'description', 'amenities', 'nearby', 'images'];
+$$;
+
+create sequence if not exists private.seller_reference;
+
+create or replace function private.actor() returns text
+language sql stable set search_path = '' as $$
+  select nullif(lower(coalesce(auth.jwt() ->> 'email', '')), '');
+$$;
+
+-- Staff write any field. A seller's insert or update keeps only the seller fields;
+-- the rest is set here, whatever the request said. (No signed-in user means the
+-- SQL editor or the service role; row level security already keeps visitors out.)
+create or replace function private.guard_property() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null or public.is_staff() or current_setting('asms.trusted', true) = 'on' then return new; end if;
+  if tg_op = 'INSERT' then
+    new.seller_id := auth.uid();
+    new.reference := 'ASMS-S' || lpad(nextval('private.seller_reference')::text, 4, '0');
+    new.slug := lower(new.reference);
+    new.stage := 'draft';
+    new.featured := false;
+    new.sort_order := 0;
+    new.documents := '[]';
+    new.review_note := null;
+    new.submitted_at := null;
+    new.posted_on := null;
+    new.last_confirmed_on := null;
+    new.created_at := now();
+    return new;
+  end if;
+  return jsonb_populate_record(old, (
+    select coalesce(jsonb_object_agg(key, value), '{}') from jsonb_each(to_jsonb(new)) where key = any (private.seller_fields())));
+end $$;
+
+drop trigger if exists properties_guard on public.properties;
+create trigger properties_guard before insert or update on public.properties for each row execute function private.guard_property();
+
+drop policy if exists "sellers add listings" on public.properties;
+create policy "sellers add listings" on public.properties for insert to authenticated
+  with check (seller_id = auth.uid() and stage = 'draft' and public.is_active_seller());
+drop policy if exists "sellers edit drafts" on public.properties;
+create policy "sellers edit drafts" on public.properties for update to authenticated
+  using (seller_id = auth.uid() and stage in ('draft', 'changes_requested') and public.is_active_seller())
+  with check (seller_id = auth.uid());
+drop policy if exists "sellers delete drafts" on public.properties;
+create policy "sellers delete drafts" on public.properties for delete to authenticated
+  using (seller_id = auth.uid() and stage = 'draft');
+
+-- Profiles: sellers keep their own; staff see all and can suspend.
+create or replace function private.guard_seller_profile() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null or public.is_staff() then return new; end if;
+  new.user_id := auth.uid();
+  new.email := lower(coalesce(auth.jwt() ->> 'email', ''));
+  new.status := case when tg_op = 'INSERT' then 'active' else old.status end;
+  new.created_at := case when tg_op = 'INSERT' then now() else old.created_at end;
+  return new;
+end $$;
+
+drop trigger if exists seller_profiles_guard on public.seller_profiles;
+create trigger seller_profiles_guard before insert or update on public.seller_profiles for each row execute function private.guard_seller_profile();
+drop trigger if exists seller_profiles_touch on public.seller_profiles;
+create trigger seller_profiles_touch before update on public.seller_profiles for each row execute function private.touch_updated_at();
+
+alter table public.seller_profiles enable row level security;
+drop policy if exists "sellers read own profile" on public.seller_profiles;
+create policy "sellers read own profile" on public.seller_profiles for select to authenticated using (user_id = auth.uid() or public.is_staff());
+drop policy if exists "sellers create own profile" on public.seller_profiles;
+create policy "sellers create own profile" on public.seller_profiles for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "sellers update own profile" on public.seller_profiles;
+create policy "sellers update own profile" on public.seller_profiles for update to authenticated
+  using (user_id = auth.uid() or public.is_staff()) with check (user_id = auth.uid() or public.is_staff());
+revoke delete on public.seller_profiles from anon, authenticated;
+revoke all on public.seller_profiles from anon;
+
+-- Private documents (patta, EC, approvals...): reviewers only, never visitors.
+create table if not exists public.seller_documents (
+  id          uuid primary key default gen_random_uuid(),
+  property_id uuid not null references public.properties (id) on delete cascade,
+  seller_id   uuid not null references public.seller_profiles (user_id) on delete cascade,
+  label       text not null check (char_length(btrim(label)) between 1 and 80),
+  path        text not null unique,
+  file_name   text check (file_name is null or char_length(file_name) <= 200),
+  size_bytes  int check (size_bytes is null or size_bytes >= 0),
+  created_at  timestamptz not null default now()
+);
+create index if not exists seller_documents_property on public.seller_documents (property_id);
+revoke all on public.seller_documents from anon;
+alter table public.seller_documents enable row level security;
+drop policy if exists "read own or staff documents" on public.seller_documents;
+create policy "read own or staff documents" on public.seller_documents for select to authenticated using (seller_id = auth.uid() or public.is_staff());
+drop policy if exists "sellers add documents to editable listings" on public.seller_documents;
+create policy "sellers add documents to editable listings" on public.seller_documents for insert to authenticated
+  with check (seller_id = auth.uid() and public.is_active_seller() and path like auth.uid()::text || '/%'
+    and exists (select 1 from public.properties p where p.id = property_id and p.seller_id = auth.uid() and p.stage in ('draft', 'changes_requested')));
+drop policy if exists "sellers remove documents from editable listings" on public.seller_documents;
+create policy "sellers remove documents from editable listings" on public.seller_documents for delete to authenticated
+  using (public.is_staff() or (seller_id = auth.uid()
+    and exists (select 1 from public.properties p where p.id = property_id and p.seller_id = auth.uid() and p.stage in ('draft', 'changes_requested'))));
+revoke update on public.seller_documents from authenticated;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('seller-docs', 'seller-docs', false, 10485760, array['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "sellers upload own documents" on storage.objects;
+create policy "sellers upload own documents" on storage.objects for insert to authenticated
+  with check (bucket_id = 'seller-docs' and (storage.foldername(name))[1] = auth.uid()::text and public.is_active_seller());
+drop policy if exists "sellers and staff read documents" on storage.objects;
+create policy "sellers and staff read documents" on storage.objects for select to authenticated
+  using (bucket_id = 'seller-docs' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_staff()));
+drop policy if exists "sellers delete own documents" on storage.objects;
+create policy "sellers delete own documents" on storage.objects for delete to authenticated
+  using (bucket_id = 'seller-docs' and (storage.foldername(name))[1] = auth.uid()::text);
+-- Listing photos go to the public media bucket under sellers/<their id>/.
+drop policy if exists "sellers upload listing photos" on storage.objects;
+create policy "sellers upload listing photos" on storage.objects for insert to authenticated
+  with check (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = auth.uid()::text and public.is_active_seller());
+drop policy if exists "sellers read own listing photos" on storage.objects;
+create policy "sellers read own listing photos" on storage.objects for select to authenticated
+  using (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = auth.uid()::text);
+drop policy if exists "sellers delete own listing photos" on storage.objects;
+create policy "sellers delete own listing photos" on storage.objects for delete to authenticated
+  using (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = auth.uid()::text);
+
+-- Edits to a live listing wait here until staff approve them ("live-edit revisions").
+create table if not exists public.property_revisions (
+  id          uuid primary key default gen_random_uuid(),
+  property_id uuid not null references public.properties (id) on delete cascade,
+  seller_id   uuid not null references public.seller_profiles (user_id) on delete cascade,
+  changes     jsonb not null check (jsonb_typeof(changes) = 'object'),
+  status      text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'withdrawn')),
+  note        text check (note is null or char_length(note) <= 2000),
+  created_at  timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by text
+);
+create unique index if not exists property_revisions_one_pending on public.property_revisions (property_id) where status = 'pending';
+revoke all on public.property_revisions from anon, authenticated;
+grant select on public.property_revisions to authenticated;
+alter table public.property_revisions enable row level security;
+drop policy if exists "read own or staff revisions" on public.property_revisions;
+create policy "read own or staff revisions" on public.property_revisions for select to authenticated using (seller_id = auth.uid() or public.is_staff());
+
+-- Who did what to which listing or seller. Written only by the database; staff read it.
+create table if not exists public.audit_log (
+  id          bigint generated always as identity primary key,
+  at          timestamptz not null default now(),
+  actor       text,
+  property_id uuid references public.properties (id) on delete set null,
+  seller_id   uuid,
+  action      text not null,
+  note        text,
+  detail      jsonb
+);
+create index if not exists audit_log_property on public.audit_log (property_id, at);
+create index if not exists audit_log_at on public.audit_log (at desc);
+revoke all on public.audit_log from anon, authenticated;
+grant select on public.audit_log to authenticated;
+alter table public.audit_log enable row level security;
+drop policy if exists "staff read audit log" on public.audit_log;
+create policy "staff read audit log" on public.audit_log for select to authenticated using (public.is_staff());
+
+create or replace function private.log_property() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into public.audit_log (actor, property_id, seller_id, action) values (private.actor(), new.id, new.seller_id, 'created');
+  elsif new.stage is distinct from old.stage then
+    insert into public.audit_log (actor, property_id, seller_id, action, note, detail)
+    values (private.actor(), new.id, new.seller_id, 'stage', nullif(current_setting('asms.note', true), ''), jsonb_build_object('from', old.stage, 'to', new.stage));
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists properties_log on public.properties;
+create trigger properties_log after insert or update on public.properties for each row execute function private.log_property();
+
+create or replace function private.log_seller() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.status is distinct from old.status then
+    insert into public.audit_log (actor, seller_id, action, detail) values (private.actor(), new.user_id, 'seller_status', jsonb_build_object('from', old.status, 'to', new.status));
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists seller_profiles_log on public.seller_profiles;
+create trigger seller_profiles_log after update on public.seller_profiles for each row execute function private.log_seller();
+
+-- What a listing still needs before it can be sent for review.
+create or replace function public.listing_gaps(p public.properties) returns text[]
+language sql stable set search_path = '' as $$
+  select array_remove(array[
+    case when char_length(btrim(coalesce(p.title, ''))) < 5 then 'a title' end,
+    case when btrim(coalesce(p.location, '')) = '' then 'the location' end,
+    case when p.area_sqft is null then 'the area' end,
+    case when char_length(btrim(coalesce(p.description, ''))) < 50 then 'a description of at least 50 characters' end,
+    case when jsonb_array_length(p.images) < 3 then 'at least 3 photos' end
+  ], null);
+$$;
+
+-- Seller: send a draft (or a corrected listing) for review.
+create or replace function public.submit_listing(listing uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  p public.properties%rowtype;
+  gaps text[];
+begin
+  select * into p from public.properties where id = listing and seller_id = auth.uid() for update;
+  if not found then raise exception 'Listing not found.' using errcode = 'P0002'; end if;
+  if not public.is_active_seller() then raise exception 'Your seller account is suspended.' using errcode = '42501'; end if;
+  if p.stage not in ('draft', 'changes_requested') then raise exception 'This listing has already been sent for review.' using errcode = 'P0001'; end if;
+  gaps := public.listing_gaps(p);
+  if cardinality(gaps) > 0 then raise exception 'Still needed: %.', array_to_string(gaps, ', ') using errcode = 'P0001'; end if;
+  perform set_config('asms.trusted', 'on', true);
+  update public.properties set stage = 'submitted', submitted_at = now() where id = listing;
+  perform set_config('asms.trusted', 'off', true);
+end $$;
+
+-- Seller: pause, resume, mark sold, reconfirm availability, or withdraw a submission.
+create or replace function public.seller_listing_action(listing uuid, action text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  p public.properties%rowtype;
+  next_stage text;
+begin
+  select * into p from public.properties where id = listing and seller_id = auth.uid() for update;
+  if not found then raise exception 'Listing not found.' using errcode = 'P0002'; end if;
+  if action not in ('pause', 'sold') and not public.is_active_seller() then raise exception 'Your seller account is suspended.' using errcode = '42501'; end if;
+  next_stage := case
+    when action = 'pause' and p.stage = 'live' then 'paused'
+    when action = 'resume' and p.stage = 'paused' then 'live'
+    when action = 'sold' and p.stage in ('live', 'paused') then 'sold'
+    when action = 'reconfirm' and p.stage = 'live' then 'live'
+    when action = 'withdraw' and p.stage = 'submitted' then 'draft'
+  end;
+  if next_stage is null then raise exception 'That isn''t possible for this listing right now.' using errcode = 'P0001'; end if;
+  perform set_config('asms.trusted', 'on', true);
+  update public.properties
+     set stage = next_stage,
+         last_confirmed_on = case when action in ('resume', 'reconfirm') then current_date else last_confirmed_on end
+   where id = listing;
+  perform set_config('asms.trusted', 'off', true);
+  if action = 'reconfirm' then
+    insert into public.audit_log (actor, property_id, seller_id, action) values (private.actor(), listing, p.seller_id, 'reconfirmed');
+  end if;
+end $$;
+
+-- Seller: propose changes to a live or paused listing. They wait for review.
+create or replace function public.submit_revision(listing uuid, changes jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  p public.properties%rowtype;
+  allowed jsonb;
+begin
+  select * into p from public.properties where id = listing and seller_id = auth.uid();
+  if not found then raise exception 'Listing not found.' using errcode = 'P0002'; end if;
+  if not public.is_active_seller() then raise exception 'Your seller account is suspended.' using errcode = '42501'; end if;
+  if p.stage not in ('live', 'paused') then raise exception 'Only live or paused listings take change requests.' using errcode = 'P0001'; end if;
+  select coalesce(jsonb_object_agg(key, value), '{}') into allowed
+    from jsonb_each(coalesce(changes, '{}')) where key = any (private.seller_fields()) and value is distinct from to_jsonb(p) -> key;
+  if allowed = '{}' then raise exception 'There are no changes to send.' using errcode = 'P0001'; end if;
+  if public.listing_gaps(jsonb_populate_record(p, allowed)) <> '{}' then
+    raise exception 'Still needed: %.', array_to_string(public.listing_gaps(jsonb_populate_record(p, allowed)), ', ') using errcode = 'P0001';
+  end if;
+  update public.property_revisions set status = 'withdrawn' where property_id = listing and status = 'pending';
+  insert into public.property_revisions (property_id, seller_id, changes) values (listing, p.seller_id, allowed);
+  insert into public.audit_log (actor, property_id, seller_id, action, detail) values (private.actor(), listing, p.seller_id, 'revision_submitted', jsonb_build_object('fields', (select jsonb_agg(k) from jsonb_object_keys(allowed) k)));
+end $$;
+
+-- Staff: review decisions. Requesting changes or rejecting needs a note for the seller.
+create or replace function public.review_listing(listing uuid, decision text, note text default null) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  p public.properties%rowtype;
+  clean text := nullif(btrim(coalesce(note, '')), '');
+  next_stage text;
+begin
+  if not public.is_staff() then raise exception 'Not allowed' using errcode = '42501'; end if;
+  select * into p from public.properties where id = listing for update;
+  if not found then raise exception 'Listing not found.' using errcode = 'P0002'; end if;
+  next_stage := case
+    when decision = 'start' and p.stage = 'submitted' then 'under_review'
+    when decision = 'changes' and p.stage in ('submitted', 'under_review') then 'changes_requested'
+    when decision = 'reject' and p.stage in ('submitted', 'under_review', 'changes_requested') then 'rejected'
+    when decision = 'approve' and p.stage in ('submitted', 'under_review') then 'live'
+  end;
+  if next_stage is null then raise exception 'That decision isn''t possible at this stage.' using errcode = 'P0001'; end if;
+  if decision in ('changes', 'reject') and clean is null then raise exception 'Write a note telling the seller why.' using errcode = 'P0001'; end if;
+  perform set_config('asms.note', coalesce(clean, ''), true);
+  update public.properties
+     set stage = next_stage,
+         review_note = case when decision in ('changes', 'reject') then clean else null end,
+         slug = case when decision = 'approve' then trim(both '-' from regexp_replace(lower(title || ' ' || reference), '[^a-z0-9]+', '-', 'g')) else slug end,
+         posted_on = case when decision = 'approve' then current_date else posted_on end,
+         last_confirmed_on = case when decision = 'approve' then current_date else last_confirmed_on end
+   where id = listing;
+  perform set_config('asms.note', '', true);
+end $$;
+
+-- Staff: apply or turn down a seller's change request on a live listing.
+create or replace function public.review_revision(revision uuid, decision text, note text default null) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  r public.property_revisions%rowtype;
+  clean text := nullif(btrim(coalesce(note, '')), '');
+  sets text;
+begin
+  if not public.is_staff() then raise exception 'Not allowed' using errcode = '42501'; end if;
+  select * into r from public.property_revisions where id = revision and status = 'pending' for update;
+  if not found then raise exception 'This change request was already handled.' using errcode = 'P0002'; end if;
+  if decision not in ('approve', 'reject') then raise exception 'Unknown decision.' using errcode = 'P0001'; end if;
+  if decision = 'reject' and clean is null then raise exception 'Write a note telling the seller why.' using errcode = 'P0001'; end if;
+  if decision = 'approve' then
+    select string_agg(format('%I = r.%I', k, k), ', ') into sets from jsonb_object_keys(r.changes) k where k = any (private.seller_fields());
+    if sets is not null then
+      execute format('update public.properties p set %s from jsonb_populate_record(null::public.properties, $1) r where p.id = $2', sets) using r.changes, r.property_id;
+    end if;
+  end if;
+  update public.property_revisions set status = case when decision = 'approve' then 'approved' else 'rejected' end,
+         note = clean, reviewed_at = now(), reviewed_by = private.actor() where id = revision;
+  insert into public.audit_log (actor, property_id, seller_id, action, note)
+  values (private.actor(), r.property_id, r.seller_id, case when decision = 'approve' then 'revision_approved' else 'revision_rejected' end, clean);
+end $$;
+
+-- The listing's history for its seller (staff names are not shown) or for staff.
+create or replace function public.listing_history(listing uuid)
+returns table (at timestamptz, by_seller boolean, action text, note text, detail jsonb)
+language sql stable security definer set search_path = '' as $$
+  select a.at, a.actor is not distinct from s.email, a.action, a.note, a.detail
+    from public.audit_log a
+    join public.properties p on p.id = a.property_id
+    left join public.seller_profiles s on s.user_id = p.seller_id
+   where a.property_id = listing and (public.is_staff() or p.seller_id = auth.uid())
+   order by a.at, a.id;
+$$;
+
+revoke execute on function public.submit_listing(uuid), public.seller_listing_action(uuid, text), public.submit_revision(uuid, jsonb),
+  public.review_listing(uuid, text, text), public.review_revision(uuid, text, text), public.listing_history(uuid), public.listing_gaps(public.properties) from public, anon;
+grant execute on function public.submit_listing(uuid), public.seller_listing_action(uuid, text), public.submit_revision(uuid, jsonb),
+  public.review_listing(uuid, text, text), public.review_revision(uuid, text, text), public.listing_history(uuid), public.listing_gaps(public.properties) to authenticated;
+
 -- ------------------------------------------------- automatic site rebuild ----
 -- Content changes call GitHub's repository_dispatch API, which runs the
 -- "Deploy to Hostinger" workflow. The token and repo live in Supabase Vault
@@ -434,10 +820,37 @@ begin
   return null;
 end $$;
 
+-- Properties rebuild only when a row that is (or was) on the website changed, so
+-- drafts, seller autosaves and review steps never start a deploy.
+create or replace function private.rebuild_on_property_change() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  public_rows boolean;
+begin
+  -- Each branch reads only the transition tables its operation has.
+  if tg_op = 'INSERT' then
+    public_rows := exists (select 1 from changed where stage in ('live', 'sold'));
+  elsif tg_op = 'DELETE' then
+    public_rows := exists (select 1 from gone where stage in ('live', 'sold'));
+  else
+    public_rows := exists (select 1 from changed c join gone g on g.id = c.id where c.stage in ('live', 'sold') or g.stage in ('live', 'sold'));
+  end if;
+  if public_rows then perform private.dispatch_rebuild(); end if;
+  return null;
+end $$;
+
+drop trigger if exists properties_rebuild on public.properties;
+drop trigger if exists properties_rebuild_ins on public.properties;
+drop trigger if exists properties_rebuild_upd on public.properties;
+drop trigger if exists properties_rebuild_del on public.properties;
+create trigger properties_rebuild_ins after insert on public.properties referencing new table as changed for each statement execute function private.rebuild_on_property_change();
+create trigger properties_rebuild_upd after update on public.properties referencing old table as gone new table as changed for each statement execute function private.rebuild_on_property_change();
+create trigger properties_rebuild_del after delete on public.properties referencing old table as gone for each statement execute function private.rebuild_on_property_change();
+
 do $$
 declare t text;
 begin
-  foreach t in array array['properties', 'products', 'product_categories'] loop
+  foreach t in array array['products', 'product_categories'] loop
     execute format('drop trigger if exists %I on public.%I', t || '_rebuild', t);
     execute format('drop trigger if exists %I on public.%I', t || '_rebuild_ins', t);
     execute format('drop trigger if exists %I on public.%I', t || '_rebuild_upd', t);

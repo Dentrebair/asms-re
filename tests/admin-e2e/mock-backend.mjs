@@ -17,6 +17,10 @@ const db = {
     preferred_date: null, preferred_time: null, organisation: null, quantity: null, delivery_location: null, repeat_contact: true,
     status: "new", assigned_to: null, follow_up_on: null, notes: null }],
   enquiry_history: [],
+  seller_profiles: [],
+  property_revisions: [],
+  seller_documents: [],
+  audit_log: [],
 };
 const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "*", "access-control-expose-headers": "*" };
 const send = (res, status, body, headers = {}) => {

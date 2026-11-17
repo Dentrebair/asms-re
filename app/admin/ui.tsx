@@ -140,8 +140,8 @@ export function Rows<T extends Record<string, string>>({ label, rows, columns, o
 }
 
 /** Upload, reorder, caption and remove photos. Newly uploaded paths are reported so unsaved uploads can be cleaned up. */
-export function Photos({ images, onChange, folder, max = 20, onUploaded }: {
-  images: ImageRef[]; onChange: (images: ImageRef[]) => void; folder: "properties" | "products"; max?: number; onUploaded: (path: string) => void;
+export function Photos({ images, onChange, folder, max = 20, onUploaded, hint }: {
+  images: ImageRef[]; onChange: (images: ImageRef[]) => void; folder: string; max?: number; onUploaded: (path: string) => void; hint?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(0);
@@ -200,7 +200,7 @@ export function Photos({ images, onChange, folder, max = 20, onUploaded }: {
         )}
       </div>
       <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,image/heic" multiple={max > 1} hidden onChange={(e) => add(e.target.files)} />
-      <small>Photos are resized automatically. {max > 1 && "The first photo is the cover. "}Use real photos of the property or product.</small>
+      <small>Photos are resized automatically. {max > 1 && "The first photo is the cover. "}Use real photos of the property or product.{hint ? ` ${hint}` : ""}</small>
       {error && <Banner status="error" title={error} />}
     </div>
   );

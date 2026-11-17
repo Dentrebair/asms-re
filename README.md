@@ -18,6 +18,9 @@ npm test        # build the static site and check every exported page
 npm run lint
 npm run test:db     # check the Supabase schema + security rules (needs local Postgres)
 npm run test:admin  # browser test of /admin against a fake Supabase (needs Chrome)
+npm run test:browser  # browser test of the public catalogue pages (needs Chrome)
+npm run test:seller   # seller portal and review queue end to end, on the demo server (needs Chrome)
+npm run demo        # the whole site, admin and seller portal on a fake Supabase: http://localhost:54401
 npm run content:pull  # fetch published content + photos from Supabase
 ```
 

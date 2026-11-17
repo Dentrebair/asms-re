@@ -1,7 +1,8 @@
 import { Footer, Header, PageHead } from "../site-components";
 import { ForestTheme } from "../astryx/themes";
 import { Step, Stepper } from "@astryxdesign/core/Stepper";
-import { Phone, PhoneCall } from "lucide-react";
+import { House, Phone, PhoneCall } from "lucide-react";
+import { Divider } from "@astryxdesign/core/Divider";
 import { COMPANY } from "@/lib/company";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
@@ -39,11 +40,14 @@ export default function SellPage() {
               <aside>
                 <Card padding={6} elevation="med">
                   <VStack gap={4}>
-                    <span className="type-icon"><PhoneCall size={24} aria-hidden="true" /></span>
-                    <Heading level={2}>Start with a call</Heading>
-                    <Text color="secondary" as="p">Online seller accounts are not open yet. Tell us about the property and the team will call you to take the details.</Text>
-                    <Button href={sellHref} label="Request a callback" variant="primary" size="lg" width="100%" />
-                    <Button href={COMPANY.phoneHref} label={`Call ${COMPANY.phone}`} width="100%" icon={<Phone size={16} />} />
+                    <span className="type-icon"><House size={24} aria-hidden="true" /></span>
+                    <Heading level={2}>List it online</Heading>
+                    <Text color="secondary" as="p">Sign in with Google, describe the property and add photos and documents. Your draft saves as you go, and our team reviews it before it goes live.</Text>
+                    <Button href="/seller" label="Start your listing" variant="primary" size="lg" width="100%" />
+                    <Divider />
+                    <Text type="supporting" as="p">Prefer to talk it through? We&rsquo;ll call you and take the details.</Text>
+                    <Button href={sellHref} label="Request a callback" width="100%" icon={<PhoneCall size={16} />} />
+                    <Button href={COMPANY.phoneHref} label={`Call ${COMPANY.phone}`} variant="ghost" width="100%" icon={<Phone size={16} />} />
                   </VStack>
                 </Card>
               </aside>
