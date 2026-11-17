@@ -117,7 +117,7 @@ try {
   b = await backend();
   check("status change patches only status", JSON.stringify(b.log.filter((l) => l.op === "update" && l.table === "enquiries").pop()) === JSON.stringify({ op: "update", table: "enquiries", filter: [["id", "eq.enq-1"]], change: { status: "contacted" } }));
   check("badge clears when nothing is new", await js(`!document.querySelector('.adm-count')`));
-  await click("All");
+  await js(`[...document.querySelectorAll(".adm-stat")].find(c => c.textContent.trim().startsWith("All")).click()`);
   await waitFor(`!!document.querySelector('.adm-enquiry-notes textarea')`, "enquiry in All");
   await js(`(() => { const el = document.querySelector('.adm-enquiry-notes textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el, 'Called, visit on Saturday'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   await click("Save note");
@@ -327,6 +327,10 @@ try {
   await fill("Email", "owner@asms.test"); await fill("Password", "correct-horse"); await click("Sign in");
   await waitFor(`!!document.querySelector('.adm-header')`, "mobile header");
   await waitFor(`!!document.querySelector('.adm-enquiries li')`, "mobile inbox");
+  await js(`document.querySelector('.adm-inbox-row').click()`); await sleep(300);
+  check("phone: tapping an enquiry opens its details in place of the list", await js(`getComputedStyle(document.querySelector('.adm-inbox-list')).display === 'none' && getComputedStyle(document.querySelector('.adm-inbox-detail')).display !== 'none'`));
+  await js(`[...document.querySelectorAll('.adm-inbox-back button')].find(b => b.textContent.includes('All enquiries')).click()`); await sleep(300);
+  check("phone: Back returns to the list", await js(`getComputedStyle(document.querySelector('.adm-inbox-list')).display !== 'none'`));
   check("no horizontal overflow on phone", await js(`document.documentElement.scrollWidth <= 390`), String(await js(`document.documentElement.scrollWidth`)));
   await shot("6-mobile");
 } catch (e) {
