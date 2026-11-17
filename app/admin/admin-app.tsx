@@ -9,18 +9,22 @@ import { ProductsAdmin } from "./products-admin";
 import { PropertiesAdmin } from "./properties-admin";
 import { StaffAdmin } from "./staff-admin";
 import { Toast } from "./ui";
-import { ForestTheme } from "../astryx/themes";
 import { Badge } from "@astryxdesign/core/Badge";
 import { Card } from "@astryxdesign/core/Card";
 import { Spinner } from "@astryxdesign/core/Spinner";
-import { Tab as TabItem, TabList } from "@astryxdesign/core/TabList";
+import { AppShell } from "@astryxdesign/core/AppShell";
+import { SideNav, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
+import { TopNav, TopNavHeading } from "@astryxdesign/core/TopNav";
+import { HStack } from "@astryxdesign/core/Layout";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { TextInput } from "@astryxdesign/core/TextInput";
-import { LockKeyhole, Mail } from "lucide-react";
+import { UploadCloud, Building2, ExternalLink, Inbox, LockKeyhole, LogOut, Mail, Package, Users, type LucideIcon } from "lucide-react";
 import { Heading, Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/Layout";
 
 type Tab = "enquiries" | "properties" | "products" | "staff";
 const TAB_LABELS: Record<Tab, string> = { enquiries: "Enquiries", properties: "Properties", products: "Products", staff: "Staff" };
+const TAB_ICONS: Record<Tab, LucideIcon> = { enquiries: Inbox, properties: Building2, products: Package, staff: Users };
 type AuthState = "loading" | "signed-out" | "set-password" | "not-staff" | "ready";
 
 export default function AdminApp() {
@@ -94,35 +98,56 @@ export default function AdminApp() {
   }
 
   return (
-    <Shell>
-      <ForestTheme>
-        <header className="adm-header">
-          <a className="adm-brand" href="/">
-            {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
-            <img src="/icon.png" alt="" width={34} height={34} /> ASMS–ROUNAQH <Badge label="Admin" variant="warning" /></a>
-          <nav aria-label="Admin sections" className="adm-tabs">
-            <TabList value={tab} onChange={(v) => setTab(v as Tab)} overflow="auto">
+    <div className="adm adm-portal">
+      <AppShell
+        variant="elevated"
+        mobileNav={{ breakpoint: "md" }}
+        topNav={
+          <div className="adm-header">
+            <TopNav
+              label="Admin"
+              heading={
+                <TopNavHeading
+                  logo={
+                    // eslint-disable-next-line @next/next/no-img-element -- static export
+                    <img src="/icon.png" alt="" width={30} height={30} className="adm-logo" />
+                  }
+                  heading="ASMS–ROUNAQH"
+                  headingHref="/admin"
+                  headerEndContent={<span className="only-wide"><Badge label="Admin" variant="warning" /></span>}
+                />
+              }
+              endContent={
+                <HStack gap={2} vAlign="center">
+                  <PublishNow notify={notify} />
+                  <span className="adm-user-name"><Text type="supporting">{me.name || me.email}</Text></span>
+                  <span className="only-wide"><Button variant="ghost" label="Sign out" icon={<LogOut size={16} />} onClick={() => supabase().auth.signOut()} /></span>
+                  <span className="only-narrow"><IconButton variant="ghost" label="Sign out" icon={<LogOut size={16} />} onClick={() => supabase().auth.signOut()} /></span>
+                </HStack>
+              }
+            />
+          </div>
+        }
+        sideNav={
+          <SideNav
+            footer={<SideNavItem label="View website" href="/" icon={ExternalLink} />}>
+            <SideNavSection title="Manage">
               {(["enquiries", "properties", "products", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => (
-                <TabItem key={t} value={t} label={TAB_LABELS[t]}
+                <SideNavItem key={t} label={TAB_LABELS[t]} icon={TAB_ICONS[t]} isSelected={tab === t} onClick={() => setTab(t)}
                   endContent={t === "enquiries" && newEnquiries > 0 ? <span className="adm-count" aria-label={`${newEnquiries} new`}><Badge label={String(newEnquiries)} variant="warning" /></span> : undefined} />
               ))}
-            </TabList>
-          </nav>
-          <div className="adm-user">
-            <PublishNow notify={notify} />
-            <Text>{me.name || me.email}</Text>
-            <Button variant="ghost" label="Sign out" onClick={() => supabase().auth.signOut()} />
-          </div>
-        </header>
-      </ForestTheme>
-      <main className="adm-main">
-        {tab === "enquiries" && <EnquiriesAdmin me={me} notify={notify} onNewCount={setNewEnquiries} />}
-        {tab === "properties" && <PropertiesAdmin notify={notify} />}
-        {tab === "products" && <ProductsAdmin notify={notify} />}
-        {tab === "staff" && me.role === "owner" && <StaffAdmin me={me} notify={notify} />}
-      </main>
+            </SideNavSection>
+          </SideNav>
+        }>
+        <main className="adm-main" data-section={tab}>
+          {tab === "enquiries" && <EnquiriesAdmin me={me} notify={notify} onNewCount={setNewEnquiries} />}
+          {tab === "properties" && <PropertiesAdmin notify={notify} />}
+          {tab === "products" && <ProductsAdmin notify={notify} />}
+          {tab === "staff" && me.role === "owner" && <StaffAdmin me={me} notify={notify} />}
+        </main>
+      </AppShell>
       <Toast message={toast?.message ?? null} tone={toast?.tone} onClose={() => setToast(null)} />
-    </Shell>
+    </div>
   );
 }
 
@@ -138,7 +163,13 @@ function PublishNow({ notify }: { notify: (m: string, t?: "ok" | "error") => voi
     setBusy(false);
     notify(error ? explain(error) : "Website update started. It will be live in about 3 minutes.", error ? "error" : "ok");
   }
-  return <Button type="button" isDisabled={busy} onClick={run} tooltip="Changes publish automatically; use this to force an update." variant="secondary" label={busy ? "Starting…" : "Update website now"} />;
+  const label = busy ? "Starting…" : "Update website now";
+  return (
+    <>
+      <span className="only-wide"><Button type="button" isDisabled={busy} onClick={run} tooltip="Changes publish automatically; use this to force an update." variant="secondary" icon={<UploadCloud size={16} />} label={label} /></span>
+      <span className="only-narrow"><IconButton isDisabled={busy} onClick={run} variant="secondary" label={label} icon={<UploadCloud size={16} />} /></span>
+    </>
+  );
 }
 
 function SignIn({ notify }: { notify: (m: string, t?: "ok" | "error") => void }) {

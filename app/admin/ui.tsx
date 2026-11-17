@@ -11,6 +11,10 @@ import type { ISODateString } from "@astryxdesign/core/Calendar";
 import { Button } from "@astryxdesign/core/Button";
 import { Badge } from "@astryxdesign/core/Badge";
 import { Banner } from "@astryxdesign/core/Banner";
+import { Card } from "@astryxdesign/core/Card";
+import { ClickableCard } from "@astryxdesign/core/ClickableCard";
+import { Heading, Text as TextLine } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { mediaUrl, uploadPhoto, type ImageRef } from "./lib";
 import { iconFor } from "./field-icons";
@@ -210,4 +214,47 @@ export function Toast({ message, tone = "ok", onClose }: { message: string | nul
         title={<span data-toast-message>{message}</span>} />
     </div>
   );
+}
+
+/** Portal section header: title with count, a line of description, and actions on the right. */
+export function SectionHeader({ title, count, description, children }: { title: string; count?: number | null; description?: string; children?: ReactNode }) {
+  return (
+    <div className="adm-section-head">
+      <VStack gap={1}>
+        <HStack gap={2} vAlign="center">
+          <Heading level={1}>{title}</Heading>
+          {count !== undefined && <Badge label={count === null ? "…" : String(count)} variant="neutral" />}
+        </HStack>
+        {description && <TextLine type="supporting" as="p">{description}</TextLine>}
+      </VStack>
+      {children && <HStack gap={2} wrap="wrap">{children}</HStack>}
+    </div>
+  );
+}
+
+/** A row of summary figures; each can filter the list below when clicked. */
+export function StatCards({ items }: { items: { label: string; value: number | string; tone?: "warning" | "success"; onClick?: () => void; isActive?: boolean }[] }) {
+  return (
+    <div className="adm-stats">
+      {items.map((s) => {
+        const body = (
+          <VStack gap={0}>
+            <TextLine type="supporting">{s.label}</TextLine>
+            <TextLine type="display-3" weight="bold" hasTabularNumbers className={s.tone ? `adm-stat-${s.tone}` : undefined}>{s.value}</TextLine>
+          </VStack>
+        );
+        return s.onClick ? (
+          <ClickableCard key={s.label} label={`${s.label}: ${s.value}`} onClick={s.onClick} padding={4} className={s.isActive ? "adm-stat is-active" : "adm-stat"}>{body}</ClickableCard>
+        ) : (
+          <Card key={s.label} padding={4} className="adm-stat">{body}</Card>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Small photo for table rows, or a placeholder. */
+export function Thumb({ src }: { src: string | null }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return src ? <img className="adm-thumb" src={src} alt="" /> : <span className="adm-thumb adm-thumb-empty" aria-hidden="true">No photo</span>;
 }

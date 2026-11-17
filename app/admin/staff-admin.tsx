@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@astryxdesign/core/Button";
+import { SectionHeader } from "./ui";
 import { Selector } from "@astryxdesign/core/Selector";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { Mail, User } from "lucide-react";
@@ -53,7 +54,7 @@ export function StaffAdmin({ me, notify }: { me: StaffRow; notify: Notify }) {
 
   return (
     <section>
-      <div className="adm-toolbar"><h2>Staff <small>{rows ? rows.length : "…"}</small></h2></div>
+      <SectionHeader title="Staff" count={rows ? rows.length : null} description="Who can sign in to this panel. Editors manage properties and products; owners also manage staff." />
       {rows && (
         <ul className="adm-list adm-staff">
           {rows.map((r) => (

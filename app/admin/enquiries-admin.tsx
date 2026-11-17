@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@astryxdesign/core/Button";
+import { RefreshCw } from "lucide-react";
+import { SectionHeader } from "./ui";
 import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
 import { DateInput } from "@astryxdesign/core/DateInput";
 import type { ISODateString } from "@astryxdesign/core/Calendar";
@@ -98,15 +100,16 @@ export function EnquiriesAdmin({ me, notify, onNewCount }: { me: StaffRow; notif
 
   return (
     <section>
+      <SectionHeader title="Enquiries" count={rows ? rows.length : null} description="Everything sent from the website: property enquiries, visit requests, quotes and sell requests.">
+        <Button type="button" onClick={() => void load()} variant="secondary" icon={<RefreshCw size={16} />} label="Refresh" />
+      </SectionHeader>
       <div className="adm-toolbar">
-        <h2>Enquiries <small>{rows ? rows.length : "…"}</small></h2>
         <div className="adm-filter">
           <SegmentedControl label="Show enquiries" value={view} onChange={(v) => setView(v as typeof view)} size="sm">
             {VIEWS.map((v) => <SegmentedControlItem key={v.value} value={v.value} label={`${v.label} ${count(v.value)}`} />)}
           </SegmentedControl>
         </div>
         <CheckboxInput label="Assigned to me" value={mine} onChange={(v) => setMine(v)} />
-        <Button type="button" onClick={() => void load()} variant="secondary" label="Refresh" />
       </div>
 
       {rows && shown.length === 0 && (

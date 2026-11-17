@@ -1,10 +1,18 @@
 "use client";
 
 import { Button } from "@astryxdesign/core/Button";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Card } from "@astryxdesign/core/Card";
+import { MoreMenu } from "@astryxdesign/core/MoreMenu";
+import { Table, pixel, proportional, type TableColumn } from "@astryxdesign/core/Table";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Heading, Text as TextLine } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
+import { FolderTree, Plus, Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CATEGORY_ICONS, slugify } from "@/lib/presets";
 import { deletePhotos, emptyProduct, explain, mediaUrl, supabase, type CategoryRow, type ProductRow } from "./lib";
-import { Check, NumberInput, Photos, Rows, Select, Text, TextArea } from "./ui";
+import { Check, NumberInput, Photos, Rows, SectionHeader, Select, StatCards, Text, TextArea, Thumb } from "./ui";
 
 type Notify = (message: string, tone?: "ok" | "error") => void;
 
@@ -13,6 +21,8 @@ export function ProductsAdmin({ notify }: { notify: Notify }) {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [managingCategories, setManagingCategories] = useState(false);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"all" | "live" | "draft">("all");
 
   async function load() {
     const [p, c] = await Promise.all([
@@ -45,39 +55,56 @@ export function ProductsAdmin({ notify }: { notify: Notify }) {
   if (editing) return <ProductForm initial={editing} categories={categories} notify={notify} onDone={(saved) => { setEditing(null); if (saved) void load(); }} />;
   if (managingCategories) return <CategoriesForm categories={categories} notify={notify} onDone={() => { setManagingCategories(false); void load(); }} />;
 
+  const all = products ?? [];
+  const q = query.trim().toLowerCase();
+  const shown = (p: ProductRow) => (status === "all" || (status === "live") === p.published) && (!q || [p.name, p.summary, p.unit].some((v) => v?.toLowerCase().includes(q)));
+  const stat = (label: string, value: typeof status, n: number, tone?: "success" | "warning") =>
+    ({ label, value: products ? n : "…", tone, isActive: status === value, onClick: () => setStatus(status === value ? "all" : value) });
+  const columns: TableColumn<Row>[] = [
+    { key: "photo", header: "", width: pixel(76), renderCell: (p) => <Thumb src={p.image_path ? mediaUrl(p.image_path) : null} /> },
+    { key: "name", header: "Product", width: proportional(3, { minWidth: 200 }), renderCell: (p) => (
+      <VStack gap={0}><TextLine weight="semibold">{p.name}</TextLine><TextLine type="supporting" maxLines={1}>{p.summary || "No summary"}</TextLine></VStack>
+    ) },
+    { key: "unit", header: "Priced", width: proportional(1, { minWidth: 90 }), renderCell: (p) => <TextLine type="supporting">{p.unit || "—"}</TextLine> },
+    { key: "published", header: "Status", width: proportional(1, { minWidth: 90 }), renderCell: (p) => <Badge label={p.published ? "Live" : "Draft"} variant={p.published ? "success" : "warning"} /> },
+    { key: "actions", header: "", width: pixel(250), align: "end", renderCell: (p) => (
+      <HStack gap={1} hAlign="end">
+        <Button size="sm" onClick={() => togglePublished(p)} label={p.published ? "Unpublish" : "Publish"} />
+        <Button size="sm" variant="primary" onClick={() => setEditing(p)} label="Edit" />
+        <MoreMenu label={`More actions for ${p.name}`} size="sm" alignment="end" items={[
+          ...(p.published ? [{ label: "View on website", href: `/products/${p.slug}`, target: "_blank" as const }] : []),
+          { label: "Delete", variant: "destructive" as const, onClick: () => void remove(p) },
+        ]} />
+      </HStack>
+    ) },
+  ];
+
   return (
     <section>
-      <div className="adm-toolbar">
-        <h2>Construction products <small>{products ? products.length : "…"}</small></h2>
-        <Button type="button" onClick={() => setManagingCategories(true)} variant="secondary" label="Categories" />
-        <Button type="button" isDisabled={categories.length === 0} onClick={() => setEditing(emptyProduct(categories[0]?.id))} variant="primary" label="+ New product" />
+      <SectionHeader title="Construction products" count={products ? products.length : null} description="The catalogue on the website, grouped by category. Prices are quoted per enquiry.">
+        <Button onClick={() => setManagingCategories(true)} variant="secondary" icon={<FolderTree size={16} />} label="Categories" />
+        <Button isDisabled={categories.length === 0} onClick={() => setEditing(emptyProduct(categories[0]?.id))} variant="primary" icon={<Plus size={16} />} label="New product" />
+      </SectionHeader>
+      <StatCards items={[
+        stat("All products", "all", all.length),
+        stat("Live", "live", all.filter((p) => p.published).length, "success"),
+        stat("Drafts", "draft", all.filter((p) => !p.published).length, "warning"),
+        { label: "Categories", value: categories.length },
+      ]} />
+      <div className="adm-filters">
+        <TextInput type="search" label="Search products" isLabelHidden placeholder="Search name, summary, unit" value={query} onChange={setQuery} hasClear startIcon={Search} />
       </div>
       {products === null ? <p className="adm-muted">Loading…</p> : categories.map((c) => {
         const items = products.filter((p) => p.category_id === c.id);
+        const rowsShown = items.filter(shown);
         return (
           <div key={c.id} className="adm-group">
-            <h3>{c.name} <small>{items.length}</small></h3>
-            {items.length === 0 ? <p className="adm-empty">No products in this category.</p> : (
-              <ul className="adm-list">
-                {items.map((p) => (
-                  <li key={p.id}>
-                    {p.image_path ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={mediaUrl(p.image_path)} alt="" />
-                    ) : <span className="adm-thumb-empty">No photo</span>}
-                    <div className="adm-list-main">
-                      <strong>{p.name}</strong>
-                      <span>{p.summary || "No summary"}{p.unit && ` · ${p.unit}`}</span>
-                      <span className="adm-tags"><em className={p.published ? "adm-tag-live" : "adm-tag-draft"}>{p.published ? "Live" : "Draft"}</em></span>
-                    </div>
-                    <div className="adm-list-actions">
-                      <Button type="button" onClick={() => togglePublished(p)} variant="secondary" label={p.published ? "Unpublish" : "Publish"} />
-                      <Button type="button" onClick={() => setEditing(p)} variant="primary" label="Edit" />
-                      <Button type="button" onClick={() => remove(p)} variant="destructive" label="Delete" />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <HStack gap={2} vAlign="center"><Heading level={2}>{c.name}</Heading><Badge label={String(items.length)} variant="neutral" /></HStack>
+            {items.length === 0 ? <p className="adm-empty">No products in this category.</p>
+              : rowsShown.length === 0 ? <p className="adm-empty">No products here match the search.</p> : (
+              <Card padding={0} className="adm-table">
+                <Table<Row> data={rowsShown as Row[]} columns={columns} idKey="id" hasHover />
+              </Card>
             )}
           </div>
         );
@@ -85,6 +112,8 @@ export function ProductsAdmin({ notify }: { notify: Notify }) {
     </section>
   );
 }
+
+type Row = ProductRow & Record<string, unknown>;
 
 function ProductForm({ initial, categories, notify, onDone }: { initial: ProductRow; categories: CategoryRow[]; notify: Notify; onDone: (saved: boolean) => void }) {
   const [p, setP] = useState<ProductRow>(initial);

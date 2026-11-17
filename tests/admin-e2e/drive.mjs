@@ -82,7 +82,7 @@ const fillDate = async (label, iso) => {
   await sleep(200);
 };
 const checkBox = (label) => js(`[...document.querySelectorAll('label')].find(l => l.textContent.trim().startsWith(${JSON.stringify(label)}))?.click()`);
-const tabValues = `[...document.querySelectorAll('.adm-header .astryx-tab')].map(t => t.dataset.tabValue + (t.querySelector('.adm-count')?.textContent ?? '')).join(',')`;
+const tabValues = `[...document.querySelectorAll('button.astryx-side-nav-item')].map(b => b.textContent.trim().toLowerCase()).join(',')`;
 const shot = async (name) => { const r = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }); writeFileSync(`${shots}/${name}.png`, Buffer.from(r.result.data, "base64")); };
 const backend = async () => (await fetch(`${BASE}/__log`)).json();
 const toast = () => js(`document.querySelector('.adm-toast [data-toast-message]')?.textContent.trim() ?? ''`);
@@ -136,7 +136,7 @@ try {
   // 2. create a property with a photo
   await click("Properties");
   await waitFor(`document.body.textContent.includes('No properties yet')`, "empty properties list");
-  await click("+ New property");
+  await click("New property");
   await waitFor(`!!document.querySelector('.adm-form')`, "property form");
   await fill("Title", "East-facing plot in Tambaram");
   await fill("Reference", "ASMS-0001");
@@ -172,7 +172,7 @@ try {
   await shot("3-properties-list");
 
   // 3. duplicate reference is explained
-  await click("+ New property");
+  await click("New property");
   await waitFor(`!!document.querySelector('.adm-form')`, "property form 2");
   await fill("Title", "East-facing plot in Tambaram"); await fill("Reference", "ASMS-0001"); await fill("Location", "X");
   await click("Create property");
@@ -198,7 +198,7 @@ try {
   await sleep(500);
   b = await backend();
   check("pause patches stage=paused", JSON.stringify(b.log.filter((l) => l.op === "update").pop()?.change) === '{"stage":"paused"}');
-  await click("+ New property");
+  await click("New property");
   await waitFor(`!!document.querySelector('.adm-form')`, "property form 3");
   await fill("Show area in", "acres");
   await fill("Area (acres)", "2.5");
@@ -211,7 +211,7 @@ try {
   // 6. products: create one
   await click("Products");
   await waitFor(`document.body.textContent.includes('No products in this category')`, "products tab");
-  await click("+ New product");
+  await click("New product");
   await waitFor(`!!document.querySelector('.adm-form')`, "product form");
   await fill("Name", "TMT reinforcement bars");
   await fill("Pricing unit", "Per tonne");

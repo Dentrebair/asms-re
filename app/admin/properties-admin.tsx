@@ -2,13 +2,22 @@
 
 import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
-import { Search } from "lucide-react";
+import { ArrowLeft, Building2, ExternalLink, Filter, Plus, Search } from "lucide-react";
+import { Divider } from "@astryxdesign/core/Divider";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Card } from "@astryxdesign/core/Card";
+import { EmptyState } from "@astryxdesign/core/EmptyState";
+import { MoreMenu } from "@astryxdesign/core/MoreMenu";
+import { Selector } from "@astryxdesign/core/Selector";
+import { Table, pixel, proportional, type TableColumn } from "@astryxdesign/core/Table";
+import { Heading, Text as TextLine } from "@astryxdesign/core/Text";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { formatINR, formatINRShort } from "@/lib/format";
 import { AMENITY_PRESETS, FACINGS, NEARBY_GROUPS, slugify } from "@/lib/presets";
 import { AREA_UNITS, CATEGORIES, SUBTYPES, areaIn } from "@/lib/property";
 import { deletePhotos, emptyProperty, explain, mediaUrl, supabase, type PropertyRow, type PropertyStage } from "./lib";
-import { Check, DateField, NumberInput, Photos, Rows, Select, Text, TextArea, YesNo } from "./ui";
+import { Check, DateField, NumberInput, Photos, Rows, SectionHeader, Select, StatCards, Text, TextArea, Thumb, YesNo } from "./ui";
 
 type Notify = (message: string, tone?: "ok" | "error") => void;
 
@@ -33,6 +42,8 @@ export function PropertiesAdmin({ notify }: { notify: Notify }) {
   const [rows, setRows] = useState<PropertyRow[] | null>(null);
   const [editing, setEditing] = useState<PropertyRow | null>(null);
   const [query, setQuery] = useState("");
+  const [type, setType] = useState("all");
+  const [view, setView] = useState<"all" | "live" | "hidden" | "sold" | "stale" | "featured">("all");
 
   async function load() {
     const { data, error } = await supabase().from("properties").select("*").order("sort_order").order("created_at", { ascending: false });
@@ -63,52 +74,87 @@ export function PropertiesAdmin({ notify }: { notify: Notify }) {
   }
 
   const q = query.trim().toLowerCase();
-  const visible = (rows ?? []).filter((r) => !q || [r.title, r.reference, r.location].some((v) => v?.toLowerCase().includes(q)));
+  const all = rows ?? [];
+  const stale = (r: PropertyRow) => r.stage === "live" && daysSince(r.last_confirmed_on) > STALE_DAYS;
+  const matchesView = (r: PropertyRow) =>
+    view === "all" ? true : view === "stale" ? stale(r) : view === "featured" ? r.featured : view === "hidden" ? ["draft", "paused", "archived"].includes(r.stage) : r.stage === view;
+  const visible = all.filter((r) => matchesView(r) && (type === "all" || r.category === type)
+    && (!q || [r.title, r.reference, r.location, r.locality].some((v) => v?.toLowerCase().includes(q))));
+  const stat = (label: string, value: typeof view, n: number, tone?: "warning" | "success") =>
+    ({ label, value: rows ? n : "…", tone, isActive: view === value, onClick: () => setView(view === value ? "all" : value) });
+
+  const columns: TableColumn<Row>[] = [
+    { key: "photo", header: "", width: pixel(76), renderCell: (r) => <Thumb src={r.images[0] ? mediaUrl(r.images[0].path) : null} /> },
+    { key: "title", header: "Property", width: proportional(3, { minWidth: 200 }), renderCell: (r) => (
+      <VStack gap={0}>
+        <TextLine weight="semibold" maxLines={2}>{r.title}</TextLine>
+        <TextLine type="supporting" maxLines={1}>{r.reference} · {r.location || "No location"}</TextLine>
+      </VStack>
+    ) },
+    { key: "property_type", header: "Type", width: proportional(1.2, { minWidth: 90 }), renderCell: (r) => <TextLine type="supporting">{r.property_type}</TextLine> },
+    { key: "price", header: "Price", width: proportional(1, { minWidth: 80 }), renderCell: (r) => <TextLine hasTabularNumbers>{r.price ? formatINRShort(r.price) : "On request"}</TextLine> },
+    { key: "stage", header: "Status", width: proportional(1.3, { minWidth: 120 }), renderCell: (r) => (
+      <HStack gap={1} wrap="wrap">
+        <Badge label={STAGE_LABEL[r.stage]} variant={r.stage === "live" ? "success" : r.stage === "sold" ? "neutral" : "warning"} />
+        {r.featured && <Badge label="Featured" variant="info" />}
+        {stale(r) && <Badge label={`Not confirmed ${STALE_DAYS}+ days`} variant="warning" />}
+      </HStack>
+    ) },
+    { key: "actions", header: "", width: pixel(200), align: "end", renderCell: (r) => (
+      <HStack gap={1} hAlign="end">
+        {r.stage === "live"
+          ? <Button size="sm" onClick={() => patch(r, { stage: "paused" })} label="Pause" />
+          : r.stage !== "sold" && <Button size="sm" onClick={() => patch(r, { stage: "live", last_confirmed_on: todayIso() })} label="Publish" />}
+        <Button size="sm" variant="primary" onClick={() => setEditing(r)} label="Edit" />
+        <MoreMenu label={`More actions for ${r.reference}`} size="sm" alignment="end" items={[
+          ...(r.stage === "live" ? [
+            { label: "Still available", description: "Record that the details were checked today", onClick: () => void patch(r, { last_confirmed_on: todayIso() }) },
+            { label: "Mark sold", onClick: () => { if (confirm(`Mark ${r.reference} as sold? It leaves search and stops taking enquiries.`)) void patch(r, { stage: "sold" }); } },
+          ] : []),
+          { label: r.featured ? "Unfeature" : "Feature on home page", onClick: () => void patch(r, { featured: !r.featured }) },
+          ...(isPublic(r.stage) ? [{ label: "View on website", href: `/properties/${r.slug}`, target: "_blank" as const }] : []),
+          { label: "Delete", variant: "destructive" as const, onClick: () => void remove(r) },
+        ]} />
+      </HStack>
+    ) },
+  ];
 
   return (
     <section>
-      <div className="adm-toolbar">
-        <h2>Properties <small>{rows ? rows.length : "…"}</small></h2>
+      <SectionHeader title="Properties" count={rows ? rows.length : null} description="Listings on the website. Live ones appear in search; drafts and paused ones are hidden.">
+        <Button onClick={() => setEditing(emptyProperty())} variant="primary" icon={<Plus size={16} />} label="New property" />
+      </SectionHeader>
+      <StatCards items={[
+        stat("All properties", "all", all.length),
+        stat("Live", "live", all.filter((r) => r.stage === "live").length, "success"),
+        stat("Drafts and paused", "hidden", all.filter((r) => ["draft", "paused", "archived"].includes(r.stage)).length),
+        stat("Needs reconfirming", "stale", all.filter(stale).length, "warning"),
+        stat("Featured", "featured", all.filter((r) => r.featured).length),
+      ]} />
+      <div className="adm-filters">
         <TextInput type="search" label="Search properties" isLabelHidden placeholder="Search title, reference, location" value={query} onChange={setQuery} hasClear startIcon={Search} />
-        <Button type="button" onClick={() => setEditing(emptyProperty())} variant="primary" label="+ New property" />
+        <Selector label="Type" isLabelHidden startIcon={Building2} value={type} onChange={setType}
+          options={[{ value: "all", label: "All types" }, ...CATEGORIES.map((c) => ({ value: c.id, label: c.label }))]} />
+        <Selector label="Status" isLabelHidden startIcon={Filter} value={view} onChange={(v) => setView(v as typeof view)}
+          options={[{ value: "all", label: "Any status" }, { value: "live", label: "Live" }, { value: "hidden", label: "Drafts and paused" }, { value: "sold", label: "Sold" }, { value: "stale", label: "Needs reconfirming" }, { value: "featured", label: "Featured" }]} />
       </div>
       {rows === null ? <p className="adm-muted">Loading…</p> : visible.length === 0 ? (
-        <p className="adm-empty">{rows.length === 0 ? "No properties yet. Add your first listing." : "No properties match your search."}</p>
+        <div className="adm-empty"><EmptyState isCompact title={rows.length === 0 ? "No properties yet" : "No properties match"} description={rows.length === 0 ? "Add your first listing." : "Try another search or filter."} /></div>
       ) : (
-        <ul className="adm-list">
-          {visible.map((r) => (
-            <li key={r.id}>
-              {r.images[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={mediaUrl(r.images[0].path)} alt="" />
-              ) : <span className="adm-thumb-empty">No photo</span>}
-              <div className="adm-list-main">
-                <strong>{r.title}</strong>
-                <span>{r.reference} · {r.location || "No location"} · {r.price ? formatINRShort(r.price) : "Price on request"}</span>
-                <span className="adm-tags">
-                  <em className={r.stage === "live" ? "adm-tag-live" : "adm-tag-draft"}>{STAGE_LABEL[r.stage]}</em>
-                  <em>{r.property_type}</em>
-                  {r.featured && <em>Featured</em>}
-                  {r.stage === "live" && daysSince(r.last_confirmed_on) > STALE_DAYS && <em className="adm-tag-draft">Not confirmed for {STALE_DAYS}+ days</em>}
-                </span>
-              </div>
-              <div className="adm-list-actions">
-                {r.stage === "live"
-                  ? <Button type="button" onClick={() => patch(r, { stage: "paused" })} variant="secondary" label="Pause" />
-                  : r.stage !== "sold" && <Button type="button" onClick={() => patch(r, { stage: "live", last_confirmed_on: todayIso() })} variant="secondary" label="Publish" />}
-                {r.stage === "live" && <Button type="button" onClick={() => patch(r, { last_confirmed_on: todayIso() })} tooltip="Record that the details were checked today" variant="secondary" label="Still available" />}
-                {r.stage === "live" && <Button type="button" onClick={() => confirm(`Mark ${r.reference} as sold? It leaves search and stops taking enquiries.`) && patch(r, { stage: "sold" })} variant="secondary" label="Mark sold" />}
-                <Button type="button" onClick={() => patch(r, { featured: !r.featured })} variant="secondary" label={r.featured ? "Unfeature" : "Feature"} />
-                <Button type="button" onClick={() => setEditing(r)} variant="primary" label="Edit" />
-                <Button type="button" onClick={() => remove(r)} variant="destructive" label="Delete" />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <Card padding={0} className="adm-table">
+          <Table<Row> data={visible as Row[]} columns={columns} idKey="id" hasHover density="balanced" />
+        </Card>
       )}
     </section>
   );
 }
+
+type Row = PropertyRow & Record<string, unknown>;
+
+const JUMP: [string, string][] = [
+  ["sec-listing", "Listing"], ["sec-location", "Location"], ["sec-price-and-size", "Price & size"], ["sec-legal-and-details", "Legal & details"],
+  ["sec-photos", "Photos"], ["sec-amenities", "Amenities"], ["sec-nearby-and-documents", "Nearby & documents"],
+];
 
 function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notify: Notify; onDone: (saved: boolean) => void }) {
   const [p, setP] = useState<PropertyRow>(initial);
@@ -156,29 +202,28 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
   return (
     <form className="adm-form" onSubmit={save}>
       <div className="adm-form-head">
-        <Button type="button" onClick={cancel} variant="ghost" label="← All properties" />
-        <h2>{isNew ? "New property" : `Edit ${initial.reference}`}</h2>
+        <Button type="button" onClick={cancel} variant="ghost" icon={<ArrowLeft size={16} />} label="All properties" />
+        <SectionHeader title={isNew ? "New property" : `Edit ${initial.reference}`} description={isNew ? "Fill in the listing, then publish it from the panel on the right." : p.title} />
       </div>
+      <div className="adm-edit-grid">
+      <div className="adm-edit-main">
 
-      <fieldset><legend>Listing</legend>
+      <fieldset id="sec-listing"><legend>Listing</legend>
         <Text label="Title" value={p.title} onChange={setTitle} required placeholder="e.g. East-facing plot in Tambaram" wide />
         <Text label="Reference" value={p.reference} onChange={setReference} required placeholder="e.g. ASMS-0001" hint="Shown to buyers; must be unique." />
         <Text label="Web address (slug)" value={p.slug} onChange={(v) => { setSlugTouched(true); set("slug", slugify(v ?? "")); }} required grow hint={`asmsrounaqh.com/properties/${p.slug || "…"}`} />
         <Select label="Category" value={p.category} options={CATEGORIES.map((c) => ({ value: c.id, label: c.label }))} required
           onChange={(v) => { const c = (v ?? "plot") as PropertyRow["category"]; setP((cur) => ({ ...cur, category: c, property_type: SUBTYPES[c].includes(cur.property_type) ? cur.property_type : SUBTYPES[c][0] })); }} />
         <Select label="Property type" value={p.property_type} options={SUBTYPES[p.category]} onChange={(v) => set("property_type", v ?? SUBTYPES[p.category][0])} required />
-        <Select label="Stage" value={p.stage} options={p.stage in STAGE_LABEL && !STAGES.some((x) => x.value === p.stage) ? [...STAGES, { value: p.stage, label: STAGE_LABEL[p.stage] }] : STAGES} onChange={(v) => set("stage", (v ?? "draft") as PropertyStage)} required />
+      </fieldset>
+
+      <fieldset id="sec-location"><legend>Location</legend>
         <Text label="Location" value={p.location} onChange={(v) => set("location", v ?? "")} required grow placeholder="e.g. Tambaram, Chennai" />
         <Text label="Locality / landmark" value={p.locality} onChange={(v) => set("locality", v)} placeholder="e.g. Near Tambaram railway station" />
         <Text label="Google Maps link" value={p.map_url} onChange={(v) => set("map_url", v)} hint="Paste the share link from Google Maps (starts with https://)" placeholder="https://maps.app.goo.gl/…" />
-        <DateField label="Posted on" value={p.posted_on} onChange={(v) => set("posted_on", v)} />
-        <DateField label="Details last confirmed" value={p.last_confirmed_on} onChange={(v) => set("last_confirmed_on", v)} />
-        <div className="adm-checks adm-wide">
-          <Check label="Featured" hint="Show on the home page" checked={p.featured} onChange={(v) => set("featured", v)} />
-        </div>
       </fieldset>
 
-      <fieldset><legend>Price &amp; size</legend>
+      <fieldset id="sec-price-and-size"><legend>Price &amp; size</legend>
         <NumberInput label="Price (₹)" value={p.price} onChange={(v) => set("price", v === null ? null : Math.round(v))} placeholder="Leave empty for “Price on request”"
           hint={p.price ? `${formatINRShort(p.price)} · ${formatINR(p.price)}${p.area_sqft ? ` · ${formatINR(p.price / p.area_sqft)}/sq ft` : ""}` : "Empty = “Price on request”"} />
         <YesNo label="Price negotiable" value={p.price_negotiable} onChange={(v) => set("price_negotiable", v)} />
@@ -192,7 +237,7 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
       </fieldset>
 
       {p.category === "residential" && (
-        <fieldset><legend>Home details</legend>
+        <fieldset id="sec-home-details"><legend>Home details</legend>
           <NumberInput label="Bedrooms (BHK)" value={p.bhk} onChange={(v) => set("bhk", v === null ? null : Math.round(v))} />
           <NumberInput label="Bathrooms" value={p.bathrooms} onChange={(v) => set("bathrooms", v === null ? null : Math.round(v))} />
           <NumberInput label="Carpet area (sq ft)" value={p.carpet_area_sqft} onChange={(v) => set("carpet_area_sqft", v)} />
@@ -204,7 +249,7 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
       )}
 
       {(p.category === "plot" || p.category === "agricultural") && (
-        <fieldset><legend>Land details</legend>
+        <fieldset id="sec-land-details"><legend>Land details</legend>
           <NumberInput label="Frontage (ft)" value={p.frontage_ft} onChange={(v) => set("frontage_ft", v)} />
           <NumberInput label="Road width (ft)" value={p.road_width_ft} onChange={(v) => set("road_width_ft", v)} />
           <Text label="Land use" value={p.land_use} onChange={(v) => set("land_use", v)} list={["Residential", "Commercial", "Agricultural", "Industrial"]} />
@@ -216,7 +261,7 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
       )}
 
       {p.category === "commercial" && (
-        <fieldset><legend>Commercial details</legend>
+        <fieldset id="sec-commercial-details"><legend>Commercial details</legend>
           <NumberInput label="Usable area (sq ft)" value={p.usable_area_sqft} onChange={(v) => set("usable_area_sqft", v)} />
           <Text label="Floor" value={p.floor_info} onChange={(v) => set("floor_info", v)} placeholder="e.g. Ground floor" grow />
           <Text label="Parking" value={p.parking} onChange={(v) => set("parking", v)} placeholder="e.g. 6 car parks, truck access" grow />
@@ -226,7 +271,7 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
         </fieldset>
       )}
 
-      <fieldset><legend>Legal &amp; details</legend>
+      <fieldset id="sec-legal-and-details"><legend>Legal &amp; details</legend>
         <Text label="Approval" value={p.approval} onChange={(v) => set("approval", v)} placeholder="Leave empty unless confirmed" list={["DTCP", "CMDA", "Panchayat", "Verification pending"]} hint="Shown exactly as entered. Leave empty rather than guess." />
         <Text label="RERA registration" value={p.rera} onChange={(v) => set("rera", v)} placeholder="RERA number, or “Not applicable”" />
         <Text label="Ownership" value={p.ownership} onChange={(v) => set("ownership", v)} list={["Freehold", "Leasehold", "Power of attorney"]} />
@@ -235,11 +280,11 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
         <TextArea label="Description" value={p.description} onChange={(v) => set("description", v)} hint="Highlights, access, limitations. No return-on-investment claims. Leave a blank line between paragraphs." />
       </fieldset>
 
-      <fieldset><legend>Photos</legend>
+      <fieldset id="sec-photos"><legend>Photos</legend>
         <Photos images={p.images} onChange={(images) => set("images", images)} folder="properties" onUploaded={(path) => uploaded.current.push(path)} />
       </fieldset>
 
-      <fieldset><legend>Amenities</legend>
+      <fieldset id="sec-amenities"><legend>Amenities</legend>
         <div className="adm-checks adm-wide">
           {AMENITY_PRESETS.map((a) => <Check key={a.label} label={a.label} checked={p.amenities.includes(a.label)} onChange={() => toggleAmenity(a.label)} />)}
           {customAmenities.map((a) => <Check key={a} label={a} checked onChange={() => toggleAmenity(a)} />)}
@@ -250,7 +295,7 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
         </div>
       </fieldset>
 
-      <fieldset><legend>Nearby &amp; documents</legend>
+      <fieldset id="sec-nearby-and-documents"><legend>Nearby &amp; documents</legend>
         <Rows label="Nearby places" rows={p.nearby} onChange={(v) => set("nearby", v)} addLabel="Add place"
           blank={{ group: "Transport", name: "", distance: "" }}
           columns={[{ key: "group", label: "Group", options: NEARBY_GROUPS.map((g) => g.label) }, { key: "name", label: "Place", placeholder: "e.g. Bus stop" }, { key: "distance", label: "Distance", placeholder: "e.g. 1 km" }]} />
@@ -259,9 +304,28 @@ function PropertyForm({ initial, notify, onDone }: { initial: PropertyRow; notif
           columns={[{ key: "label", label: "Document", placeholder: "e.g. Patta & chitta" }, { key: "status", label: "Status", placeholder: "e.g. Available on request" }]} />
       </fieldset>
 
-      <div className="adm-form-foot">
-        <Button type="button" onClick={cancel} variant="secondary" label="Cancel" />
-        <Button type="submit" isDisabled={saving} variant="primary" label={saving ? "Saving…" : isNew ? "Create property" : "Save changes"} />
+      </div>
+
+      <aside className="adm-edit-side" aria-label="Publishing">
+        <Card padding={5}>
+          <VStack gap={4}>
+            <HStack gap={2} vAlign="center"><Heading level={2}>Publishing</Heading><Badge label={STAGE_LABEL[p.stage]} variant={p.stage === "live" ? "success" : "warning"} /></HStack>
+            <Select label="Stage" value={p.stage} options={p.stage in STAGE_LABEL && !STAGES.some((x) => x.value === p.stage) ? [...STAGES, { value: p.stage, label: STAGE_LABEL[p.stage] }] : STAGES} onChange={(v) => set("stage", (v ?? "draft") as PropertyStage)} required />
+            <Check label="Featured" hint="Show on the home page" checked={p.featured} onChange={(v) => set("featured", v)} />
+            <DateField label="Posted on" value={p.posted_on} onChange={(v) => set("posted_on", v)} />
+            <DateField label="Details last confirmed" value={p.last_confirmed_on} onChange={(v) => set("last_confirmed_on", v)} />
+            {!isNew && isPublic(initial.stage) && <Button href={`/properties/${initial.slug}`} target="_blank" variant="ghost" icon={<ExternalLink size={16} />} label="View on website" />}
+            <Divider />
+            <VStack gap={2}>
+              <Button type="submit" isDisabled={saving} variant="primary" width="100%" label={saving ? "Saving…" : isNew ? "Create property" : "Save changes"} />
+              <Button type="button" onClick={cancel} variant="secondary" width="100%" label="Cancel" />
+            </VStack>
+          </VStack>
+        </Card>
+        <nav className="adm-jump" aria-label="Form sections">
+          {JUMP.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
+        </nav>
+      </aside>
       </div>
     </form>
   );
