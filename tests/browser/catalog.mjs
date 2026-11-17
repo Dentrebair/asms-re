@@ -19,20 +19,21 @@ const cdp = (method, params = {}) => new Promise((res) => { const id = ++seq; pe
 const js = async (expression) => (await cdp("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result?.result?.value;
 const go = async (url) => { await cdp("Page.navigate", { url }); await sleep(1500); };
 const visible = `[...document.querySelectorAll('.card-grid > li')].filter(li => !li.hidden).map(li => li.querySelector('h3').textContent)`;
-// Astryx controls: a Selector is a combobox button whose options (role=option) open in a
-// popover; a Tab is a button with data-tab-value (its label is rendered twice, once hidden
-// for sizing, hence the half-length slice).
-const tabLabel = `(t) => t.textContent.slice(0, t.textContent.length / 2)`;
+// Astryx controls: a Selector is a combobox button whose own listbox (aria-controls) holds
+// the options; the property-type choice is a RadioList in the filter sidebar, labelled
+// "Name (count)".
+const radioLabel = `(i) => (document.getElementById(i.getAttribute('aria-labelledby'))?.textContent ?? '').replace(/ \\(\\d+\\)$/, '')`;
 const setSelect = async (label, option) => {
-  await js(`(() => { const l=[...document.querySelectorAll('[role=search] label')].find(x=>x.textContent===${JSON.stringify(label)}); document.getElementById(l.htmlFor).click(); })()`);
+  const trigger = `document.getElementById([...document.querySelectorAll('.catalog label')].find(x=>x.textContent===${JSON.stringify(label)}).htmlFor)`;
+  await js(`${trigger}.click()`);
   await sleep(250);
-  await js(`[...document.querySelectorAll('[role=option]')].find(o=>o.textContent.trim()===${JSON.stringify(option)}).click()`);
+  await js(`[...document.getElementById(${trigger}.getAttribute('aria-controls')).querySelectorAll('[role=option]')].find(o=>o.textContent.trim()===${JSON.stringify(option)}).click()`);
 };
-const type = (value) => js(`(() => { const el = document.querySelector('[role=search] input[type=search]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input',{bubbles:true})); })()`);
-const tab = (label) => js(`[...document.querySelectorAll('.catalog .astryx-tab')].find(t=>(${tabLabel})(t)===${JSON.stringify(label)}).click()`);
-const activeTab = () => js(`(${tabLabel})(document.querySelector('.catalog .astryx-tab[data-selected]'))`);
+const type = (value) => js(`(() => { const el = document.querySelector('.catalog-side input[type=search]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+const tab = (label) => js(`[...document.querySelectorAll('.catalog-side input[type=radio]')].find(i => (${radioLabel})(i) === ${JSON.stringify(label)}).click()`);
+const activeTab = () => js(`(${radioLabel})(document.querySelector('.catalog-side input[type=radio]:checked'))`);
 const url = () => js(`location.search`);
-const labels = () => js(`[...document.querySelectorAll('[role=search] label')].map(l=>l.textContent)`);
+const labels = () => js(`[...document.querySelectorAll('.catalog-side label')].map(l=>l.textContent)`);
 const pagerText = () => js(`[...document.querySelectorAll('.catalog [aria-live=polite]')].map(e=>e.textContent).find(t=>t.startsWith('Showing'))`);
 
 try {
@@ -41,11 +42,11 @@ try {
   // products
   await go(`${BASE}/products`);
   let v = await js(visible);
-  check("products page 1 shows 6 (3 x 2)", v.length === 6, v.join(", "));
-  check("pager reads 1 to 6 of 12", (await pagerText()) === "Showing 1 to 6 of 12");
+  check("products page 1 shows 9 (3 x 3)", v.length === 9, v.join(", "));
+  check("pager reads 1 to 9 of 12", (await pagerText()) === "Showing 1 to 9 of 12");
   check("grid is 3 columns at 1440", (await js(`getComputedStyle(document.querySelector('.card-grid')).gridTemplateColumns.split(' ').length`)) === 3);
   await js(`document.querySelector('.astryx-pagination [aria-label="Go to next page"]').click()`); await sleep(400);
-  check("Next shows the other 6 and puts page=2 in the URL", (await js(visible)).length === 6 && (await url()) === "?page=2", await url());
+  check("Next shows the other 3 and puts page=2 in the URL", (await js(visible)).length === 3 && (await url()) === "?page=2", await url());
   await go(`${BASE}/products?category=roofing`);
   v = await js(visible);
   check("?category=roofing opens the roofing tab", v.length === 4 && v.includes("AAC blocks") && (await activeTab()).startsWith("Roofing"), v.join(", "));
@@ -61,7 +62,7 @@ try {
   await go(`${BASE}/properties`);
   v = await js(visible);
   check("properties shows the 6 live listings, not the sold one", v.length === 6 && !v.includes("Corner residential plot"), v.join(", "));
-  check("type tabs per PRD", (await js(`[...document.querySelectorAll('.catalog .astryx-tab')].map(${tabLabel}).join('|')`)) === "All|Apartments and houses|Plots and land|Commercial|Agricultural");
+  check("type tabs per PRD", (await js(`[...document.querySelectorAll('.catalog-side input[type=radio]')].map(${radioLabel}).join('|')`)) === "All|Apartments and houses|Plots and land|Commercial|Agricultural");
   check("no Bedrooms filter on All", !(await labels()).includes("Bedrooms"), (await labels()).join(","));
   await tab("Plots and land"); await sleep(300);
   check("Plots tab: 2 listings, ?type=plot", (await js(visible)).length === 2 && (await url()) === "?type=plot", await url());
@@ -92,11 +93,13 @@ try {
   check("sold page says sold, no enquiry button", await js(`document.body.textContent.includes('This property has been sold') && !document.body.textContent.includes('Enquire about property')`));
 
   await go(`${BASE}/`);
-  check("home shows 3 x 2 properties", (await js(`document.querySelectorAll('.card-grid > li').length`)) === 6 && (await js(`getComputedStyle(document.querySelector('.card-grid')).gridTemplateColumns.split(' ').length`)) === 3);
+  check("home features the 6 live properties in a carousel", (await js(`document.querySelectorAll('.carousel-card').length`)) === 6);
 
   await cdp("Emulation.setDeviceMetricsOverride", { width: 375, height: 800, deviceScaleFactor: 1, mobile: true });
   await go(`${BASE}/properties`);
-  check("phone: filters stack in one column", await js(`(() => { const f = [...document.querySelectorAll('[role=search] label')].map(l => l.getBoundingClientRect().left); return f.length > 1 && f.every(x => Math.abs(x - f[0]) < 2); })()`));
+  check("phone: sidebar hidden, Filters button shown", await js(`getComputedStyle(document.querySelector('.catalog-side')).display === 'none' && [...document.querySelectorAll('.filters-toggle button')].some(b => b.textContent.startsWith('Filters'))`));
+  await js(`[...document.querySelectorAll('.filters-toggle button')].find(b => b.textContent.startsWith('Filters')).click()`); await sleep(500);
+  check("phone: Filters opens the drawer", await js(`!!document.querySelector('.astryx-drawer') && [...document.querySelectorAll('.astryx-drawer button')].some(b => b.textContent.startsWith('Show'))`));
   check("phone: no sideways scroll", await js(`document.documentElement.scrollWidth <= 375`), String(await js(`document.documentElement.scrollWidth`)));
 } catch (e) { check("crashed", false, e.message); }
 console.log(out.join("\n"));

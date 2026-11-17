@@ -1,6 +1,9 @@
 import { SERVICES } from "@/lib/company";
 import { Footer, Header, PageHead } from "../site-components";
 import { ForestTheme } from "../astryx/themes";
+import { ArrowRight, Building2, Landmark, Printer, Church, HardHat, Warehouse, type LucideIcon } from "lucide-react";
+
+const SERVICE_ICONS: Record<string, LucideIcon> = { "real-estate": Building2, construction: HardHat, peb: Warehouse, heritage: Landmark, religious: Church, "3dcp": Printer };
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Grid } from "@astryxdesign/core/Grid";
@@ -21,16 +24,25 @@ export default function ServicesPage() {
     <>
       <Header />
       <main id="main">
-        <PageHead title="Development, construction and engineering" lead="Six lines of work, carried by decades of practical building experience." />
+        <PageHead crumb="Services" title="Development, construction and engineering" lead="Six lines of work, carried by decades of practical building experience." />
 
-        <section className="band band--tight" aria-label="Services" style={{ paddingTop: 0 }}>
+        <section className="band band--tight" aria-label="Services">
           <div className="page">
             <Grid columns={{ minWidth: 320, repeat: "fit" }} gap={4}>
-              {SERVICES.map((s) => (
-                <Card key={s.id} padding={6}>
-                  <VStack gap={3}><Heading level={2} id={s.id}>{s.title}</Heading><Text color="secondary" as="p">{s.text}</Text></VStack>
-                </Card>
-              ))}
+              {SERVICES.map((s) => {
+                const Icon = SERVICE_ICONS[s.id] ?? HardHat;
+                return (
+                  <Card key={s.id} padding={6}>
+                    <VStack gap={4} height="100%">
+                      <span className="type-icon"><Icon size={24} aria-hidden="true" /></span>
+                      <VStack gap={2}><Heading level={2} id={s.id}>{s.title}</Heading><Text color="secondary" as="p">{s.text}</Text></VStack>
+                      <div className="card-foot">
+                        <Button variant="ghost" href={`/contact?category=${encodeURIComponent("General enquiry")}&interest=${encodeURIComponent(s.title)}`} label="Discuss a project" icon={<ArrowRight size={16} />} />
+                      </div>
+                    </VStack>
+                  </Card>
+                );
+              })}
             </Grid>
           </div>
         </section>

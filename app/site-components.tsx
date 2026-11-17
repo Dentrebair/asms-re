@@ -1,6 +1,7 @@
 import { Heading, Text } from "@astryxdesign/core/Text";
 import { Link } from "@astryxdesign/core/Link";
 import { Divider } from "@astryxdesign/core/Divider";
+import { BreadcrumbItem, Breadcrumbs } from "@astryxdesign/core/Breadcrumbs";
 import { Grid } from "@astryxdesign/core/Grid";
 import { HStack, VStack } from "@astryxdesign/core/Layout";
 import { areaLabel, priceLabel, type ProductRecord, type PropertyRecord } from "@/lib/content";
@@ -23,9 +24,10 @@ export function propertyCardData(p: PropertyRecord): ListingCardData {
     href: `/properties/${p.slug}`,
     title: p.title,
     image: p.images[0] ? { src: p.images[0].srcSmall, alt: p.images[0].alt } : null,
+    photoCount: p.images.length,
     tag: listingTag(p),
+    location: [p.location, p.locality].filter(Boolean).join(" · "),
     facts: [
-      { label: "Location", value: p.location },
       { label: "Type", value: p.propertyType },
       { label: "Area", value: areaLabel(p) },
     ],
@@ -122,14 +124,18 @@ export function creditsFor(items: { name: string; image: { credit?: Omit<Credit,
   return items.flatMap((item) => (item.image?.credit ? [{ label: item.name, ...item.image.credit }] : []));
 }
 
-/** A page heading block: title, a lead line, and optional actions. */
-export function PageHead({ title, lead, children }: { title: string; lead?: string; children?: React.ReactNode }) {
+/** Portal page header: breadcrumbs, a compact title, a lead line, and optional actions. */
+export function PageHead({ title, lead, crumb, children }: { title: string; lead?: string; crumb?: string; children?: React.ReactNode }) {
   return (
-    <section className="band band--tight" aria-labelledby="page-title">
+    <section className="page-head" aria-labelledby="page-title">
       <div className="page">
-        <VStack gap={4}>
-          <Heading level={1} type="display-2" id="page-title" textWrap="balance">{title}</Heading>
-          {lead && <Text type="large" color="secondary" as="p" textWrap="pretty">{lead}</Text>}
+        <VStack gap={3}>
+          <Breadcrumbs label="Breadcrumb">
+            <BreadcrumbItem href="/">Home</BreadcrumbItem>
+            <BreadcrumbItem isCurrent>{crumb ?? title}</BreadcrumbItem>
+          </Breadcrumbs>
+          <Heading level={1} type="display-3" id="page-title" textWrap="balance">{title}</Heading>
+          {lead && <Text color="secondary" as="p" textWrap="pretty">{lead}</Text>}
           {children}
         </VStack>
       </div>

@@ -291,14 +291,14 @@ try {
   const visit = b.log.filter((l) => l.op === "insert" && l.table === "enquiries").pop()?.rows[0];
   check("visit request sent with property and preference", visit && visit.kind === "visit" && visit.source === "property_page" && visit.property_ref === "ASMS-PREVIEW-01" && visit.preferred_date === tomorrow && visit.preferred_time === "Morning" && !("message" in visit), JSON.stringify(visit));
   check("visit lands in the inbox as Visit requested", b.db.enquiries.find((e) => e.name === "Karthik R")?.status === "visit_requested");
-  await js(`(() => { const a = [...document.querySelectorAll('.detail-rail a')].find(x => x.textContent === 'WhatsApp us'); a.addEventListener('click', (e) => e.preventDefault()); a.click(); window.__wa = a.href; })()`);
+  await js(`(() => { const a = [...document.querySelectorAll('main a')].find(x => x.textContent === 'WhatsApp us'); a.addEventListener('click', (e) => e.preventDefault()); a.click(); window.__wa = a.href; })()`);
   await sleep(400);
   b = await backend();
   check("WhatsApp click tracked separately from enquiries", b.log.some((l) => l.op === "track" && l.event_type === "whatsapp_click") && (await js(`window.__wa`)).startsWith("https://wa.me/919800000000?text=Hello"));
   await cdp("Emulation.setFocusEmulationEnabled", { enabled: true });  // the clipboard needs a focused page
   await js(`Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })`);  // test the copy-link path
   await click("Share this property");
-  await waitFor(`[...document.querySelectorAll('.detail-rail button')].some(b => b.textContent.trim() === 'Link copied')`, "link copied");
+  await waitFor(`[...document.querySelectorAll('main button')].some(b => b.textContent.trim() === 'Link copied')`, "link copied");
   b = await backend();
   check("share tracked", b.log.some((l) => l.op === "track" && l.event_type === "property_shared"));
   await cdp("Page.navigate", { url: `${BASE}/properties/sold-plot-sample` });

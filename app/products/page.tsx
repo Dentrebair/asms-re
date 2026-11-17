@@ -34,9 +34,9 @@ export default function ProductsPage() {
     <>
       <Header />
       <main id="main">
-        <PageHead title="Steel, roofing and concrete products" lead="Compare grades and standards, then request a quote for your site." />
+        <PageHead crumb="Products" title="Steel, roofing and concrete products" lead="Compare grades and standards, then request a quote for your site." />
 
-        <section className="band band--tight" aria-label="Product catalogue" style={{ paddingTop: 0 }}>
+        <section className="band band--tight" aria-label="Product catalogue">
           <div className="page">
             <VStack gap={6}>
               {isSample && <Banner status="info" title="Design preview" description="Product lines and specifications are typical industry values, not confirmed stock, and the photographs are illustrative. Prices are quoted per enquiry." />}
@@ -46,6 +46,7 @@ export default function ProductsPage() {
               ) : (
                 <Catalog
                   label="Products"
+                  itemName={["product", "products"]}
                   tabs={{ name: "category", attr: "category", label: "Product category", allLabel: "All products", options: productCategories.map((category) => ({ value: category.id, label: category.name })) }}
                   search="Product, grade or standard"
                   sorts={SORTS}

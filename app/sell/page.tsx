@@ -1,10 +1,13 @@
 import { Footer, Header, PageHead } from "../site-components";
 import { ForestTheme } from "../astryx/themes";
+import { Step, Stepper } from "@astryxdesign/core/Stepper";
+import { Phone, PhoneCall } from "lucide-react";
+import { COMPANY } from "@/lib/company";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Grid } from "@astryxdesign/core/Grid";
 import { Heading, Text } from "@astryxdesign/core/Text";
-import { HStack, VStack } from "@astryxdesign/core/Layout";
+import { VStack } from "@astryxdesign/core/Layout";
 
 
 export const dynamic = "force-static";
@@ -22,20 +25,29 @@ export default function SellPage() {
     <>
       <Header />
       <main id="main">
-        <PageHead title="Sell your property with ASMS‑ROUNAQH" lead="Homes, plots and commercial space, reviewed before buyers see them." />
+        <PageHead crumb="Sell a property" title="Sell your property with ASMS‑ROUNAQH" lead="Homes, plots and commercial space, reviewed before buyers see them." />
 
-        <section className="band band--tight" aria-labelledby="steps-title" style={{ paddingTop: 0 }}>
+        <section className="band band--tight" aria-labelledby="steps-title">
           <div className="page">
-            <VStack gap={6}>
-              <Heading level={2} type="display-3" id="steps-title">How listing works</Heading>
-              <Grid columns={{ minWidth: 240, repeat: "fit" }} gap={4}>
-                  {STEPS.map((c, i) => (
-                    <Card key={c.title} padding={6}>
-                      <VStack gap={2}>{"step" in c && <Text type="supporting" weight="bold" color="accent">Step {i + 1}</Text>}<Heading level={3}>{c.title}</Heading><Text color="secondary" as="p">{c.text}</Text></VStack>
-                    </Card>
-                  ))}
-                </Grid>
-            </VStack>
+            <div className="split">
+              <VStack gap={6}>
+                <Heading level={2} type="display-3" id="steps-title">How listing works</Heading>
+                <Stepper activeStep={0} orientation="vertical" label="How listing works">
+                  {STEPS.map((step, i) => <Step key={step.title} step={i} label={step.title} description={step.text} />)}
+                </Stepper>
+              </VStack>
+              <aside>
+                <Card padding={6} elevation="med">
+                  <VStack gap={4}>
+                    <span className="type-icon"><PhoneCall size={24} aria-hidden="true" /></span>
+                    <Heading level={2}>Start with a call</Heading>
+                    <Text color="secondary" as="p">Online seller accounts are not open yet. Tell us about the property and the team will call you to take the details.</Text>
+                    <Button href={sellHref} label="Request a callback" variant="primary" size="lg" width="100%" />
+                    <Button href={COMPANY.phoneHref} label={`Call ${COMPANY.phone}`} width="100%" icon={<Phone size={16} />} />
+                  </VStack>
+                </Card>
+              </aside>
+            </div>
           </div>
         </section>
 
@@ -59,19 +71,6 @@ export default function SellPage() {
           </section>
         </ForestTheme>
 
-        <section className="band" aria-labelledby="start-title">
-          <div className="page">
-            <Card padding={8} variant="muted">
-              <HStack gap={6} hAlign="between" vAlign="center" wrap="wrap">
-                <VStack gap={2} className="measure">
-                  <Heading level={2} type="display-3" id="start-title">Start with a call</Heading>
-                  <Text color="secondary" as="p">Online seller accounts are not open yet. Tell us about the property and the team will call you to take the details.</Text>
-                </VStack>
-                <Button href={sellHref} label="Request a callback" variant="primary" size="lg" />
-              </HStack>
-            </Card>
-          </div>
-        </section>
       </main>
       <Footer />
     </>

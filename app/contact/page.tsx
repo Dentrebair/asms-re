@@ -2,10 +2,10 @@ import { Footer, Header, PageHead } from "../site-components";
 import { ForestTheme } from "../astryx/themes";
 import { Card } from "@astryxdesign/core/Card";
 import { Grid } from "@astryxdesign/core/Grid";
-import { Link } from "@astryxdesign/core/Link";
-import { MetadataList, MetadataListItem } from "@astryxdesign/core/MetadataList";
+import { ClickableCard } from "@astryxdesign/core/ClickableCard";
+import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Heading, Text } from "@astryxdesign/core/Text";
-import { VStack } from "@astryxdesign/core/Layout";
+import { HStack, VStack } from "@astryxdesign/core/Layout";
 
 import { COMPANY } from "@/lib/company";
 import EnquiryForm from "./enquiry-form";
@@ -23,30 +23,33 @@ export default function ContactPage() {
     <>
       <Header />
       <main id="main">
-        <PageHead title="Ask about a property or a product" lead="Share the essentials and the team will guide the next conversation." />
+        <PageHead crumb="Contact" title="Ask about a property or a product" lead="Share the essentials and the team will guide the next conversation." />
 
-        <section className="band band--tight" aria-label="Enquiry" style={{ paddingTop: 0 }}>
+        <section className="band band--tight" aria-label="Enquiry">
           <div className="page">
-            <Grid columns={{ minWidth: 320, repeat: "fit" }} gap={10} align="start">
-              <VStack gap={5}>
-                <Heading level={2} type="display-3">Clear answers begin with the right details</Heading>
-                <Text color="secondary" as="p">Tell us your intended use, location or product specification. We respond with relevant information and no artificial urgency.</Text>
-                <Card padding={5}>
-                  <MetadataList>
-                    <MetadataListItem label="Call or WhatsApp">
-                      <VStack gap={1}><Link href={COMPANY.phoneHref}>{COMPANY.phone}</Link><Text type="supporting">For property and product enquiries. <Link href={`https://wa.me/${COMPANY.whatsapp}`} target="_blank" rel="noopener noreferrer">Chat on WhatsApp</Link></Text></VStack>
-                    </MetadataListItem>
-                    <MetadataListItem label="Email">
-                      <VStack gap={1}><Link href={`mailto:${COMPANY.email}`}>{COMPANY.email}</Link><Text type="supporting">For detailed requirements and documents</Text></VStack>
-                    </MetadataListItem>
-                    <MetadataListItem label="Registered office">
-                      <VStack gap={1}><address style={{ fontStyle: "normal" }}>{COMPANY.address.join(", ")}</address><Text type="supporting">Visits by prior appointment. <Link href={COMPANY.mapHref} target="_blank" rel="noopener noreferrer">Open in Maps</Link></Text></VStack>
-                    </MetadataListItem>
-                  </MetadataList>
-                </Card>
-              </VStack>
+            <div className="split split--form">
               <Card padding={6} elevation="med"><EnquiryForm /></Card>
-            </Grid>
+              <VStack gap={3}>
+                <Heading level={2}>Other ways to reach us</Heading>
+                {[
+                  { icon: Phone, title: "Call", line: COMPANY.phone, note: "Property and product enquiries", href: COMPANY.phoneHref },
+                  { icon: MessageCircle, title: "WhatsApp", line: "Chat with the team", note: "Send a listing reference or a photo", href: `https://wa.me/${COMPANY.whatsapp}`, external: true },
+                  { icon: Mail, title: "Email", line: COMPANY.email, note: "Detailed requirements and documents", href: `mailto:${COMPANY.email}` },
+                  { icon: MapPin, title: "Registered office", line: COMPANY.address.join(", "), note: "Visits by prior appointment · Open in Maps", href: COMPANY.mapHref, external: true },
+                ].map(({ icon: Icon, title, line, note, href, external }) => (
+                  <ClickableCard key={title} href={href} label={`${title}: ${line}`} padding={4} {...(external ? { target: "_blank" } : {})}>
+                    <HStack gap={4} vAlign="center">
+                      <span className="type-icon"><Icon size={22} aria-hidden="true" /></span>
+                      <VStack gap={0}>
+                        <Text type="supporting">{title}</Text>
+                        <Text weight="bold">{line}</Text>
+                        <Text type="supporting">{note}</Text>
+                      </VStack>
+                    </HStack>
+                  </ClickableCard>
+                ))}
+              </VStack>
+            </div>
           </div>
         </section>
 

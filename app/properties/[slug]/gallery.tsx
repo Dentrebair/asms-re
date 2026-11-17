@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Lightbox } from "@astryxdesign/core/Lightbox";
 import { Button } from "@astryxdesign/core/Button";
+import { Images } from "lucide-react";
 
 type Photo = { src: string; srcSmall: string; alt: string };
 
 /**
- * The property photos: up to three across the top (the first loads with high priority,
+ * The property photos: a mosaic of up to five across the top (the first loads with high priority,
  * since it is the page's largest paint), and every photo opens in the Astryx Lightbox,
  * which pages, zooms and closes with Escape.
  */
@@ -16,7 +17,7 @@ export function Gallery({ photos, title }: { photos: Photo[]; title: string }) {
   const [index, setIndex] = useState(0);
   const media = photos.map((p) => ({ src: p.src, alt: p.alt || title }));
   const show = (i: number) => { setIndex(i); setOpen(true); };
-  const top = photos.slice(0, 3);
+  const top = photos.slice(0, 5);
 
   return (
     <>
@@ -31,7 +32,7 @@ export function Gallery({ photos, title }: { photos: Photo[]; title: string }) {
         ))}
         {photos.length > 1 && (
           <span className="gallery-more">
-            <Button label={`View all ${photos.length} photos`} variant="secondary" elevation="med" onClick={() => show(0)} />
+            <Button label={`View all ${photos.length} photos`} variant="secondary" elevation="med" icon={<Images size={16} />} onClick={() => show(0)} />
           </span>
         )}
       </section>

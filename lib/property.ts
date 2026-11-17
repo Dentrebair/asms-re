@@ -15,6 +15,15 @@ export const SUBTYPES: Record<PropertyCategory, string[]> = {
   agricultural: ["Agricultural land", "Farm land"],
 };
 
+/** Budget bands for search: "lo-hi" in rupees, open-ended at the top; "empty" is price on request. */
+export const BUDGETS = [
+  { value: "0-5000000", label: "Under ₹50 L" },
+  { value: "5000000-10000000", label: "₹50 L to ₹1 Cr" },
+  { value: "10000000-20000000", label: "₹1 Cr to ₹2 Cr" },
+  { value: "20000000-", label: "Above ₹2 Cr" },
+  { value: "empty", label: "Price on request" },
+];
+
 export const categoryLabel = (c: PropertyCategory) => CATEGORIES.find((x) => x.id === c)?.label ?? c;
 
 // Area is stored in sq ft. A cent (common in Tamil Nadu) is 435.6 sq ft.

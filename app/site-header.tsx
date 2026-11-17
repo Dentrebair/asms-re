@@ -8,6 +8,10 @@ import { IconButton } from "@astryxdesign/core/IconButton";
 import { MobileNav } from "@astryxdesign/core/MobileNav";
 import { SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
 import { HStack } from "@astryxdesign/core/Layout";
+import { Phone } from "lucide-react";
+import { COMPANY } from "@/lib/company";
+
+const PHONE = { href: COMPANY.phoneHref, label: COMPANY.phone };
 
 // PRD section 4: Discover properties, Construction products, Services, About, Sell a property.
 export const NAV_LINKS = [
@@ -15,7 +19,6 @@ export const NAV_LINKS = [
   { href: "/products", label: "Products" },
   { href: "/services", label: "Services" },
   { href: "/about", label: "About" },
-  { href: "/sell", label: "Sell a property" },
 ];
 
 function MenuGlyph() {
@@ -50,6 +53,10 @@ export default function SiteHeader({ brand }: { brand: string }) {
                   {NAV_LINKS.map((l) => <TopNavItem key={l.href} href={l.href} label={l.label} isSelected={current(l.href)} />)}
                 </HStack>
               </span>
+              <span className="only-wide">
+                <Button href={PHONE.href} label={PHONE.label} variant="ghost" icon={<Phone size={16} />} />
+                <Button href="/sell" label="List property" variant="secondary" />
+              </span>
               <Button href="/contact" label="Enquire" variant="primary" size="md" />
               <span className="only-narrow">
                 <IconButton label="Open menu" icon={<MenuGlyph />} variant="ghost" onClick={() => setOpen(true)} />
@@ -62,7 +69,9 @@ export default function SiteHeader({ brand }: { brand: string }) {
         <SideNavSection title="Menu">
           <SideNavItem label="Home" href="/" isSelected={path === "/"} />
           {NAV_LINKS.map((l) => <SideNavItem key={l.href} label={l.label} href={l.href} isSelected={current(l.href)} />)}
+          <SideNavItem label="Sell a property" href="/sell" isSelected={current("/sell")} />
           <SideNavItem label="Contact" href="/contact" isSelected={current("/contact")} />
+          <SideNavItem label={`Call ${PHONE.label}`} href={PHONE.href} />
         </SideNavSection>
       </MobileNav>
     </>

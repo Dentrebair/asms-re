@@ -1,5 +1,5 @@
 import { isSample, properties } from "@/lib/content";
-import { CATEGORIES, categoryLabel } from "@/lib/property";
+import { BUDGETS, CATEGORIES, categoryLabel } from "@/lib/property";
 import type { PropertyCategory } from "@/lib/content-types";
 import Catalog, { type CatalogFilter, type CatalogSort, type CatalogTabs } from "../catalog";
 import { Footer, Header, PageHead, PropertyCard } from "../site-components";
@@ -12,13 +12,6 @@ import { Grid } from "@astryxdesign/core/Grid";
 import { Heading, Text } from "@astryxdesign/core/Text";
 import { HStack, VStack } from "@astryxdesign/core/Layout";
 
-const BUDGETS = [
-  { value: "0-5000000", label: "Under ₹50 L" },
-  { value: "5000000-10000000", label: "₹50 L to ₹1 Cr" },
-  { value: "10000000-20000000", label: "₹1 Cr to ₹2 Cr" },
-  { value: "20000000-", label: "Above ₹2 Cr" },
-  { value: "empty", label: "Price on request" },
-];
 const AREAS_SQFT = [
   { value: "0-1000", label: "Under 1,000 sq ft" },
   { value: "1000-2000", label: "1,000 to 2,000 sq ft" },
@@ -80,9 +73,9 @@ export default function PropertiesPage() {
     <>
       <Header />
       <main id="main">
-        <PageHead title="Property for sale around Chennai" lead="Each listing shows price, area, location and document status upfront." />
+        <PageHead crumb="Properties" title="Property for sale around Chennai" lead="Each listing shows price, area, location and document status upfront." />
 
-        <section className="band band--tight" aria-label="Listings" style={{ paddingTop: 0 }}>
+        <section className="band band--tight" aria-label="Listings">
           <div className="page">
             <VStack gap={6}>
               {isSample && <Banner status="info" title="Design preview" description="All listing details are placeholders. Only verified ASMS‑ROUNAQH inventory will be published." />}
@@ -90,7 +83,7 @@ export default function PropertiesPage() {
                 <EmptyState title="New listings are being prepared" description="Tell us what you are looking for and we will be in touch."
                   actions={<Button href="/contact" label="Tell us what you need" variant="primary" />} />
               ) : (
-                <Catalog label="Properties" tabs={tabs} search="Locality, landmark or reference" filters={filters} sorts={SORTS} total={properties.length}>
+                <Catalog label="Properties" itemName={["property", "properties"]} tabs={tabs} search="Locality, landmark or reference" filters={filters} sorts={SORTS} total={properties.length}>
                   {properties.map((p, i) => (
                     <li key={p.slug} data-order={i} data-category={p.category} data-subtype={p.propertyType} data-location={p.location}
                       data-price={p.price ?? ""} data-area={p.areaSqFt ?? ""} data-posted={p.postedOn ?? ""} data-bhk={p.bhk ?? ""}
