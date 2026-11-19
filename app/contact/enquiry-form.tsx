@@ -19,6 +19,7 @@ const CATEGORIES: { label: string; kind: EnquiryKind }[] = [
   { label: "Property purchase", kind: "property" },
   { label: "Construction products", kind: "product" },
   { label: "Selling a property", kind: "sell" },
+  { label: "Rentals", kind: "general" },
   { label: "General enquiry", kind: "general" },
 ];
 

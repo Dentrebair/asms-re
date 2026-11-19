@@ -62,6 +62,7 @@ export type Credit = { label: string; artist: string; license: string; licenseUr
 
 const FOOTER_LINKS = [
   { href: "/properties", label: "Properties" },
+  { href: "/rentals", label: "Rentals" },
   { href: "/products", label: "Products" },
   { href: "/services", label: "Services" },
   { href: "/about", label: "About us" },

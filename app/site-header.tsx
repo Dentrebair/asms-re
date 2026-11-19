@@ -8,17 +8,27 @@ import { IconButton } from "@astryxdesign/core/IconButton";
 import { MobileNav } from "@astryxdesign/core/MobileNav";
 import { SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
 import { HStack } from "@astryxdesign/core/Layout";
-import { DraftingCompass, HardHat, LayoutGrid, Phone, Ruler } from "lucide-react";
+import { Building, DraftingCompass, HardHat, Home, LayoutGrid, Phone, Ruler, Search, Tag } from "lucide-react";
 import { COMPANY } from "@/lib/company";
 
 const PHONE = { href: COMPANY.phoneHref, label: COMPANY.phone };
 
 // PRD section 4: Discover properties, Construction products, Services, About, Sell a property.
 export const NAV_LINKS = [
-  { href: "/properties", label: "Properties" },
+  { href: "/properties", label: "Real Estate" },
   { href: "/products", label: "Products" },
   { href: "/services", label: "Services" },
   { href: "/about", label: "About" },
+];
+
+// The Real Estate menu: buying, selling, and the two kinds of rental.
+export const REAL_ESTATE_LINKS = [
+  { href: "/properties", title: "Buying Property", description: "Plots, homes, land and commercial", Icon: Search },
+  { href: "/sell", title: "Selling Property", description: "List your property with ASMS", Icon: Tag },
+];
+export const RENTAL_LINKS = [
+  { href: "/rentals#corporate", title: "Corporate", description: "Offices, showrooms, warehouses", Icon: Building },
+  { href: "/rentals#domestic", title: "Domestic", description: "Apartments and houses", Icon: Home },
 ];
 
 // The Services menu: the three main lines of work, each opening its card on /services.
@@ -57,7 +67,12 @@ export default function SiteHeader({ brand }: { brand: string }) {
             <HStack gap={2} vAlign="center">
               <span className="only-wide">
                 <HStack gap={1}>
-                  {NAV_LINKS.map((l) => l.href === "/services"
+                  {NAV_LINKS.map((l) => l.href === "/properties"
+                    ? <TopNavMenu key={l.href} label={l.label} items={[
+                        ...REAL_ESTATE_LINKS.map(({ href, title, description, Icon }) => ({ href, title, description, icon: <Icon size={18} aria-hidden="true" /> })),
+                        ...RENTAL_LINKS.map(({ href, title, description, Icon }) => ({ href, title: `Rentals · ${title}`, description, icon: <Icon size={18} aria-hidden="true" /> })),
+                      ]} />
+                    : l.href === "/services"
                     ? <TopNavMenu key={l.href} label={l.label} items={[
                         ...SERVICE_LINKS.map(({ href, title, description, Icon }) => ({ href, title, description, icon: <Icon size={18} aria-hidden="true" /> })),
                         { href: "/services", title: "All services", description: "Heritage, PEB, 3D printing and more", icon: <LayoutGrid size={18} aria-hidden="true" /> },
@@ -80,13 +95,18 @@ export default function SiteHeader({ brand }: { brand: string }) {
       <MobileNav isOpen={open} onOpenChange={setOpen} header={brand} side="end">
         <SideNavSection title="Menu">
           <SideNavItem label="Home" href="/" isSelected={path === "/"} />
-          {NAV_LINKS.map((l) => <SideNavItem key={l.href} label={l.label} href={l.href} isSelected={current(l.href)} />)}
+          {NAV_LINKS.filter((l) => l.href !== "/properties").map((l) => <SideNavItem key={l.href} label={l.label} href={l.href} isSelected={current(l.href)} />)}
+        </SideNavSection>
+        <SideNavSection title="Real Estate">
+          {REAL_ESTATE_LINKS.map((l) => <SideNavItem key={l.href} label={l.title} href={l.href} isSelected={current(l.href)} />)}
+          <SideNavItem label="Rentals" href="/rentals" isSelected={current("/rentals")} collapsible>
+            {RENTAL_LINKS.map((l) => <SideNavItem key={l.href} label={l.title} href={l.href} />)}
+          </SideNavItem>
         </SideNavSection>
         <SideNavSection title="Services">
           {SERVICE_LINKS.map((l) => <SideNavItem key={l.href} label={l.title} href={l.href} />)}
         </SideNavSection>
         <SideNavSection title="More">
-          <SideNavItem label="Sell a property" href="/sell" isSelected={current("/sell")} />
           <SideNavItem label="Contact" href="/contact" isSelected={current("/contact")} />
           <SideNavItem label={`Call ${PHONE.label}`} href={PHONE.href} />
         </SideNavSection>
