@@ -52,7 +52,9 @@ function image(path, alt) {
 
 async function download(path) {
   const res = await fetch(`${url}/storage/v1/object/public/media/${path.split("/").map(encodeURIComponent).join("/")}`);
-  if (res.status === 404 && path.includes("-sm.")) return false; // tolerate a missing small variant
+  // A missing small variant falls back to the full photo. Supabase Storage answers
+  // "not found" with 400 (body statusCode "404"), so accept either status here.
+  if ((res.status === 404 || res.status === 400) && path.includes("-sm.")) return false;
   if (!res.ok) throw new Error(`media/${path}: HTTP ${res.status}`);
   const file = mediaFile(path);
   await mkdir(dirname(file), { recursive: true });
