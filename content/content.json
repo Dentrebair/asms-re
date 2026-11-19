@@ -110,6 +110,196 @@
       "mapUrl": "https://www.google.com/maps/place/13%C2%B006%2704.6%22N+79%C2%B058%2700.0%22E/@13.102156,79.9673705,18z"
     },
     {
+      "slug": "commercial-building-mannady-george-town-chennai",
+      "reference": "ASMS-CHN-0001",
+      "title": "Commercial building behind Mannady Metro",
+      "stage": "live",
+      "featured": true,
+      "category": "commercial",
+      "propertyType": "Commercial building",
+      "transactionType": null,
+      "ownership": null,
+      "location": "Muthu Naicken Street, Mannady, George Town, Chennai 600001",
+      "locality": "Behind Mannady Metro Station (Blue Line)",
+      "price": null,
+      "priceNegotiable": null,
+      "areaSqFt": 6000,
+      "areaUnit": "sqft",
+      "dimensions": null,
+      "facing": null,
+      "bhk": null,
+      "bathrooms": null,
+      "carpetAreaSqFt": null,
+      "furnishing": null,
+      "floorInfo": "6,000 sq ft built up on 2,200 sq ft of land",
+      "parking": null,
+      "possession": "Ready to move",
+      "roadWidthFt": null,
+      "frontageFt": null,
+      "landUse": "Commercial",
+      "cornerPlot": null,
+      "boundaryWall": null,
+      "gatedLayout": null,
+      "floorsAllowed": null,
+      "usableAreaSqFt": null,
+      "accessNotes": "Walking distance to Mannady Metro Station, Blue Line, with a direct link to the airport",
+      "zoningNotes": "Suits warehouse, wholesale trading, showroom or office use",
+      "approval": null,
+      "rera": null,
+      "availability": null,
+      "description": "A built-up commercial property of 6,000 sq ft on 2,200 sq ft of land on Muthu Naicken Street, Mannady, in George Town, right behind Mannady Metro Station on the Blue Line.\n\nIt sits in the middle of Mannady's wholesale and trading bazaar, close to Chennai Beach railway station and Parry's Corner, with easy access to Broadway, Flower Bazaar and the Chennai Port belt. The street sees heavy footfall and strong rental demand.\n\nSuitable for a warehouse, wholesale trading, a showroom, offices, or as an investment: built-up space here rarely comes up for sale.\n\nPrice on request. Genuine enquiries are welcome, and site visits are by appointment.",
+      "amenities": [],
+      "nearby": [
+        {
+          "group": "Transport",
+          "name": "Mannady Metro Station (Blue Line)",
+          "distance": "Walking distance"
+        },
+        {
+          "group": "Transport",
+          "name": "Chennai Beach railway station",
+          "distance": "Close by"
+        },
+        {
+          "group": "Transport",
+          "name": "Chennai Port",
+          "distance": "Close by"
+        },
+        {
+          "group": "Daily needs",
+          "name": "Parry's Corner",
+          "distance": "Close by"
+        },
+        {
+          "group": "Daily needs",
+          "name": "Broadway",
+          "distance": "Close by"
+        },
+        {
+          "group": "Daily needs",
+          "name": "Flower Bazaar",
+          "distance": "Close by"
+        }
+      ],
+      "documents": [
+        {
+          "label": "Title documents, patta and EC",
+          "status": "To be obtained"
+        }
+      ],
+      "images": [],
+      "postedOn": "2026-11-14",
+      "lastConfirmedOn": "2026-11-14",
+      "mapUrl": "https://maps.app.goo.gl/pcGnkCfTUdUAQ25k8"
+    },
+    {
+      "slug": "star-lion-engineering-college-campus-thanjavur",
+      "reference": "ASMS-TNJ-0001",
+      "title": "Engineering college campus on 29.79 acres",
+      "stage": "live",
+      "featured": true,
+      "category": "commercial",
+      "propertyType": "Educational campus",
+      "transactionType": null,
+      "ownership": null,
+      "location": "Thanjavur, Tamil Nadu",
+      "locality": "Manankorai (PIN 614206)",
+      "price": null,
+      "priceNegotiable": null,
+      "areaSqFt": 1297652.4,
+      "areaUnit": "acre",
+      "dimensions": null,
+      "facing": null,
+      "bhk": null,
+      "bathrooms": null,
+      "carpetAreaSqFt": null,
+      "furnishing": null,
+      "floorInfo": "Ground + 2 floors, about 1,11,158 sq ft built up",
+      "parking": "Car parking shed (2,073 sq ft); 2 college buses",
+      "possession": "Ready to move",
+      "roadWidthFt": null,
+      "frontageFt": null,
+      "landUse": "Educational institution",
+      "cornerPlot": null,
+      "boundaryWall": null,
+      "gatedLayout": null,
+      "floorsAllowed": null,
+      "usableAreaSqFt": null,
+      "accessNotes": null,
+      "zoningNotes": "Running engineering college (educational use)",
+      "approval": "AICTE approved; affiliated to Anna University, Chennai",
+      "rera": null,
+      "availability": null,
+      "description": "Star Lion College of Engineering and Technology: a working engineering college campus in Thanjavur on 29 acres 79 cents, with about 1,11,158 sq ft of buildings, approved by AICTE and affiliated to Anna University, Chennai.\n\nBuilt-up area: ground floor 39,111 sq ft, first floor 36,227 sq ft, second floor 8,520 sq ft, labs 10,744 sq ft, workshop 10,708 sq ft, cafeteria 2,324 sq ft with a 1,097 sq ft open shed, car parking 2,073 sq ft, generator room 274 sq ft and watchman shed 80 sq ft.\n\nCourses currently approved, with yearly intake: B.E. Computer Science and Engineering (60), Mechanical Engineering (60), Civil Engineering (30), Electrical and Electronics Engineering (30), Electronics and Communication Engineering (30), Computer Science and Engineering with AI and Machine Learning (30), and B.Tech. Artificial Intelligence and Data Science (30), a total UG intake of 270; plus M.E. Structural Engineering (18).\n\nFacilities: 22 classrooms, 2 computer labs, a library of 12,672 volumes with 96 national and international journals and DELNET e-journals, a seminar hall, recreation and physical education rooms, separate rest rooms for boys and girls, and 2 buses. Each department has its own laboratories, including a CNC lab, CAD/CAM, thermal, heat transfer, surveying, soil mechanics, hydraulics, materials testing, power systems, power electronics, VLSI, communication systems, AI, machine learning and deep learning labs.\n\nPrice, title documents and the terms of transfer are shared on enquiry. Figures are from the college brochure and will be verified before a site visit.",
+      "amenities": [
+        "22 classrooms",
+        "2 computer labs",
+        "Library: 12,672 volumes",
+        "Seminar hall",
+        "Department laboratories",
+        "CNC laboratory",
+        "Workshop (10,708 sq ft)",
+        "Cafeteria",
+        "Recreation room",
+        "Physical education room",
+        "Boys' and girls' rest rooms",
+        "Generator room",
+        "Car parking",
+        "2 college buses",
+        "Watchman shed"
+      ],
+      "nearby": [],
+      "documents": [
+        {
+          "label": "AICTE approval",
+          "status": "As stated in the college brochure; copy to be verified"
+        },
+        {
+          "label": "Anna University affiliation",
+          "status": "As stated in the college brochure; copy to be verified"
+        },
+        {
+          "label": "Title documents, patta and EC",
+          "status": "To be obtained"
+        }
+      ],
+      "images": [
+        {
+          "src": "/media/properties/star-lion-entrance.webp",
+          "srcSmall": "/media/properties/star-lion-entrance-sm.webp",
+          "alt": "Main entrance arch of Star Lion College of Engineering and Technology"
+        },
+        {
+          "src": "/media/properties/star-lion-aerial.webp",
+          "srcSmall": "/media/properties/star-lion-aerial-sm.webp",
+          "alt": "Aerial view of the campus buildings surrounded by open farmland"
+        },
+        {
+          "src": "/media/properties/star-lion-block.webp",
+          "srcSmall": "/media/properties/star-lion-block-sm.webp",
+          "alt": "Campus block with a glass-fronted round entrance and landscaped drive"
+        },
+        {
+          "src": "/media/properties/star-lion-library.webp",
+          "srcSmall": "/media/properties/star-lion-library-sm.webp",
+          "alt": "Library reading hall with tall windows and book stacks"
+        },
+        {
+          "src": "/media/properties/star-lion-workshop.webp",
+          "srcSmall": "/media/properties/star-lion-workshop-sm.webp",
+          "alt": "Mechanical workshop under a steel truss roof"
+        },
+        {
+          "src": "/media/properties/star-lion-cnc.webp",
+          "srcSmall": "/media/properties/star-lion-cnc-sm.webp",
+          "alt": "CNC laboratory machines"
+        }
+      ],
+      "postedOn": "2026-11-14",
+      "lastConfirmedOn": "2026-11-14",
+      "mapUrl": null
+    },
+    {
       "slug": "residential-plot-opportunity",
       "reference": "ASMS-PREVIEW-01",
       "title": "Residential plot opportunity",

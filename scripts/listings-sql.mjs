@@ -1,7 +1,9 @@
 // Writes supabase/seed-listings.sql from the real (non ASMS-PREVIEW) listings in
 // content/content.json, so listings prepared before Supabase existed can be loaded
 // into it. Run it in the Supabase SQL editor after schema.sql; it is safe to re-run
-// (rows are matched by reference). Photos are not included: upload them in /admin.
+// (rows are matched by reference). Photos are stored as their storage paths
+// (/media/properties/x.webp -> properties/x.webp); upload the files themselves to
+// the "media" bucket under the same paths.
 // Usage: node scripts/listings-sql.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -12,11 +14,18 @@ const content = JSON.parse(readFileSync(join(root, "content", "content.json"), "
 const listings = content.properties.filter((p) => !p.reference.startsWith("ASMS-PREVIEW"));
 
 const snake = (k) => k.replace("SqFt", "Sqft").replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
-const SKIP = new Set(["images"]);
+const SKIP = new Set([]);
+const SAFE_PATH = /^[a-z0-9_-]+(\/[A-Za-z0-9_-]+)*\/[A-Za-z0-9_-]+\.(webp|jpe?g|png)$/;
+const storageImages = (images) => images.map((img) => {
+  const path = img.src.replace(/^\/media\//, "");
+  if (!img.src.startsWith("/media/") || !SAFE_PATH.test(path)) throw new Error(`Photo is not a storage path: ${img.src}`);
+  return { path, alt: img.alt ?? "" };
+});
 const quote = (s) => `'${String(s).replaceAll("'", "''")}'`;
 const literal = (key, v) => {
   if (v === null || v === undefined) return "null";
   if (key === "amenities") return `array[${v.map(quote).join(", ")}]::text[]`;
+  if (key === "images") return `${quote(JSON.stringify(storageImages(v)))}::jsonb`;
   if (key === "nearby" || key === "documents") return `${quote(JSON.stringify(v))}::jsonb`;
   if (typeof v === "boolean" || typeof v === "number") return String(v);
   return quote(v);
