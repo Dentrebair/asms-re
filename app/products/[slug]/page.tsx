@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation";
 import { isSample, productCategories } from "@/lib/content";
-import { BRAND, Footer, Header, ListingCardFor, creditsFor } from "../../site-components";
+import { BRAND, Footer, Header, ListingCardFor, NotAvailablePage, creditsFor } from "../../site-components";
 import QuoteForm from "./quote-form";
 import { AspectRatio } from "@astryxdesign/core/AspectRatio";
 import { Badge } from "@astryxdesign/core/Badge";
@@ -22,13 +21,16 @@ type Params = Promise<{ slug: string }>;
 const all = productCategories.flatMap((category) => category.products.map((product) => ({ product, category })));
 const find = (slug: string) => all.find((x) => x.product.slug === slug);
 
+// A static export must build at least one page per route. With nothing published
+// yet, a single placeholder is built and renders the not-found page.
 export function generateStaticParams() {
-  return all.map(({ product }) => ({ slug: product.slug }));
+  const params = all.map(({ product }) => ({ slug: product.slug }));
+  return params.length ? params : [{ slug: "none" }];
 }
 
 export async function generateMetadata({ params }: { params: Params }) {
   const found = find((await params).slug);
-  if (!found) return {};
+  if (!found) return { title: `Product not available | ${BRAND}`, robots: { index: false } };
   const { product } = found;
   const description = `${product.name}: ${product.summary} Request a quote from ${BRAND}, Chennai.`;
   return {
@@ -41,7 +43,8 @@ export async function generateMetadata({ params }: { params: Params }) {
 
 export default async function ProductPage({ params }: { params: Params }) {
   const found = find((await params).slug);
-  if (!found) notFound();
+  // Only the empty-catalogue placeholder gets here (dynamicParams is false).
+  if (!found) return <NotAvailablePage crumb="Products" title="This product isn’t listed" lead="Product details are being prepared. Ask us for a quote and the team will get back to you." />;
   const { product: p, category } = found;
   const related = category.products.filter((x) => x.slug !== p.slug).slice(0, 3);
 

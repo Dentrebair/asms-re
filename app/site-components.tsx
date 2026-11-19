@@ -4,6 +4,7 @@ import { Divider } from "@astryxdesign/core/Divider";
 import { BreadcrumbItem, Breadcrumbs } from "@astryxdesign/core/Breadcrumbs";
 import { Grid } from "@astryxdesign/core/Grid";
 import { HStack, VStack } from "@astryxdesign/core/Layout";
+import { Button } from "@astryxdesign/core/Button";
 import { areaLabel, priceLabel, type ProductRecord, type PropertyRecord } from "@/lib/content";
 import { COMPANY } from "@/lib/company";
 import { listingTag, shortDate } from "@/lib/property";
@@ -141,5 +142,27 @@ export function PageHead({ title, lead, crumb, children }: { title: string; lead
         </VStack>
       </div>
     </section>
+  );
+}
+
+/**
+ * A whole page saying something is not here: the site 404 page, and the
+ * placeholder detail page a static build needs while nothing is published.
+ */
+export function NotAvailablePage({ title, lead, crumb = "Not found" }: { title: string; lead: string; crumb?: string }) {
+  return (
+    <>
+      <Header />
+      <main id="main">
+        <PageHead crumb={crumb} title={title} lead={lead}>
+          <HStack gap={2} wrap="wrap">
+            <Button href="/properties" label="Browse properties" variant="primary" />
+            <Button href="/products" label="Construction products" variant="secondary" />
+            <Button href="/contact" label="Contact us" variant="ghost" />
+          </HStack>
+        </PageHead>
+      </main>
+      <Footer />
+    </>
   );
 }

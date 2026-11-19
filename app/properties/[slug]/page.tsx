@@ -1,11 +1,10 @@
-import { notFound } from "next/navigation";
 import { HERO_IMAGE, allProperties, getProperty, isSampleListing, priceLabel, pricePerSqFt, similarProperties, type PropertyRecord } from "@/lib/content";
 import { categoryLabel, keySpecs, listingTag, shortDate } from "@/lib/property";
 import { COMPANY } from "@/lib/company";
 import { formatINR, monthlyEmi } from "@/lib/format";
 import { amenityIcon, nearbyIcon } from "@/lib/presets";
 import { Icon, type IconName } from "../../icons";
-import { BRAND, Footer, Header, PropertyCard } from "../../site-components";
+import { BRAND, Footer, Header, NotAvailablePage, PropertyCard } from "../../site-components";
 import EmiCalculator from "./emi-calculator";
 import { Gallery, PhotoGrid } from "./gallery";
 import { Badge } from "@astryxdesign/core/Badge";
@@ -28,13 +27,16 @@ export const dynamicParams = false;
 
 type Params = Promise<{ slug: string }>;
 
+// A static export must build at least one page per route. With nothing published
+// yet, a single placeholder is built and renders the not-found page.
 export function generateStaticParams() {
-  return allProperties.map((p) => ({ slug: p.slug }));
+  const params = allProperties.map((p) => ({ slug: p.slug }));
+  return params.length ? params : [{ slug: "none" }];
 }
 
 export async function generateMetadata({ params }: { params: Params }) {
   const property = getProperty((await params).slug);
-  if (!property) return {};
+  if (!property) return { title: `Property not available | ${BRAND}`, robots: { index: false } };
   const description = `${property.propertyType} in ${property.location}, ${priceLabel(property)}${property.stage === "sold" ? ", sold" : ""}.`;
   return {
     title: `${property.title} | ${BRAND}`,
@@ -79,7 +81,8 @@ function overview(p: PropertyRecord): [string, string][] {
 
 export default async function PropertyDetailPage({ params }: { params: Params }) {
   const p = getProperty((await params).slug);
-  if (!p) notFound();
+  // Only the no-listings placeholder gets here (dynamicParams is false).
+  if (!p) return <NotAvailablePage crumb="Properties" title="This property isn’t listed" lead="It may have been sold or taken down. Browse the current listings, or tell us what you are looking for." />;
 
   const sold = p.stage === "sold";
   const listing = { reference: p.reference, title: p.title };
