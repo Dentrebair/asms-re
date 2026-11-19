@@ -342,3 +342,11 @@ select pg_temp.check('audit log records stages, the change request and the suspe
   (select count(*) from public.audit_log where property_id = 'cccccccc-0000-0000-0000-00000000000c' and action = 'stage') = 7
   and (select count(*) from public.audit_log where action in ('revision_submitted', 'revision_approved')) = 3
   and (select count(*) from public.audit_log where action = 'seller_status' and actor = 'editor@asms.test') = 1);
+
+-- ---------- product photo credits
+update public.products set image_path = 'products/a.webp', image_credit = '{"artist":"Someone","license":"CC BY 4.0"}' where slug = 'paver-blocks';
+select pg_temp.check('a photo can carry its credit', (select image_credit ->> 'artist' = 'Someone' from public.products where slug = 'paver-blocks'));
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
+update public.products set image_path = 'products/b.webp' where slug = 'paver-blocks';
+reset role;
+select pg_temp.check('replacing the photo clears the old credit', (select image_credit is null from public.products where slug = 'paver-blocks'));

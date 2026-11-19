@@ -81,7 +81,7 @@ const content = {
     unit: p.unit,
     suitableUse: p.suitable_use,
     availability: p.availability,
-    image: image(p.image_path, p.image_alt || p.name),
+    image: p.image_path ? { ...image(p.image_path, p.image_alt || p.name), credit: p.image_credit ?? null } : null,
   })),
   properties: properties.map((p) => ({
     slug: p.slug,

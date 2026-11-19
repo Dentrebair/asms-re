@@ -73,6 +73,23 @@ create table if not exists public.products (
   updated_at   timestamptz not null default now()
 );
 
+-- Who to credit for a product photo licensed from someone else (Creative Commons),
+-- shown on the product page: {"artist", "license", "licenseUrl", "source"}.
+alter table public.products add column if not exists image_credit jsonb
+  check (image_credit is null or jsonb_typeof(image_credit) = 'object');
+
+-- A credit belongs to one photo: replacing the photo clears it.
+create or replace function private.clear_stale_credit() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.image_path is distinct from old.image_path and new.image_credit is not distinct from old.image_credit then
+    new.image_credit := null;
+  end if;
+  return new;
+end $$;
+drop trigger if exists products_credit on public.products;
+create trigger products_credit before update on public.products for each row execute function private.clear_stale_credit();
+
 -- ------------------------------------------------------ seller profiles ----
 -- Anyone may list a property (PRD sections 9 to 11). A seller signs in with
 -- Google, then completes this profile once; it says who they are. Staff can
