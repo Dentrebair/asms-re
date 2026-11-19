@@ -61,11 +61,11 @@ try {
   // properties
   await go(`${BASE}/properties`);
   v = await js(visible);
-  check("properties shows the 6 live listings, not the sold one", v.length === 6 && !v.includes("Corner residential plot"), v.join(", "));
+  check("properties shows the 7 live listings, not the sold one", v.length === 7 && !v.includes("Corner residential plot"), v.join(", "));
   check("type tabs per PRD", (await js(`[...document.querySelectorAll('.catalog-side input[type=radio]')].map(${radioLabel}).join('|')`)) === "All|Apartments and houses|Plots and land|Commercial|Agricultural");
   check("no Bedrooms filter on All", !(await labels()).includes("Bedrooms"), (await labels()).join(","));
   await tab("Plots and land"); await sleep(300);
-  check("Plots tab: 2 listings, ?type=plot", (await js(visible)).length === 2 && (await url()) === "?type=plot", await url());
+  check("Plots tab: 3 listings, ?type=plot", (await js(visible)).length === 3 && (await url()) === "?type=plot", await url());
   check("Plots tab: road width, no bedrooms", (await labels()).includes("Road width") && !(await labels()).includes("Bedrooms"), (await labels()).join(","));
   await tab("Apartments and houses"); await sleep(300);
   check("Homes tab: bedrooms filter appears", (await labels()).includes("Bedrooms") && !(await labels()).includes("Road width"), (await labels()).join(","));
@@ -82,7 +82,7 @@ try {
   await go(`${BASE}/properties?budget=empty`);
   check("budget: price on request = 5", (await js(visible)).length === 5);
   await js(`[...document.querySelectorAll('[aria-label="Applied filters"] button')].find(b=>b.textContent.trim()==='Clear all').click()`); await sleep(300);
-  check("Clear all", (await js(visible)).length === 6 && (await url()) === "");
+  check("Clear all", (await js(visible)).length === 7 && (await url()) === "");
   await setSelect("Sort by", "Area, largest first"); await sleep(300);
   check("sort by area puts the 2.5 acres first", (await js(visible))[0] === "Agricultural land");
   await go(`${BASE}/properties`);
@@ -93,7 +93,7 @@ try {
   check("sold page says sold, no enquiry button", await js(`document.body.textContent.includes('This property has been sold') && !document.body.textContent.includes('Enquire about property')`));
 
   await go(`${BASE}/`);
-  check("home features the 6 live properties in a carousel", (await js(`document.querySelectorAll('.carousel-card').length`)) === 6);
+  check("home features the 7 live properties in a carousel", (await js(`document.querySelectorAll('.carousel-card').length`)) === 7);
 
   await cdp("Emulation.setDeviceMetricsOverride", { width: 375, height: 800, deviceScaleFactor: 1, mobile: true });
   await go(`${BASE}/properties`);

@@ -11,6 +11,9 @@ export const HERO_IMAGE = "/hero-chennai-omr.webp";
 /** True while the site shows the committed sample data instead of Supabase content. */
 export const isSample = content.source === "sample";
 
+/** Placeholder listings in the committed sample file; real listings added to it are not. */
+export const isSampleListing = (p: { reference: string }) => isSample && p.reference.startsWith("ASMS-PREVIEW");
+
 /** Every property with a public page: live ones and sold ones (kept, marked Sold). */
 export const allProperties = content.properties;
 

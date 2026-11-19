@@ -116,7 +116,7 @@ export default function Home() {
                 </VStack>
                 <Button href="/properties" label={`View all ${properties.length}`} variant="secondary" icon={<ArrowRight size={16} />} />
               </HStack>
-              {isSample && <Banner status="info" title="Design preview" description="These listings are samples until verified inventory is added." />}
+              {isSample && <Banner status="info" title="Design preview" description="Listings with an ASMS-PREVIEW reference are samples until verified inventory is added." />}
               <Carousel aria-label="Featured properties" gap={4} hasSnap>
                 {featured.map((p, i) => <div key={p.slug} className="carousel-card"><PropertyCard property={p} priority={i < 3} /></div>)}
               </Carousel>

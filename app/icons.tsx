@@ -18,6 +18,7 @@ const PATHS = {
   bus: "M5 4h14v13H5z M5 11h14 M8 20v-3 M16 20v-3 M8 14h.01 M16 14h.01",
   school: "M2 9l10-5 10 5-10 5z M6 11v5c3 2 9 2 12 0v-5",
   hospital: "M4 4h16v16H4z M12 8v8 M8 12h8",
+  briefcase: "M4 8h16v11H4z M9 8V5h6v3 M4 13h16",
   cart: "M3 4h2l2.5 11h11L21 7H6 M9 20h.01 M18 20h.01",
   layers: "M12 3 2 8l10 5 10-5z M2 13l10 5 10-5 M2 18l10 5 10-5",
   roof: "M2 12 12 4l10 8 M5 10v10h14V10",

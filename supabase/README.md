@@ -23,6 +23,11 @@ scheduled build keeps the free project from pausing.
 
 2. **Create the tables and rules.** *SQL Editor → New query*, paste all of
    [`schema.sql`](schema.sql), **Run**. Safe to run again after updates.
+   Then, in a new query, paste and run [`seed-listings.sql`](seed-listings.sql):
+   it loads the listings prepared before the database existed (currently
+   ASMS-0001, the Aranvoyal plots). It is also safe to run again. Add their
+   photos afterwards in `/admin`. To regenerate it from `content/content.json`,
+   run `npm run seed:sql`.
 
 3. **Make yourself the first owner** (SQL Editor, with your email):
    ```sql

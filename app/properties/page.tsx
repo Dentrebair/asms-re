@@ -78,7 +78,7 @@ export default function PropertiesPage() {
         <section className="band band--tight" aria-label="Listings">
           <div className="page">
             <VStack gap={6}>
-              {isSample && <Banner status="info" title="Design preview" description="All listing details are placeholders. Only verified ASMS‑ROUNAQH inventory will be published." />}
+              {isSample && <Banner status="info" title="Design preview" description="Listings with an ASMS-PREVIEW reference are placeholders. Only verified ASMS‑ROUNAQH inventory will be published." />}
               {properties.length === 0 ? (
                 <EmptyState title="New listings are being prepared" description="Tell us what you are looking for and we will be in touch."
                   actions={<Button href="/contact" label="Tell us what you need" variant="primary" />} />

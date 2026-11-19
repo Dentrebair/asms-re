@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { HERO_IMAGE, allProperties, getProperty, isSample, priceLabel, pricePerSqFt, similarProperties, type PropertyRecord } from "@/lib/content";
+import { HERO_IMAGE, allProperties, getProperty, isSampleListing, priceLabel, pricePerSqFt, similarProperties, type PropertyRecord } from "@/lib/content";
 import { categoryLabel, keySpecs, listingTag, shortDate } from "@/lib/property";
 import { COMPANY } from "@/lib/company";
 import { formatINR, monthlyEmi } from "@/lib/format";
@@ -139,7 +139,7 @@ export default async function PropertyDetailPage({ params }: { params: Params })
         <div className="page">
           <VStack gap={5}>
             {p.images.length > 0 && <Gallery photos={p.images} title={p.title} />}
-            {isSample && <Banner status="info" title="Design preview" description="Every figure, amenity, distance and photograph on this page is sample data until verified property information is supplied." />}
+            {isSampleListing(p) && <Banner status="info" title="Design preview" description="Every figure, amenity, distance and photograph on this page is sample data until verified property information is supplied." />}
           </VStack>
         </div>
 

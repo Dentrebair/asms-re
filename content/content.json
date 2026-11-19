@@ -3,6 +3,113 @@
   "generatedAt": null,
   "properties": [
     {
+      "slug": "six-adjoining-dtcp-plots-aranvoyal",
+      "reference": "ASMS-0001",
+      "title": "Six adjoining DTCP-approved plots, Aranvoyal",
+      "stage": "live",
+      "featured": true,
+      "category": "plot",
+      "propertyType": "Residential plot",
+      "transactionType": null,
+      "ownership": null,
+      "location": "Kanakavalli Nagar, Aranvoyal, Thiruvallur",
+      "locality": "Next to ECI Good Shepherd Church, opposite DSM Hospitals",
+      "price": 60320000,
+      "priceNegotiable": true,
+      "areaSqFt": 15080,
+      "areaUnit": "sqft",
+      "dimensions": null,
+      "facing": null,
+      "bhk": null,
+      "bathrooms": null,
+      "carpetAreaSqFt": null,
+      "furnishing": null,
+      "floorInfo": null,
+      "parking": null,
+      "possession": null,
+      "roadWidthFt": 20,
+      "frontageFt": null,
+      "landUse": null,
+      "cornerPlot": null,
+      "boundaryWall": null,
+      "gatedLayout": null,
+      "floorsAllowed": null,
+      "usableAreaSqFt": null,
+      "accessNotes": "20 ft service road directly in front, off the Chennai–Thiruvallur Highway.",
+      "zoningNotes": null,
+      "approval": "DTCP approved",
+      "rera": null,
+      "availability": "Immediate",
+      "description": "Six adjoining DTCP-approved plots (Plot Nos. 39, 40, 41, 95, 96 and 97) in Kanakavalli Nagar, Aranvoyal, Thiruvallur, offered together with a combined area of 15,080 sq ft. The land is on the Chennai–Thiruvallur Highway with a 20-foot service road directly in front, next to ECI Good Shepherd Church and opposite DSM Hospitals, with Prathyusha Engineering College nearby. It is close to major industrial and employment hubs, from United Breweries about 1 km away to Caterpillar India and Stellantis within 10 km, and suits residential development or long-term investment. The rate is ₹4,000 per sq ft, negotiable, and the plots are available for immediate sale.",
+      "amenities": [],
+      "nearby": [
+        {
+          "group": "Transport",
+          "name": "Chennai–Thiruvallur Highway",
+          "distance": "Via service road in front"
+        },
+        {
+          "group": "Healthcare",
+          "name": "DSM Hospitals",
+          "distance": "Opposite"
+        },
+        {
+          "group": "Education",
+          "name": "Prathyusha Engineering College",
+          "distance": "Nearby"
+        },
+        {
+          "group": "Employment",
+          "name": "United Breweries (Kingfisher / HEINEKEN Group)",
+          "distance": "Approx. 1 km"
+        },
+        {
+          "group": "Employment",
+          "name": "Hindustan Coca-Cola Beverages, Nemam",
+          "distance": "Approx. 8.3 km"
+        },
+        {
+          "group": "Employment",
+          "name": "Caterpillar India",
+          "distance": "Approx. 9 km"
+        },
+        {
+          "group": "Employment",
+          "name": "Stellantis / Citroën",
+          "distance": "Approx. 10 km"
+        },
+        {
+          "group": "Employment",
+          "name": "Hyundai Motor India, Irungattukottai",
+          "distance": "Approx. 20 km by road"
+        },
+        {
+          "group": "Daily needs",
+          "name": "Shops, groceries, banks & ATMs, pharmacies, petrol stations",
+          "distance": "In Aranvoyal"
+        },
+        {
+          "group": "Other",
+          "name": "ECI Good Shepherd Church",
+          "distance": "Next door"
+        }
+      ],
+      "documents": [
+        {
+          "label": "DTCP approval",
+          "status": "Approved, as stated by the owner"
+        },
+        {
+          "label": "Independent legal review",
+          "status": "Recommended for buyers"
+        }
+      ],
+      "images": [],
+      "postedOn": "2026-11-19",
+      "lastConfirmedOn": "2026-11-19",
+      "mapUrl": "https://www.google.com/maps/place/13%C2%B006%2704.6%22N+79%C2%B058%2700.0%22E/@13.102156,79.9673705,18z"
+    },
+    {
       "slug": "residential-plot-opportunity",
       "reference": "ASMS-PREVIEW-01",
       "title": "Residential plot opportunity",

@@ -18,7 +18,8 @@
     "test:browser": "tests/browser/run.sh",
     "test:seller": "tests/seller-e2e/run.sh",
     "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs",
-    "theme:build": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs theme build themes/asms/asmsTheme.ts --out app/astryx/asms.css"
+    "theme:build": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs theme build themes/asms/asmsTheme.ts --out app/astryx/asms.css",
+    "seed:sql": "node scripts/listings-sql.mjs"
   },
   "dependencies": {
     "@astryxdesign/core": "0.7.14",

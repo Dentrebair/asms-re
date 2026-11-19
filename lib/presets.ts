@@ -21,6 +21,7 @@ export const NEARBY_GROUPS: { label: string; icon: IconName }[] = [
   { label: "Transport", icon: "bus" },
   { label: "Education", icon: "school" },
   { label: "Healthcare", icon: "hospital" },
+  { label: "Employment", icon: "briefcase" },
   { label: "Daily needs", icon: "cart" },
   { label: "Other", icon: "compass" },
 ];
