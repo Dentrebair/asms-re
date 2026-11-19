@@ -15,6 +15,8 @@ export const COMPANY = {
 export const SERVICES = [
   { id: "real-estate", title: "Real estate development", text: "We understand land, opportunities and the importance of creating developments with purpose and long-term value. Our approach combines market understanding, planning, development and construction expertise." },
   { id: "construction", title: "Construction", text: "With decades of experience, we bring practical knowledge and technical understanding to construction projects. Our focus is on quality, responsibility and efficient execution." },
+  { id: "architecture", title: "Architecture", text: "Architectural design for homes, commercial buildings and institutional spaces, drawn by people who also build, so that what is designed can be built well and lasts." },
+  { id: "civil", title: "Civil engineering", text: "Structural design, foundations, site development and supervision for buildings of every size, grounded in the same practical construction experience." },
   { id: "peb", title: "PEB structures", text: "Pre-engineered building structures provide efficient and modern construction solutions. Our expertise combines engineering principles with practical construction requirements." },
   { id: "heritage", title: "Heritage structures", text: "Our journey has included projects connected with heritage buildings and meaningful spaces. We understand the importance of preserving architectural character while meeting modern requirements." },
   { id: "religious", title: "Religious architecture", text: "Religious structures require more than construction. They require an understanding of purpose, identity, architectural character and the people who use these spaces." },

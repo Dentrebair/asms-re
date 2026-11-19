@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { TopNav, TopNavHeading, TopNavItem } from "@astryxdesign/core/TopNav";
+import { TopNav, TopNavHeading, TopNavItem, TopNavMenu } from "@astryxdesign/core/TopNav";
 import { Button } from "@astryxdesign/core/Button";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { MobileNav } from "@astryxdesign/core/MobileNav";
 import { SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
 import { HStack } from "@astryxdesign/core/Layout";
-import { Phone } from "lucide-react";
+import { DraftingCompass, HardHat, LayoutGrid, Phone, Ruler } from "lucide-react";
 import { COMPANY } from "@/lib/company";
 
 const PHONE = { href: COMPANY.phoneHref, label: COMPANY.phone };
@@ -19,6 +19,13 @@ export const NAV_LINKS = [
   { href: "/products", label: "Products" },
   { href: "/services", label: "Services" },
   { href: "/about", label: "About" },
+];
+
+// The Services menu: the three main lines of work, each opening its card on /services.
+export const SERVICE_LINKS = [
+  { href: "/services#construction", title: "Construction", description: "Building projects, start to finish", Icon: HardHat },
+  { href: "/services#architecture", title: "Architecture", description: "Design for homes and buildings", Icon: DraftingCompass },
+  { href: "/services#civil", title: "Civil", description: "Structural design and site work", Icon: Ruler },
 ];
 
 function MenuGlyph() {
@@ -50,7 +57,12 @@ export default function SiteHeader({ brand }: { brand: string }) {
             <HStack gap={2} vAlign="center">
               <span className="only-wide">
                 <HStack gap={1}>
-                  {NAV_LINKS.map((l) => <TopNavItem key={l.href} href={l.href} label={l.label} isSelected={current(l.href)} />)}
+                  {NAV_LINKS.map((l) => l.href === "/services"
+                    ? <TopNavMenu key={l.href} label={l.label} items={[
+                        ...SERVICE_LINKS.map(({ href, title, description, Icon }) => ({ href, title, description, icon: <Icon size={18} aria-hidden="true" /> })),
+                        { href: "/services", title: "All services", description: "Heritage, PEB, 3D printing and more", icon: <LayoutGrid size={18} aria-hidden="true" /> },
+                      ]} />
+                    : <TopNavItem key={l.href} href={l.href} label={l.label} isSelected={current(l.href)} />)}
                 </HStack>
               </span>
               <span className="only-wide">
@@ -69,6 +81,11 @@ export default function SiteHeader({ brand }: { brand: string }) {
         <SideNavSection title="Menu">
           <SideNavItem label="Home" href="/" isSelected={path === "/"} />
           {NAV_LINKS.map((l) => <SideNavItem key={l.href} label={l.label} href={l.href} isSelected={current(l.href)} />)}
+        </SideNavSection>
+        <SideNavSection title="Services">
+          {SERVICE_LINKS.map((l) => <SideNavItem key={l.href} label={l.title} href={l.href} />)}
+        </SideNavSection>
+        <SideNavSection title="More">
           <SideNavItem label="Sell a property" href="/sell" isSelected={current("/sell")} />
           <SideNavItem label="Contact" href="/contact" isSelected={current("/contact")} />
           <SideNavItem label={`Call ${PHONE.label}`} href={PHONE.href} />

@@ -179,3 +179,7 @@ img { max-width: 100%; height: auto; display: block; }
 .prose--doc p, .prose--doc li { font-size: var(--text-body-size); line-height: 1.65; color: var(--color-text-primary); }
 .prose--doc ul { padding-left: 1.25em; display: grid; gap: var(--spacing-2); }
 .prose--doc a { color: var(--color-text-accent); }
+
+/* Services: menu links jump to a card; keep its heading clear of the header and mark the card. */
+.service-card h2 { scroll-margin-top: 112px; }
+.service-card:has(h2:target) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
