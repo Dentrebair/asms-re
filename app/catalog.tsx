@@ -33,7 +33,8 @@ export type CatalogTabs = {
   attr: string;
   label: string;
   allLabel: string;
-  options: CatalogOption[];
+  /** count: items in this tab, known at build time, so the page never shows "(0)" before scripts run. */
+  options: (CatalogOption & { count?: number })[];
 };
 
 export type CatalogFilter = {
@@ -81,7 +82,8 @@ export default function Catalog({ label, itemName = ["result", "results"], tabs,
   const [ready, setReady] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [counts, setCounts] = useState<Record<string, number>>(() =>
+    Object.fromEntries((tabs?.options ?? []).map((o) => [o.value, o.count ?? 0])));
   const noun = (n: number) => (n === 1 ? itemName[0] : itemName[1]);
 
   const visibleFilters = filters.filter((f) => !f.tabs || f.tabs.includes(state.tab));

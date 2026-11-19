@@ -66,7 +66,7 @@ function buildFilters(): CatalogFilter[] {
 
 export default function PropertiesPage() {
   // Every type is always offered; an empty one says to check again later.
-  const tabs: CatalogTabs = { name: "type", attr: "category", label: "Property type", allLabel: "All", options: CATEGORIES.map((c) => ({ value: c.id, label: c.tab })) };
+  const tabs: CatalogTabs = { name: "type", attr: "category", label: "Property type", allLabel: "All", options: CATEGORIES.map((c) => ({ value: c.id, label: c.tab, count: properties.filter((p) => p.category === c.id).length })) };
   const filters = buildFilters();
 
   return (
