@@ -18,7 +18,7 @@ create function pg_temp.check(label text, ok boolean) returns text language sql 
 set role anon; set request.jwt.claims = '{}';
 select pg_temp.check('anon sees only live and sold properties', (select array_agg(slug order by slug) from public.properties) = array['gone', 'pub']);
 select pg_temp.check('anon sees only published products', (select count(*) from public.products) = 1);
-select pg_temp.check('anon cannot read staff', (select count(*) from public.staff) = 0);
+select pg_temp.check('anon cannot read staff', not has_table_privilege('anon', 'public.staff', 'select'));
 update public.properties set title = 'hacked'; delete from public.products;
 insert into public.properties (slug, reference, title) values ('x', 'X', 'x');
 insert into storage.objects (bucket_id, name) values ('media', 'evil.webp');

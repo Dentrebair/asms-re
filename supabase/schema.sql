@@ -922,6 +922,22 @@ end $$;
 revoke execute on function public.request_site_rebuild() from public, anon;
 grant execute on function public.request_site_rebuild() to authenticated;
 
+-- ----------------------------------------------------------- privileges ----
+-- New Supabase projects do not give anon/authenticated access to tables or
+-- functions automatically, so every privilege the site uses is granted here.
+-- These say which operations a role may attempt; the row level security
+-- policies above still decide which rows (enquiries, events, revisions, audit
+-- log and history are granted where they are created).
+grant usage on schema public to anon, authenticated;
+grant select on public.product_categories, public.products, public.properties to anon, authenticated;
+grant insert, update, delete on public.product_categories, public.products, public.properties to authenticated;
+grant select, insert, update, delete on public.staff to authenticated;
+grant select, insert, update on public.seller_profiles to authenticated;   -- never delete
+grant select, insert, delete on public.seller_documents to authenticated;  -- never update
+-- Called by the policies and checks above as the visitor's own role.
+grant execute on function public.is_staff(), public.is_owner(), public.is_active_seller() to anon, authenticated;
+grant execute on function private.safe_media_path(text), private.valid_images(jsonb) to anon, authenticated;
+
 -- ------------------------------------------------------------ seed data ----
 insert into public.product_categories (id, name, intro, icon, sort_order) values
   ('steel-peb', 'Structural steel & PEB', 'Reinforcement and structural steel, plus pre-engineered building components for industrial and commercial sheds.', 'layers', 1),

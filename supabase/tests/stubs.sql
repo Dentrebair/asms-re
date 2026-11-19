@@ -17,6 +17,9 @@ create function net.http_post(url text, body jsonb default '{}', params jsonb de
 language sql as $$ insert into net.calls values (url, body, headers); select 1::bigint $$;
 grant usage on schema storage, public to anon, authenticated;
 grant all on storage.objects to anon, authenticated;
--- Supabase grants table/function privileges to anon & authenticated by default; RLS is the real guard.
-alter default privileges in schema public grant all on tables to anon, authenticated;
-alter default privileges in schema public grant all on functions to anon, authenticated;
+-- New Supabase projects no longer grant anon/authenticated access to new tables or
+-- functions automatically, so the stand-in grants nothing either: schema.sql must
+-- grant every privilege it relies on, and these tests prove it does.
+alter default privileges in schema public revoke execute on functions from public;
+create schema private;
+alter default privileges in schema private revoke execute on functions from public;
