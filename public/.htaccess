@@ -34,7 +34,21 @@ RewriteRule ^(.+)$ /$1.html [L]
   </FilesMatch>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # No other site may frame these pages (stops clickjacking on /admin and /seller).
+  Header always set X-Frame-Options "DENY"
+  # Browsers keep to HTTPS for a year after the first visit.
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  # What pages may load. Inline scripts are allowed because the static export embeds
+  # React's page data inline; everything else is limited to this site and Supabase.
+  # images.unsplash.com serves the sample photos only.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 </IfModule>
+
+# Build leftovers that are not part of the website.
+<FilesMatch "^(_headers|\.ftp-deploy-sync-state\.json)$">
+  Require all denied
+</FilesMatch>
 
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript image/svg+xml application/json

@@ -16,7 +16,7 @@ import { ArrowLeft, Check, FileText, Mail, Phone, X } from "lucide-react";
 import { formatINR, formatINRShort } from "@/lib/format";
 import { areaIn, categoryLabel } from "@/lib/property";
 import {
-  SELLER_TYPES, documentLink, explain, mediaUrl, supabase,
+  SELLER_TYPES, explain, mediaUrl, openDocument, supabase,
   type HistoryRow, type PropertyRow, type RevisionRow, type SellerDocument, type SellerProfile,
 } from "./lib";
 import { STAGE_LABEL, formatDate, formatWhen, historyLine, stageTone } from "./stages";
@@ -164,7 +164,7 @@ function Review({ item, notify, onDone }: { item: Item; notify: Notify; onDone: 
     if (await call("review_revision", { revision: revision!.id, decision, note: note.trim() || null }, done)) onDone(true);
   }
   async function openDoc(d: SellerDocument) {
-    try { window.open(await documentLink(d.path), "_blank", "noopener"); } catch (e) { notify(e instanceof Error ? e.message : "Couldn’t open it.", "error"); }
+    try { await openDocument(d.path); } catch (e) { notify(e instanceof Error ? e.message : "Couldn’t open it.", "error"); }
   }
 
   const allTicked = ticked.every(Boolean);

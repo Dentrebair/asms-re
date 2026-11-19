@@ -5,6 +5,8 @@
 
 -- setup as superuser
 insert into public.staff (email, role) values ('owner@asms.test', 'owner'), ('editor@asms.test', 'editor');
+-- Staff are recognised by a confirmed account in auth.users, not by the token's email claim.
+insert into auth.users (id, email, email_confirmed_at) values ('00000000-0000-0000-0000-0000000000a1', 'owner@asms.test', now()), ('00000000-0000-0000-0000-0000000000a2', 'editor@asms.test', now());
 insert into public.properties (slug, reference, title, stage) values ('pub', 'R-1', 'Published', 'live'), ('draft', 'R-2', 'Draft', 'draft'), ('gone', 'R-4', 'Sold one', 'sold'), ('held', 'R-5', 'Paused', 'paused');
 update public.products set published = true where slug = 'aac-blocks';
 insert into vault.decrypted_secrets values ('github_dispatch_token', 'tok'), ('github_repo', 'Dentrebair/asms-re');
@@ -36,7 +38,7 @@ select pg_temp.check('stranger changed nothing', (select count(*) from public.pr
 select pg_temp.check('blocked writes sent no rebuilds', (select count(*) from net.calls) = 0);
 
 -- ---------- editor
-set role authenticated; set request.jwt.claims = '{"email":"Editor@ASMS.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"Editor@ASMS.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 select pg_temp.check('editor sees drafts too', (select count(*) from public.properties) = 4);
 insert into public.properties (slug, reference, title, stage, price, area_sqft) values ('new-plot', 'R-3', 'New plot', 'live', 4800000, 1200);
 update public.products set published = true where category_id = 'roofing';
@@ -52,12 +54,22 @@ select pg_temp.check('each write statement + publish button = 1 rebuild call eac
 select pg_temp.check('rebuild call targets the repo dispatch URL', (select bool_and(url = 'https://api.github.com/repos/Dentrebair/asms-re/dispatches' and headers ->> 'Authorization' = 'Bearer tok' and body ->> 'event_type' = 'content-updated') from net.calls));
 
 -- ---------- owner
-set role authenticated; set request.jwt.claims = '{"email":"owner@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"owner@asms.test","sub":"00000000-0000-0000-0000-0000000000a1"}';
 insert into public.staff (email, name, role) values ('staff2@asms.test', 'Staff Two', 'editor');
 select pg_temp.check('owner adds staff', (select count(*) from public.staff) = 3);
 delete from public.staff where email = 'owner@asms.test';
 reset role;
 select pg_temp.check('last owner cannot be removed', (select count(*) from public.staff where role = 'owner') = 1);
+
+-- ---------- a staff email is not enough on its own
+-- staff2 was added to the staff list, but this account has not confirmed the address yet.
+insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-00000000000c', 'staff2@asms.test');
+set role authenticated; set request.jwt.claims = '{"email":"staff2@asms.test","sub":"cccccccc-0000-0000-0000-00000000000c"}';
+select pg_temp.check('unconfirmed account with a staff email is not staff', not public.is_staff() and not exists (select 1 from public.properties where stage = 'draft'));
+-- A token naming a staff email for some other account does not make it staff.
+set request.jwt.claims = '{"email":"owner@asms.test","sub":"cccccccc-0000-0000-0000-00000000000c"}';
+select pg_temp.check('email claim alone does not make an owner', not public.is_owner() and not public.is_staff());
+reset role;
 
 -- ---------- data constraints
 insert into public.properties (slug, reference, title) values ('Bad Slug!', 'R-9', 'x');
@@ -114,7 +126,7 @@ update public.enquiries set status = 'closed_won';
 reset role;
 select pg_temp.check('stranger changed nothing on enquiries', (select count(*) from public.enquiries where status = 'closed_won') = 0);
 
-set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 select pg_temp.check('staff read enquiries', (select count(*) from public.enquiries) = 4);
 update public.enquiries set status = 'contacted', assigned_to = 'editor@asms.test', follow_up_on = current_date + 2, notes = 'Called, site visit Saturday' where name = 'Priya' and kind = 'property';
 update public.enquiries set message = 'rewritten', repeat_contact = true where kind = 'property';
@@ -134,7 +146,7 @@ insert into public.enquiries (kind, name, phone, message, consent) values ('gene
 reset role;
 select pg_temp.check('fourth enquiry in an hour from one phone is refused', (select count(*) from public.enquiries where phone = '+91 98400 12345') = 3);
 
-set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 delete from public.enquiries where message = 'three';
 reset role;
 select pg_temp.check('staff delete an enquiry', (select count(*) from public.enquiries) = 4);
@@ -155,7 +167,7 @@ reset role;
 select pg_temp.check('track records live views and clicks only, deduped per browser', (select count(*) from public.events) = 3
   and (select count(*) from public.events where type = 'property_view') = 2 and (select count(distinct visitor) from public.events) = 2);
 select pg_temp.check('events trigger no rebuild', (select count(*) from net.calls) = 0);
-set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 select public.track('property_view', 'R-1', '00000000-0000-0000-0000-000000000009', 'detail');  -- staff browsing: ignored
 select pg_temp.check('staff read events', (select count(*) from public.events) = 3);
 reset role;
@@ -201,6 +213,24 @@ select public.submit_listing('cccccccc-0000-0000-0000-00000000000c');
 insert into storage.objects (bucket_id, name) values ('seller-docs', 'aaaaaaaa-0000-0000-0000-00000000000a/cccccccc/x.pdf');
 insert into public.seller_documents (property_id, seller_id, label, path) values ('cccccccc-0000-0000-0000-00000000000c', 'bbbbbbbb-0000-0000-0000-00000000000b', 'Patta', 'bbbbbbbb-0000-0000-0000-00000000000b/x.pdf');
 reset role;
+
+-- Photo paths: the build copies each one to public/media/<path>, so only plain
+-- storage keys are accepted, and a seller may only add photos they uploaded.
+set role authenticated; set request.jwt.claims = '{"email":"bala@gmail.com","sub":"bbbbbbbb-0000-0000-0000-00000000000b"}';
+insert into public.properties (id, title, images) values ('dddddddd-0000-0000-0000-000000000001', 'Escape', '[{"path":"sellers/bbbbbbbb-0000-0000-0000-00000000000b/../../../app/x.webp","alt":""}]');
+insert into public.properties (id, title, images) values ('dddddddd-0000-0000-0000-000000000002', 'Borrowed', '[{"path":"sellers/aaaaaaaa-0000-0000-0000-00000000000a/1.webp","alt":""}]');
+insert into public.properties (id, title, images) values ('dddddddd-0000-0000-0000-000000000003', 'Own photo', '[{"path":"sellers/bbbbbbbb-0000-0000-0000-00000000000b/1.webp","alt":""}]');
+reset role;
+select pg_temp.check('seller photo path with .. refused', not exists (select 1 from public.properties where id = 'dddddddd-0000-0000-0000-000000000001'));
+select pg_temp.check('seller cannot use another seller''s photo', not exists (select 1 from public.properties where id = 'dddddddd-0000-0000-0000-000000000002'));
+select pg_temp.check('seller can use own uploaded photo', exists (select 1 from public.properties where id = 'dddddddd-0000-0000-0000-000000000003'));
+delete from public.properties where id = 'dddddddd-0000-0000-0000-000000000003';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
+insert into public.properties (slug, reference, title, images) values ('abs', 'R-ABS', 'x', '[{"path":"/etc/passwd.png","alt":""}]');
+update public.products set image_path = '../public/.htaccess.png' where slug = 'aac-blocks';
+reset role;
+select pg_temp.check('staff cannot store unsafe photo paths either',
+  not exists (select 1 from public.properties where reference = 'R-ABS') and (select image_path is null from public.products where slug = 'aac-blocks'));
 select pg_temp.check('another seller changed nothing', (select title from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'East-facing corner plot in Porur'
   and (select count(*) from storage.objects where bucket_id = 'seller-docs') = 0 and (select count(*) from public.seller_documents) = 0);
 
@@ -228,7 +258,7 @@ select pg_temp.check('visitors cannot read private documents', not has_table_pri
 reset role;
 
 -- Staff review: changes need a note; the seller fixes and resubmits; staff approve.
-set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 select pg_temp.check('staff see the document', (select count(*) from public.seller_documents) = 1 and (select count(*) from storage.objects where bucket_id = 'seller-docs') = 1);
 select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'start');
 select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'changes');  -- no note: refused
@@ -247,7 +277,7 @@ reset role;
 select pg_temp.check('corrected listing resubmitted', (select stage = 'submitted' and jsonb_array_length(images) = 4 from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c'));
 select pg_temp.check('review steps start no rebuild', (select count(*) from net.calls) = 0);
 
-set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 select public.review_listing('cccccccc-0000-0000-0000-00000000000c', 'approve');
 reset role;
 select pg_temp.check('approved listing goes live with a web address and dates, note cleared',
@@ -274,8 +304,13 @@ set role authenticated; set request.jwt.claims = '{"email":"bala@gmail.com","sub
 select public.review_revision((select id from public.property_revisions where status = 'pending'), 'approve');
 reset role;
 select pg_temp.check('a seller cannot approve a change request', (select count(*) from public.property_revisions where status = 'pending') = 1);
+set role authenticated; set request.jwt.claims = '{"email":"asha@gmail.com","sub":"aaaaaaaa-0000-0000-0000-00000000000a"}';
+select public.submit_revision('cccccccc-0000-0000-0000-00000000000c', '{"images": [{"path":"sellers/bbbbbbbb-0000-0000-0000-00000000000b/1.webp","alt":""},{"path":"sellers/bbbbbbbb-0000-0000-0000-00000000000b/2.webp","alt":""},{"path":"sellers/bbbbbbbb-0000-0000-0000-00000000000b/3.webp","alt":""}]}');
+reset role;
+select pg_temp.check('a change request cannot bring in another seller''s photos',
+  (select changes = '{"price": 9100000, "price_negotiable": true}'::jsonb from public.property_revisions where status = 'pending'));
 
-set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 select public.review_revision((select id from public.property_revisions where status = 'pending'), 'approve');
 reset role;
 select pg_temp.check('approved change request is applied', (select price = 9100000 and price_negotiable and stage = 'live' from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c')
@@ -293,7 +328,7 @@ reset role;
 select pg_temp.check('seller marks it sold', (select stage from public.properties where id = 'cccccccc-0000-0000-0000-00000000000c') = 'sold');
 
 -- Suspension stops new listings.
-set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test"}';
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
 update public.seller_profiles set status = 'suspended' where user_id = 'bbbbbbbb-0000-0000-0000-00000000000b';
 reset role;
 set role authenticated; set request.jwt.claims = '{"email":"bala@gmail.com","sub":"bbbbbbbb-0000-0000-0000-00000000000b"}';

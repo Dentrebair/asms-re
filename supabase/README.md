@@ -34,8 +34,12 @@ scheduled build keeps the free project from pausing.
    insert into public.staff (email, name, role) values ('you@example.com', 'Your name', 'owner');
    ```
 
-4. **Lock down sign-ups.** *Authentication → Sign In / Providers*: turn **off**
-   “Allow new users to sign up”. Staff are invited instead (step 6).
+4. **Check the sign-up settings.** *Authentication → Sign In / Providers*:
+   leave “Allow new users to sign up” **on** (every new seller's first Google
+   sign-in creates an account, and the seller portal fails without it), and under
+   *Email* keep “Confirm email” **on**. Staff are invited (step 6); the database
+   only treats an account as staff when its email is on the Staff list **and**
+   confirmed, so a stranger signing up with a staff address gets nothing.
 
 5. **Set where login emails link to.** *Authentication → URL Configuration*:
    - Site URL: `https://asmsrounaqh.com/admin`
@@ -95,9 +99,10 @@ scheduled build keeps the free project from pausing.
     4. Copy the Client ID and Client secret straight into that Supabase Google
        provider form and enable it. Don't send the secret to anyone.
     5. Back on the consent screen, **Publish app** so any Google user can sign in.
-    6. In Supabase, *Authentication → URL Configuration*: set the Site URL to
-       `https://asmsrounaqh.com` and add `https://asmsrounaqh.com/seller` under
-       *Redirect URLs*, so Google can send sellers back to the portal.
+    6. In Supabase, *Authentication → URL Configuration*: add
+       `https://asmsrounaqh.com/seller` under *Redirect URLs*, so Google can send
+       sellers back to the portal. Leave the Site URL as `/admin` (step 5): staff
+       invite emails use it.
 
     `schema.sql` already creates everything else the portal needs: seller profiles,
     the review functions, the audit log and the private `seller-docs` storage bucket.

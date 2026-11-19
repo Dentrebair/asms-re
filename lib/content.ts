@@ -20,10 +20,6 @@ export const allProperties = content.properties;
 /** Live properties: the only ones in search, the home page and suggestions. */
 export const properties = content.properties.filter((p) => p.stage === "live");
 
-export const featuredProperties = (() => {
-  const featured = properties.filter((p) => p.featured);
-  return (featured.length ? featured : properties).slice(0, 3);
-})();
 
 export const getProperty = (slug: string) => allProperties.find((p) => p.slug === slug);
 

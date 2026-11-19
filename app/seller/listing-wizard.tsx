@@ -14,7 +14,7 @@ import { ArrowLeft, ArrowRight, FileText, Send, Trash2, Upload } from "lucide-re
 import { formatINR } from "@/lib/format";
 import { areaIn, categoryLabel } from "@/lib/property";
 import {
-  DOCUMENT_TYPES, SELLER_FIELDS, deleteDocuments, deletePhotos, documentLink, explain, listingGaps, pickSellerFields, supabase, uploadDocument,
+  DOCUMENT_TYPES, SELLER_FIELDS, deleteDocuments, deletePhotos, explain, listingGaps, openDocument, pickSellerFields, supabase, uploadDocument,
   type PropertyRow, type SellerDocument, type SellerProfile,
 } from "../admin/lib";
 import { AmenitiesSection, CategorySelects, LegalSection, LocationSection, NearbyRows, PriceSizeSection, TypeDetailsSection } from "../admin/listing-fields";
@@ -277,7 +277,7 @@ function Documents({ propertyId, sellerId, ensureSaved, notify }: { propertyId: 
   }
 
   async function open(doc: SellerDocument) {
-    try { window.open(await documentLink(doc.path), "_blank", "noopener"); } catch (e) { notify(e instanceof Error ? e.message : "Couldn’t open it.", "error"); }
+    try { await openDocument(doc.path); } catch (e) { notify(e instanceof Error ? e.message : "Couldn’t open it.", "error"); }
   }
 
   return (

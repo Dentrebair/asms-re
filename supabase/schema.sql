@@ -16,14 +16,19 @@ create table if not exists public.staff (
   created_at timestamptz not null default now()
 );
 
+-- Staff are recognised by the signed-in account's *confirmed* email in auth.users,
+-- not by the email claim in the token: sign-ups stay open for sellers (Google),
+-- so an unconfirmed account that merely claims a staff address must not count.
 create or replace function public.is_staff() returns boolean
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.staff where email = lower(coalesce(auth.jwt() ->> 'email', '')));
+  select exists (select 1 from public.staff s join auth.users u on lower(u.email) = s.email
+                  where u.id = auth.uid() and u.email_confirmed_at is not null);
 $$;
 
 create or replace function public.is_owner() returns boolean
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.staff where email = lower(coalesce(auth.jwt() ->> 'email', '')) and role = 'owner');
+  select exists (select 1 from public.staff s join auth.users u on lower(u.email) = s.email
+                  where u.id = auth.uid() and u.email_confirmed_at is not null and s.role = 'owner');
 $$;
 
 -- Never leave the panel without an owner.
@@ -156,6 +161,33 @@ alter table public.properties add column if not exists review_note text check (r
 alter table public.properties add column if not exists submitted_at timestamptz;
 create index if not exists properties_seller on public.properties (seller_id);
 
+-- Photo paths are storage keys like "properties/<id>.webp". The build copies each
+-- one to public/media/<path>, so anything else (.., absolute paths, odd characters)
+-- must never get in.
+create or replace function private.safe_media_path(path text) returns boolean
+language sql immutable set search_path = '' as $$
+  select path ~ '^[a-z0-9_-]+(/[A-Za-z0-9_-]+)*/[A-Za-z0-9_-]+\.(webp|jpe?g|png)$' and char_length(path) <= 200;
+$$;
+
+-- security definer: the check runs as whoever writes the row, and they cannot see
+-- the private schema that safe_media_path lives in.
+create or replace function private.valid_images(images jsonb) returns boolean
+language sql immutable security definer set search_path = '' as $$
+  select jsonb_typeof(images) = 'array' and jsonb_array_length(images) <= 30 and coalesce(bool_and(
+           jsonb_typeof(i) = 'object' and private.safe_media_path(i ->> 'path')
+           and char_length(coalesce(i ->> 'alt', '')) <= 300), true)
+    from jsonb_array_elements(images) i;
+$$;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'properties_images_valid') then
+    alter table public.properties add constraint properties_images_valid check (private.valid_images(images));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'products_image_path_valid') then
+    alter table public.products add constraint products_image_path_valid check (image_path is null or private.safe_media_path(image_path));
+  end if;
+end $$;
+
 create or replace function private.touch_updated_at() returns trigger
 language plpgsql set search_path = '' as $$
 begin new.updated_at := now(); return new; end $$;
@@ -172,25 +204,25 @@ alter table public.products           enable row level security;
 alter table public.properties         enable row level security;
 
 drop policy if exists "staff read staff" on public.staff;
-create policy "staff read staff" on public.staff for select to authenticated using (public.is_staff());
+create policy "staff read staff" on public.staff for select to authenticated using ((select public.is_staff()));
 drop policy if exists "owners manage staff" on public.staff;
-create policy "owners manage staff" on public.staff for all to authenticated using (public.is_owner()) with check (public.is_owner());
+create policy "owners manage staff" on public.staff for all to authenticated using ((select public.is_owner())) with check ((select public.is_owner()));
 
 drop policy if exists "public read categories" on public.product_categories;
 create policy "public read categories" on public.product_categories for select to anon, authenticated using (true);
 drop policy if exists "staff write categories" on public.product_categories;
-create policy "staff write categories" on public.product_categories for all to authenticated using (public.is_staff()) with check (public.is_staff());
+create policy "staff write categories" on public.product_categories for all to authenticated using ((select public.is_staff())) with check ((select public.is_staff()));
 
 drop policy if exists "public read published products" on public.products;
-create policy "public read published products" on public.products for select to anon, authenticated using (published or public.is_staff());
+create policy "public read published products" on public.products for select to anon, authenticated using (published or (select public.is_staff()));
 drop policy if exists "staff write products" on public.products;
-create policy "staff write products" on public.products for all to authenticated using (public.is_staff()) with check (public.is_staff());
+create policy "staff write products" on public.products for all to authenticated using ((select public.is_staff())) with check ((select public.is_staff()));
 
 drop policy if exists "public read published properties" on public.properties;
 create policy "public read published properties" on public.properties for select to anon, authenticated
-  using (stage in ('live', 'sold') or public.is_staff() or (seller_id is not null and seller_id = auth.uid()));
+  using (stage in ('live', 'sold') or (select public.is_staff()) or (seller_id is not null and seller_id = (select auth.uid())));
 drop policy if exists "staff write properties" on public.properties;
-create policy "staff write properties" on public.properties for all to authenticated using (public.is_staff()) with check (public.is_staff());
+create policy "staff write properties" on public.properties for all to authenticated using ((select public.is_staff())) with check ((select public.is_staff()));
 
 -- --------------------------------------------------------- photo storage ----
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -198,13 +230,13 @@ values ('media', 'media', true, 5242880, array['image/webp', 'image/jpeg', 'imag
 on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "staff read media" on storage.objects;
-create policy "staff read media" on storage.objects for select to authenticated using (bucket_id = 'media' and public.is_staff());
+create policy "staff read media" on storage.objects for select to authenticated using (bucket_id = 'media' and (select public.is_staff()));
 drop policy if exists "staff upload media" on storage.objects;
-create policy "staff upload media" on storage.objects for insert to authenticated with check (bucket_id = 'media' and public.is_staff());
+create policy "staff upload media" on storage.objects for insert to authenticated with check (bucket_id = 'media' and (select public.is_staff()));
 drop policy if exists "staff update media" on storage.objects;
-create policy "staff update media" on storage.objects for update to authenticated using (bucket_id = 'media' and public.is_staff());
+create policy "staff update media" on storage.objects for update to authenticated using (bucket_id = 'media' and (select public.is_staff()));
 drop policy if exists "staff delete media" on storage.objects;
-create policy "staff delete media" on storage.objects for delete to authenticated using (bucket_id = 'media' and public.is_staff());
+create policy "staff delete media" on storage.objects for delete to authenticated using (bucket_id = 'media' and (select public.is_staff()));
 
 -- ------------------------------------------------------------ enquiries ----
 -- Leads from the website: property enquiries, site visit requests, product
@@ -258,11 +290,11 @@ alter table public.enquiries enable row level security;
 drop policy if exists "anyone sends an enquiry" on public.enquiries;
 create policy "anyone sends an enquiry" on public.enquiries for insert to anon, authenticated with check (true);
 drop policy if exists "staff read enquiries" on public.enquiries;
-create policy "staff read enquiries" on public.enquiries for select to authenticated using (public.is_staff());
+create policy "staff read enquiries" on public.enquiries for select to authenticated using ((select public.is_staff()));
 drop policy if exists "staff update enquiries" on public.enquiries;
-create policy "staff update enquiries" on public.enquiries for update to authenticated using (public.is_staff()) with check (public.is_staff());
+create policy "staff update enquiries" on public.enquiries for update to authenticated using ((select public.is_staff())) with check ((select public.is_staff()));
 drop policy if exists "staff delete enquiries" on public.enquiries;
-create policy "staff delete enquiries" on public.enquiries for delete to authenticated using (public.is_staff());
+create policy "staff delete enquiries" on public.enquiries for delete to authenticated using ((select public.is_staff()));
 
 -- Tidies input, links the property, flags repeat contacts, refuses enquiries
 -- for properties that are not live, and limits floods: 3 an hour from one
@@ -324,7 +356,7 @@ revoke all on public.enquiry_history from anon, authenticated;
 grant select on public.enquiry_history to authenticated;
 alter table public.enquiry_history enable row level security;
 drop policy if exists "staff read enquiry history" on public.enquiry_history;
-create policy "staff read enquiry history" on public.enquiry_history for select to authenticated using (public.is_staff());
+create policy "staff read enquiry history" on public.enquiry_history for select to authenticated using ((select public.is_staff()));
 
 create or replace function private.log_enquiry_change() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -369,7 +401,7 @@ revoke all on public.events from anon, authenticated;
 grant select on public.events to authenticated;
 alter table public.events enable row level security;
 drop policy if exists "staff read events" on public.events;
-create policy "staff read events" on public.events for select to authenticated using (public.is_staff());
+create policy "staff read events" on public.events for select to authenticated using ((select public.is_staff()));
 
 create or replace function public.track(event_type text, property_ref text, visitor uuid, source text default null) returns void
 language plpgsql security definer set search_path = '' as $$
@@ -447,6 +479,15 @@ $$;
 
 create sequence if not exists private.seller_reference;
 
+-- Photos a seller adds must be ones they uploaded (media/sellers/<their id>/...);
+-- photos already on the listing (for example ones staff added) may stay.
+create or replace function private.seller_photos_ok(images jsonb, kept jsonb) returns boolean
+language sql stable set search_path = '' as $$
+  select coalesce(bool_and(i ->> 'path' like 'sellers/' || auth.uid()::text || '/%'
+                           or exists (select 1 from jsonb_array_elements(coalesce(kept, '[]')) k where k ->> 'path' = i ->> 'path')), true)
+    from jsonb_array_elements(coalesce(images, '[]')) i;
+$$;
+
 create or replace function private.actor() returns text
 language sql stable set search_path = '' as $$
   select nullif(lower(coalesce(auth.jwt() ->> 'email', '')), '');
@@ -459,6 +500,9 @@ create or replace function private.guard_property() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   if auth.uid() is null or public.is_staff() or current_setting('asms.trusted', true) = 'on' then return new; end if;
+  if not private.seller_photos_ok(new.images, case when tg_op = 'UPDATE' then old.images end) then
+    raise exception 'Photos must be ones you uploaded.' using errcode = '42501';
+  end if;
   if tg_op = 'INSERT' then
     new.seller_id := auth.uid();
     new.reference := 'ASMS-S' || lpad(nextval('private.seller_reference')::text, 4, '0');
@@ -483,14 +527,14 @@ create trigger properties_guard before insert or update on public.properties for
 
 drop policy if exists "sellers add listings" on public.properties;
 create policy "sellers add listings" on public.properties for insert to authenticated
-  with check (seller_id = auth.uid() and stage = 'draft' and public.is_active_seller());
+  with check (seller_id = (select auth.uid()) and stage = 'draft' and (select public.is_active_seller()));
 drop policy if exists "sellers edit drafts" on public.properties;
 create policy "sellers edit drafts" on public.properties for update to authenticated
-  using (seller_id = auth.uid() and stage in ('draft', 'changes_requested') and public.is_active_seller())
-  with check (seller_id = auth.uid());
+  using (seller_id = (select auth.uid()) and stage in ('draft', 'changes_requested') and (select public.is_active_seller()))
+  with check (seller_id = (select auth.uid()));
 drop policy if exists "sellers delete drafts" on public.properties;
 create policy "sellers delete drafts" on public.properties for delete to authenticated
-  using (seller_id = auth.uid() and stage = 'draft');
+  using (seller_id = (select auth.uid()) and stage = 'draft');
 
 -- Profiles: sellers keep their own; staff see all and can suspend.
 create or replace function private.guard_seller_profile() returns trigger
@@ -511,12 +555,12 @@ create trigger seller_profiles_touch before update on public.seller_profiles for
 
 alter table public.seller_profiles enable row level security;
 drop policy if exists "sellers read own profile" on public.seller_profiles;
-create policy "sellers read own profile" on public.seller_profiles for select to authenticated using (user_id = auth.uid() or public.is_staff());
+create policy "sellers read own profile" on public.seller_profiles for select to authenticated using (user_id = (select auth.uid()) or (select public.is_staff()));
 drop policy if exists "sellers create own profile" on public.seller_profiles;
-create policy "sellers create own profile" on public.seller_profiles for insert to authenticated with check (user_id = auth.uid());
+create policy "sellers create own profile" on public.seller_profiles for insert to authenticated with check (user_id = (select auth.uid()));
 drop policy if exists "sellers update own profile" on public.seller_profiles;
 create policy "sellers update own profile" on public.seller_profiles for update to authenticated
-  using (user_id = auth.uid() or public.is_staff()) with check (user_id = auth.uid() or public.is_staff());
+  using (user_id = (select auth.uid()) or (select public.is_staff())) with check (user_id = (select auth.uid()) or (select public.is_staff()));
 revoke delete on public.seller_profiles from anon, authenticated;
 revoke all on public.seller_profiles from anon;
 
@@ -535,15 +579,15 @@ create index if not exists seller_documents_property on public.seller_documents 
 revoke all on public.seller_documents from anon;
 alter table public.seller_documents enable row level security;
 drop policy if exists "read own or staff documents" on public.seller_documents;
-create policy "read own or staff documents" on public.seller_documents for select to authenticated using (seller_id = auth.uid() or public.is_staff());
+create policy "read own or staff documents" on public.seller_documents for select to authenticated using (seller_id = (select auth.uid()) or (select public.is_staff()));
 drop policy if exists "sellers add documents to editable listings" on public.seller_documents;
 create policy "sellers add documents to editable listings" on public.seller_documents for insert to authenticated
-  with check (seller_id = auth.uid() and public.is_active_seller() and path like auth.uid()::text || '/%'
-    and exists (select 1 from public.properties p where p.id = property_id and p.seller_id = auth.uid() and p.stage in ('draft', 'changes_requested')));
+  with check (seller_id = (select auth.uid()) and (select public.is_active_seller()) and path like (select auth.uid())::text || '/%'
+    and exists (select 1 from public.properties p where p.id = property_id and p.seller_id = (select auth.uid()) and p.stage in ('draft', 'changes_requested')));
 drop policy if exists "sellers remove documents from editable listings" on public.seller_documents;
 create policy "sellers remove documents from editable listings" on public.seller_documents for delete to authenticated
-  using (public.is_staff() or (seller_id = auth.uid()
-    and exists (select 1 from public.properties p where p.id = property_id and p.seller_id = auth.uid() and p.stage in ('draft', 'changes_requested'))));
+  using ((select public.is_staff()) or (seller_id = (select auth.uid())
+    and exists (select 1 from public.properties p where p.id = property_id and p.seller_id = (select auth.uid()) and p.stage in ('draft', 'changes_requested'))));
 revoke update on public.seller_documents from authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -552,23 +596,23 @@ on conflict (id) do update set public = false, file_size_limit = excluded.file_s
 
 drop policy if exists "sellers upload own documents" on storage.objects;
 create policy "sellers upload own documents" on storage.objects for insert to authenticated
-  with check (bucket_id = 'seller-docs' and (storage.foldername(name))[1] = auth.uid()::text and public.is_active_seller());
+  with check (bucket_id = 'seller-docs' and (storage.foldername(name))[1] = (select auth.uid())::text and (select public.is_active_seller()));
 drop policy if exists "sellers and staff read documents" on storage.objects;
 create policy "sellers and staff read documents" on storage.objects for select to authenticated
-  using (bucket_id = 'seller-docs' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_staff()));
+  using (bucket_id = 'seller-docs' and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.is_staff())));
 drop policy if exists "sellers delete own documents" on storage.objects;
 create policy "sellers delete own documents" on storage.objects for delete to authenticated
-  using (bucket_id = 'seller-docs' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'seller-docs' and (storage.foldername(name))[1] = (select auth.uid())::text);
 -- Listing photos go to the public media bucket under sellers/<their id>/.
 drop policy if exists "sellers upload listing photos" on storage.objects;
 create policy "sellers upload listing photos" on storage.objects for insert to authenticated
-  with check (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = auth.uid()::text and public.is_active_seller());
+  with check (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = (select auth.uid())::text and (select public.is_active_seller()));
 drop policy if exists "sellers read own listing photos" on storage.objects;
 create policy "sellers read own listing photos" on storage.objects for select to authenticated
-  using (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = auth.uid()::text);
+  using (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = (select auth.uid())::text);
 drop policy if exists "sellers delete own listing photos" on storage.objects;
 create policy "sellers delete own listing photos" on storage.objects for delete to authenticated
-  using (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = auth.uid()::text);
+  using (bucket_id = 'media' and (storage.foldername(name))[1] = 'sellers' and (storage.foldername(name))[2] = (select auth.uid())::text);
 
 -- Edits to a live listing wait here until staff approve them ("live-edit revisions").
 create table if not exists public.property_revisions (
@@ -587,7 +631,7 @@ revoke all on public.property_revisions from anon, authenticated;
 grant select on public.property_revisions to authenticated;
 alter table public.property_revisions enable row level security;
 drop policy if exists "read own or staff revisions" on public.property_revisions;
-create policy "read own or staff revisions" on public.property_revisions for select to authenticated using (seller_id = auth.uid() or public.is_staff());
+create policy "read own or staff revisions" on public.property_revisions for select to authenticated using (seller_id = (select auth.uid()) or (select public.is_staff()));
 
 -- Who did what to which listing or seller. Written only by the database; staff read it.
 create table if not exists public.audit_log (
@@ -606,7 +650,7 @@ revoke all on public.audit_log from anon, authenticated;
 grant select on public.audit_log to authenticated;
 alter table public.audit_log enable row level security;
 drop policy if exists "staff read audit log" on public.audit_log;
-create policy "staff read audit log" on public.audit_log for select to authenticated using (public.is_staff());
+create policy "staff read audit log" on public.audit_log for select to authenticated using ((select public.is_staff()));
 
 create or replace function private.log_property() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -708,6 +752,12 @@ begin
   select coalesce(jsonb_object_agg(key, value), '{}') into allowed
     from jsonb_each(coalesce(changes, '{}')) where key = any (private.seller_fields()) and value is distinct from to_jsonb(p) -> key;
   if allowed = '{}' then raise exception 'There are no changes to send.' using errcode = 'P0001'; end if;
+  if not private.seller_photos_ok(allowed -> 'images', p.images) then
+    raise exception 'Photos must be ones you uploaded.' using errcode = '42501';
+  end if;
+  if allowed ? 'images' and not private.valid_images(allowed -> 'images') then
+    raise exception 'One of the photos is not valid.' using errcode = 'P0001';
+  end if;
   if public.listing_gaps(jsonb_populate_record(p, allowed)) <> '{}' then
     raise exception 'Still needed: %.', array_to_string(public.listing_gaps(jsonb_populate_record(p, allowed)), ', ') using errcode = 'P0001';
   end if;

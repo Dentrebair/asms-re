@@ -98,7 +98,7 @@ try {
   await cdp("Page.enable"); await cdp("Runtime.enable"); await cdp("DOM.enable");
   // Focus and blur fire only in a focused page; NumberInput commits on blur.
   await cdp("Emulation.setFocusEmulationEnabled", { enabled: true });
-  await cdp("Page.addScriptToEvaluateOnNewDocument", { source: "window.confirm = () => true; window.open = (u) => { window.__opened = u; return null; };" });
+  await cdp("Page.addScriptToEvaluateOnNewDocument", { source: "window.confirm = () => true; window.open = (u) => { if (u) window.__opened = u; return { opener: null, close() {}, location: { set href(v) { window.__opened = v; } } }; };" });
   await nav("/sell");
   check("sell page links to the seller portal", await js(`!!document.querySelector('a[href="/seller"]')`));
 

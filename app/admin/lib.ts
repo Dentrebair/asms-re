@@ -200,7 +200,7 @@ export function explain(error: { message?: string; code?: string } | null | unde
   if (error.code === "23503" || /foreign key/.test(m)) return "This category still has products. Move or delete them first.";
   if (error.code === "42501" || /row-level security|permission denied|Not allowed/.test(m)) return "You don’t have permission to do that.";
   if (/At least one owner/.test(m)) return "There must always be at least one owner.";
-  if (/check constraint/.test(m)) return "Some values aren’t valid (check slug, price and area).";
+  if (/check constraint/.test(m)) return "Some values aren’t valid (check the slug, price, area and photos).";
   if (/Failed to fetch|NetworkError/.test(m)) return "Can’t reach the server. Check your internet connection.";
   if (error.code === "P0001" || error.code === "P0002") return m; // written for people in supabase/schema.sql
   return m || "Something went wrong.";
@@ -271,10 +271,28 @@ export async function uploadDocument(file: File, sellerId: string, propertyId: s
   return path;
 }
 
-export async function documentLink(path: string): Promise<string> {
+async function documentLink(path: string): Promise<string> {
   const { data, error } = await supabase().storage.from(DOCS).createSignedUrl(path, 600);
   if (error || !data) throw new Error(explain(error));
   return data.signedUrl;
+}
+
+/**
+ * Opens a private document in a new tab. The tab is opened during the click and
+ * pointed at the signed link once it arrives: opening it only after the await
+ * counts as an unrequested popup, which browsers (Safari above all) block.
+ */
+export async function openDocument(path: string): Promise<void> {
+  const tab = window.open("", "_blank");
+  if (tab) tab.opener = null;
+  try {
+    const url = await documentLink(path);
+    if (tab) tab.location.href = url;
+    else window.open(url, "_blank", "noopener"); // pop-ups blocked: one more try, never leave this page
+  } catch (e) {
+    tab?.close();
+    throw e;
+  }
 }
 
 export async function deleteDocuments(paths: string[]) {

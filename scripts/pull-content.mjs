@@ -8,10 +8,21 @@
 // Any fetch failure exits 1 so a broken pull never gets deployed.
 
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const mediaDir = resolve(root, "public", "media");
+
+// Same rule as private.safe_media_path() in supabase/schema.sql. Checked again here
+// because each path becomes a file under public/media: a path that slipped past the
+// database must not be able to write anywhere else in the build.
+const SAFE_PATH = /^[a-z0-9_-]+(\/[A-Za-z0-9_-]+)*\/[A-Za-z0-9_-]+\.(webp|jpe?g|png)$/;
+function mediaFile(path) {
+  const file = resolve(mediaDir, path);
+  if (!SAFE_PATH.test(path) || !file.startsWith(mediaDir + sep)) throw new Error(`Refusing unsafe photo path: ${JSON.stringify(path)}`);
+  return file;
+}
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -33,6 +44,7 @@ const smallPath = (path) => path.replace(/(\.[a-z0-9]+)$/i, "-sm$1");
 const downloads = new Set();
 function image(path, alt) {
   if (!path) return null;
+  mediaFile(path);
   downloads.add(path);
   downloads.add(smallPath(path));
   return { src: `/media/${path}`, srcSmall: `/media/${smallPath(path)}`, alt: alt ?? "" };
@@ -42,7 +54,7 @@ async function download(path) {
   const res = await fetch(`${url}/storage/v1/object/public/media/${path.split("/").map(encodeURIComponent).join("/")}`);
   if (res.status === 404 && path.includes("-sm.")) return false; // tolerate a missing small variant
   if (!res.ok) throw new Error(`media/${path}: HTTP ${res.status}`);
-  const file = join(root, "public", "media", path);
+  const file = mediaFile(path);
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, Buffer.from(await res.arrayBuffer()));
   return true;
