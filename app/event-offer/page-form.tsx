@@ -14,5 +14,5 @@ export default function PageForm() {
     trackEvent("view");
     if (qr) trackEvent("qr_scan");
   }, []);
-  return <EventForm source={source} />;
+  return <EventForm source={source} showCountdown={false} />;
 }
