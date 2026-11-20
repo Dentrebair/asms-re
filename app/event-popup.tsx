@@ -44,7 +44,7 @@ export default function EventPopup() {
           <p className="event-offer-big">25% OFF</p>
           <p className="event-offer-what">our real estate brokerage commission</p>
         </div>
-        <Text as="p">Register on 21 November to claim this benefit on an eligible property transaction.</Text>
+        <Text as="p">Register by 21 November, 11:59 PM IST, to claim this benefit on an eligible property transaction.</Text>
         <EventForm source="popup" />
         <Text type="supporting" as="p"><Link href={EVENT.path} onClick={() => close(false)}>See the full offer</Link></Text>
       </VStack>

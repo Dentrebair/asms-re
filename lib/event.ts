@@ -5,7 +5,7 @@ import { enquiriesConnected, visitorId } from "./enquiry";
 // when the popup shows.
 export const EVENT = {
   slug: "nov-21-2026",
-  opensAt: Date.parse("2026-11-21T00:00:00+05:30"),
+  opensAt: Date.parse("2026-11-20T00:00:00+05:30"),
   closesAt: Date.parse("2026-11-21T23:59:59+05:30"),
   path: "/event-offer",
   qrUrl: "https://asmsrounaqh.com/event-offer?src=qr",

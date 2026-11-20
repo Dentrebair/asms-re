@@ -29,7 +29,7 @@ export function EventCountdown({ now }: { now: number | null }) {
   if (now === null) return <Text type="supporting" as="p">Offer closes 21 Nov · 11:59 PM IST</Text>;
   const phase = eventPhase(now);
   if (phase === "closed") return <Text type="supporting" as="p">This offer closed on 21 Nov at 11:59 PM IST.</Text>;
-  if (phase === "before") return <Text type="supporting" as="p" className="num">Registration opens 21 Nov, 12:00 AM IST · in {countdown(EVENT.opensAt - now)}</Text>;
+  if (phase === "before") return <Text type="supporting" as="p" className="num">Registration opens soon · in {countdown(EVENT.opensAt - now)}</Text>;
   return <Text type="supporting" as="p" className="num"><strong>Offer closes in {countdown(EVENT.closesAt - now)}</strong> · 21 Nov, 11:59 PM IST</Text>;
 }
 
@@ -98,7 +98,7 @@ export default function EventForm({ source, onRegistered }: { source: Registrati
         <TextInput label="WhatsApp number (+91)" htmlName="whatsapp" startIcon={Phone} type="tel" inputMode="tel" value={f.whatsapp} onChange={(v) => set("whatsapp", v ?? "")}
           isRequired autoComplete="tel-national" placeholder="98400 12345" isDisabled={phase !== "open"} status={errors.whatsapp ? { type: "error", message: errors.whatsapp } : undefined} />
         <Button type="submit" variant="primary" size="lg" width="100%" isLoading={busy} isDisabled={phase !== "open"}
-          label={phase === "closed" ? "Offer closed" : phase === "before" ? "Opens 21 Nov" : busy ? "Registering…" : "Claim my 25% discount"} />
+          label={phase === "closed" ? "Offer closed" : phase === "before" ? "Opens soon" : busy ? "Registering…" : "Claim my 25% discount"} />
         <div role="status" aria-live="polite">{problem && <Banner status="error" title={problem} />}</div>
         <Text type="supporting" as="p">
           We use these details only to record your offer and to contact you about it. No promotional WhatsApp messages unless you ask.{" "}

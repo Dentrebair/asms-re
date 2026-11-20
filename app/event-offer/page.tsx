@@ -8,8 +8,8 @@ import PageForm from "./page-form";
 export const dynamic = "force-static";
 
 export const metadata = {
-  title: "25% off brokerage: 21 November event offer | ASMS‑ROUNAQH",
-  description: "Register on 21 November 2026 to claim 25% off ASMS‑ROUNAQH’s real estate brokerage commission on an eligible property transaction.",
+  title: "25% off brokerage: event offer until 21 November | ASMS‑ROUNAQH",
+  description: "Register by 11:59 PM IST on 21 November 2026 to claim 25% off ASMS‑ROUNAQH’s real estate brokerage commission on an eligible property transaction.",
   alternates: { canonical: "/event-offer" },
 };
 
@@ -17,7 +17,7 @@ export const metadata = {
 // qualifies and for how long the claim stays valid.
 const TERMS = [
   "The offer is 25% off ASMS‑ROUNAQH’s brokerage commission. It is not a discount on the property’s price. For example, a ₹2,00,000 commission becomes ₹1,50,000.",
-  "Register between 12:00 AM and 11:59 PM IST on 21 November 2026. Registration closes automatically after that.",
+  "Register by 11:59 PM IST on 21 November 2026. Registration closes automatically after that.",
   "One registration per WhatsApp number. The benefit is personal to the person registered and cannot be transferred.",
   "It applies to one eligible property purchase or sale handled by ASMS‑ROUNAQH, where you are ASMS’s client and the brokerage agreement is signed within 12 months of registration.",
   "Quote your registration ID when you engage ASMS. The final commission and discount are confirmed in your brokerage agreement.",
@@ -36,7 +36,7 @@ export default function EventOfferPage() {
                 <Text type="supporting" as="p" className="event-kicker">ASMS‑ROUNAQH · Exclusive event offer · 21 November 2026</Text>
                 <h1 id="event-title" className="event-offer-big">25% OFF</h1>
                 <Heading level={2} type="display-3">Our real estate brokerage commission</Heading>
-                <Text type="large" as="p">Register on 21 November to claim this exclusive benefit on an eligible property transaction. It takes three details and under 20 seconds, with no sign-in.</Text>
+                <Text type="large" as="p">Register by 21 November, 11:59 PM IST, to claim this exclusive benefit on an eligible property transaction. It takes three details and under 20 seconds, with no sign-in.</Text>
                 <VStack gap={2}>
                   <Heading level={3}>How it works</Heading>
                   <ol className="event-steps">

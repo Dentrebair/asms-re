@@ -940,7 +940,7 @@ revoke execute on function public.request_site_rebuild() from public, anon;
 grant execute on function public.request_site_rebuild() to authenticated;
 
 -- ------------------------------------------------------ promotional events ----
--- Event offers (first: 25% off brokerage for people who register on 21 Nov 2026).
+-- Event offers (first: 25% off brokerage for people who register by 21 Nov 2026, 11:59 PM IST).
 -- Visitors register through public.register_for_event() only, without signing in;
 -- the database enforces the registration window and one registration per WhatsApp
 -- number. Staff read registrations and the funnel counts in the admin panel.
@@ -952,8 +952,8 @@ create table if not exists public.promo_events (
   check (closes_at > opens_at)
 );
 insert into public.promo_events (slug, title, opens_at, closes_at)
-values ('nov-21-2026', '21 November 2026 real estate event: 25% off brokerage', '2026-11-21 00:00:00+05:30', '2026-11-21 23:59:59+05:30')
-on conflict (slug) do nothing;
+values ('nov-21-2026', '21 November 2026 real estate event: 25% off brokerage', '2026-11-20 00:00:00+05:30', '2026-11-21 23:59:59+05:30')
+on conflict (slug) do update set opens_at = excluded.opens_at, closes_at = excluded.closes_at;
 alter table public.promo_events enable row level security;
 drop policy if exists "anyone reads promo events" on public.promo_events;
 create policy "anyone reads promo events" on public.promo_events for select to anon, authenticated using (true);

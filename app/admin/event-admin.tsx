@@ -67,7 +67,7 @@ export function EventAdmin({ notify }: { notify: Notify }) {
 
   return (
     <section>
-      <SectionHeader title="Event offer" count={rows ? rows.length : null} description="21 November 2026 · 25% off brokerage. Registrations from the website popup, the event page and the QR code.">
+      <SectionHeader title="Event offer" count={rows ? rows.length : null} description="Open until 21 Nov 2026, 11:59 PM IST · 25% off brokerage. Registrations from the website popup, the event page and the QR code.">
         <HStack gap={2}>
           <Button label="Refresh" icon={<RefreshCw size={16} />} onClick={() => void load()} />
           <Button label="Export CSV" icon={<Download size={16} />} isDisabled={!rows?.length} onClick={exportCsv} />
@@ -83,7 +83,7 @@ export function EventAdmin({ notify }: { notify: Notify }) {
         <TextInput type="search" label="Search registrations" isLabelHidden placeholder="Search ID, name, company, number" value={query} onChange={setQuery} hasClear startIcon={Search} />
       </div>
       {rows === null ? <p className="adm-muted">Loading…</p> : visible.length === 0 ? (
-        <div className="adm-empty"><EmptyState isCompact title={rows.length === 0 ? "No registrations yet" : "No registrations match"} description={rows.length === 0 ? "They appear here as people register on 21 November." : "Try another search."} /></div>
+        <div className="adm-empty"><EmptyState isCompact title={rows.length === 0 ? "No registrations yet" : "No registrations match"} description={rows.length === 0 ? "They appear here as people register, until 21 Nov, 11:59 PM IST." : "Try another search."} /></div>
       ) : (
         <Card padding={0} className="adm-table"><Table<Registration> data={visible} columns={columns} idKey="id" hasHover density="balanced" /></Card>
       )}
