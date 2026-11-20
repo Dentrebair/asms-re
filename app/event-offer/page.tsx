@@ -15,10 +15,10 @@ export const metadata = {
 // Draft terms for ASMS to confirm: what is discounted, who qualifies and how long
 // the claim stays valid.
 const TERMS = [
-  "25% off the brokerage commission payable to ASMS‑ROUNAQH, not the property’s price. Example: a ₹2,00,000 commission becomes ₹1,50,000.",
-  "Register by 11:59 PM IST on 21 November 2026. One registration per WhatsApp number; the benefit is personal and not transferable.",
+  "25% off the brokerage commission payable to ASMS‑ROUNAQH.",
+  "Register by 11:59 PM IST on 21 November 2026. One registration per WhatsApp number, the benefit is personal and not transferable.",
   "Applies to one eligible purchase or sale handled by ASMS‑ROUNAQH, with the brokerage agreement signed within 12 months of registering.",
-  "Quote your claim reference when you engage ASMS. The final discount is confirmed in your brokerage agreement; not combinable with other offers or exchangeable for cash.",
+  "Quote your claim reference when you engage ASMS. The final discount is confirmed in your brokerage agreement, not combinable with other offers or exchangeable for cash.",
 ];
 
 /**
