@@ -41,6 +41,14 @@ export function EventAdmin({ notify }: { notify: Notify }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load once on open
   useEffect(() => { void load(); }, [load]);
 
+  async function remove(r: Registration) {
+    if (!confirm(`Delete ${r.code} (${r.name})? Use this for test or spam entries. It can’t be undone, and the number can register again.`)) return;
+    const { error } = await supabase().from("event_registrations").delete().eq("id", r.id);
+    if (error) return notify(explain(error), "error");
+    notify(`${r.code} deleted.`);
+    void load();
+  }
+
   const q = query.trim().toLowerCase();
   const visible = (rows ?? []).filter((r) => !q || [r.code, r.name, r.company ?? "", r.whatsapp].some((v) => v.toLowerCase().includes(q)));
 
@@ -63,6 +71,7 @@ export function EventAdmin({ notify }: { notify: Notify }) {
     { key: "whatsapp", header: "WhatsApp", width: proportional(1, { minWidth: 150 }), renderCell: (r) => <a className="adm-contact" href={`https://wa.me/${r.whatsapp}`} target="_blank" rel="noopener noreferrer">{phone(r.whatsapp)}</a> },
     { key: "source", header: "Source", width: proportional(1, { minWidth: 110 }), renderCell: (r) => <Text type="supporting">{SOURCE[r.source]}</Text> },
     { key: "created_at", header: "Registered (IST)", width: proportional(1, { minWidth: 130 }), renderCell: (r) => <Text type="supporting" hasTabularNumbers>{ist(r.created_at)}</Text> },
+    { key: "actions", header: "", width: pixel(100), align: "end", renderCell: (r) => <Button size="sm" variant="ghost" label="Delete" onClick={() => void remove(r)} /> },
   ];
 
   return (

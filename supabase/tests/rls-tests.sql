@@ -386,3 +386,11 @@ select pg_temp.check('event: staff read registrations and the funnel',
   (select count(*) from public.event_registrations) = 1
   and (select views = 1 and qr_scans = 1 and form_starts = 0 and registrations = 1 from public.event_funnel('nov-21-2026')));
 reset role;
+set role anon; set request.jwt.claims = '{}';
+delete from public.event_registrations;
+reset role;
+select pg_temp.check('event: visitors cannot delete registrations', (select count(*) from public.event_registrations) = 1);
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
+delete from public.event_registrations where code = 'ASMS-EV-0001';
+reset role;
+select pg_temp.check('event: staff can delete a test or spam registration', (select count(*) from public.event_registrations) = 0);
