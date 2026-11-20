@@ -8,7 +8,7 @@ import { IconButton } from "@astryxdesign/core/IconButton";
 import { MobileNav } from "@astryxdesign/core/MobileNav";
 import { SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
 import { HStack } from "@astryxdesign/core/Layout";
-import { Building, DraftingCompass, HardHat, Home, LayoutGrid, Phone, Ruler, Search, Tag } from "lucide-react";
+import { Building, DraftingCompass, HardHat, Home, LayoutGrid, Phone, Ruler, Scale, Search, Tag } from "lucide-react";
 import { COMPANY } from "@/lib/company";
 
 const PHONE = { href: COMPANY.phoneHref, label: COMPANY.phone };
@@ -31,11 +31,12 @@ export const RENTAL_LINKS = [
   { href: "/rentals#domestic", title: "Domestic", description: "Apartments and houses", Icon: Home },
 ];
 
-// The Services menu: the three main lines of work, each opening its card on /services.
+// The Services menu: the main lines of work, each opening its card on /services.
 export const SERVICE_LINKS = [
   { href: "/services#construction", title: "Construction", description: "Building projects, start to finish", Icon: HardHat },
   { href: "/services#architecture", title: "Architecture", description: "Design for homes and buildings", Icon: DraftingCompass },
   { href: "/services#civil", title: "Civil", description: "Structural design and site work", Icon: Ruler },
+  { href: "/services#legal", title: "Legal", description: "Title checks, documents and registration", Icon: Scale },
 ];
 
 function MenuGlyph() {

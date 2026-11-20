@@ -1,9 +1,9 @@
 import { SERVICES } from "@/lib/company";
 import { Footer, Header, PageHead } from "../site-components";
 import { ForestTheme } from "../astryx/themes";
-import { ArrowRight, Building2, Landmark, Printer, Church, DraftingCompass, HardHat, Ruler, Warehouse, type LucideIcon } from "lucide-react";
+import { ArrowRight, Building2, Landmark, Printer, Church, DraftingCompass, HardHat, Ruler, Scale, Warehouse, type LucideIcon } from "lucide-react";
 
-const SERVICE_ICONS: Record<string, LucideIcon> = { "real-estate": Building2, construction: HardHat, architecture: DraftingCompass, civil: Ruler, peb: Warehouse, heritage: Landmark, religious: Church, "3dcp": Printer };
+const SERVICE_ICONS: Record<string, LucideIcon> = { "real-estate": Building2, construction: HardHat, architecture: DraftingCompass, civil: Ruler, legal: Scale, peb: Warehouse, heritage: Landmark, religious: Church, "3dcp": Printer };
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Grid } from "@astryxdesign/core/Grid";
@@ -15,7 +15,7 @@ export const dynamic = "force-static";
 
 export const metadata = {
   title: "Services | ASMS‑ROUNAQH",
-  description: "Real estate development, construction, PEB structures, heritage structures, religious architecture and 3D concrete printing from ASMS‑ROUNAQH, Chennai.",
+  description: "Real estate development, construction, architecture, civil engineering, property legal support, PEB structures, heritage structures, religious architecture and 3D concrete printing from ASMS‑ROUNAQH, Chennai.",
   alternates: { canonical: "/services" },
 };
 
@@ -24,7 +24,7 @@ export default function ServicesPage() {
     <>
       <Header />
       <main id="main">
-        <PageHead crumb="Services" title="Development, construction and engineering" lead="Eight lines of work, carried by decades of practical building experience." />
+        <PageHead crumb="Services" title="Development, construction and engineering" lead="Nine lines of work, carried by decades of practical building experience." />
 
         <section className="band band--tight" aria-label="Services">
           <div className="page">

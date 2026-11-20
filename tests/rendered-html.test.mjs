@@ -10,7 +10,7 @@ const content = JSON.parse(await readFile(new URL("../content/content.json", imp
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/&/g, "&(amp;)?");
 
 const pages = [
-  ["index.html", /Find property in and around Chennai/],
+  ["index.html", /Your Search For Properties Ends Here/],
   ["properties.html", /Property for sale around Chennai/],
   ["products.html", /Steel, roofing and concrete products/],
   ["contact.html", /Tell us what you are looking for\./],

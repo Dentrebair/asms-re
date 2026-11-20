@@ -52,7 +52,7 @@ export default function Home() {
             <VStack gap={6} hAlign="center">
               <ForestTheme>
                 <VStack gap={3} hAlign="center">
-                  <Heading level={1} type="display-1" id="hero-title" justify="center" textWrap="balance">Find property in and around Chennai</Heading>
+                  <Heading level={1} type="display-1" id="hero-title" justify="center" textWrap="balance">Your Search For Properties Ends Here</Heading>
                   <Text type="large" justify="center" as="p">Plots, homes, commercial and agricultural land, each with price, area and document status upfront.</Text>
                 </VStack>
               </ForestTheme>
@@ -69,7 +69,7 @@ export default function Home() {
                 [String(COMPANY.since), "a family legacy in construction"],
                 [String(properties.length), properties.length === 1 ? "verified listing live" : "verified listings live"],
                 [String(productCount), "construction products"],
-                [String(SERVICES.length), "lines of building work"],
+                [String(SERVICES.length), "lines of work"],
               ].map(([n, label]) => (
                 <VStack key={label} gap={0}>
                   <Text type="display-3" weight="bold" color="accent" hasTabularNumbers>{n}</Text>

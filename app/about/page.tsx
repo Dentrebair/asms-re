@@ -34,7 +34,7 @@ export default function AboutPage() {
               </VStack>
               <Card padding={6} variant="muted">
                 <Grid columns={2} gap={6}>
-                  {[[String(COMPANY.since), "legacy began"], ["30+", "years under the current leadership"], [String(SERVICES.length), "lines of building work"], ["3", "divisions: property, products and services"]].map(([n, l]) => (
+                  {[[String(COMPANY.since), "legacy began"], ["30+", "years under the current leadership"], [String(SERVICES.length), "lines of work"], ["3", "divisions: property, products and services"]].map(([n, l]) => (
                     <VStack key={l} gap={0}><Text type="display-3" weight="bold" color="accent">{n}</Text><Text type="supporting">{l}</Text></VStack>
                   ))}
                 </Grid>
