@@ -11,12 +11,13 @@ import { listingTag, shortDate } from "@/lib/property";
 import { ForestTheme } from "./astryx/themes";
 import { ListingCard, type ListingCardData } from "./listing-card";
 import SiteHeader from "./site-header";
+import EventPopup from "./event-popup";
 
 /** The brand name. A non-breaking hyphen joins the two words. */
 export const BRAND = "ASMS‑ROUNAQH";
 
 export function Header() {
-  return <SiteHeader brand={BRAND} />;
+  return <><SiteHeader brand={BRAND} /><EventPopup /></>;
 }
 
 /** Card data for a property, in the shared listing skeleton. */

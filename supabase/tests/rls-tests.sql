@@ -350,3 +350,39 @@ set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","s
 update public.products set image_path = 'products/b.webp' where slug = 'paver-blocks';
 reset role;
 select pg_temp.check('replacing the photo clears the old credit', (select image_credit is null from public.products where slug = 'paver-blocks'));
+
+-- ---------- event offer registrations
+update public.promo_events set opens_at = now() + interval '1 hour', closes_at = now() + interval '2 hours' where slug = 'nov-21-2026';
+set role anon; set request.jwt.claims = '{}';
+select public.register_for_event('nov-21-2026', 'Early Bird', null, '9840012345');
+reset role;
+select pg_temp.check('event: registering before it opens is refused', (select count(*) from public.event_registrations) = 0);
+update public.promo_events set opens_at = now() - interval '1 hour', closes_at = now() + interval '1 hour' where slug = 'nov-21-2026';
+set role anon; set request.jwt.claims = '{}';
+select pg_temp.check('event: a visitor registers without signing in and gets an ID',
+  public.register_for_event('nov-21-2026', '  Ravi   Kumar ', 'Kumar Realty', '+91 98400 12345', 'qr') = 'ASMS-EV-0001');
+select public.register_for_event('nov-21-2026', 'Ravi Again', null, '098400-12345', 'popup');  -- same number, other format
+select public.register_for_event('nov-21-2026', 'Bad Number', null, '12345', 'page');
+select public.register_for_event('nov-21-2026', 'X', null, '9840099999', 'page');            -- name too short
+select public.register_for_event('no-such-event', 'Someone', null, '9840011111', 'page');
+select pg_temp.check('event: visitors cannot read registrations', not has_table_privilege('anon', 'public.event_registrations', 'select'));
+select public.track_event_activity('nov-21-2026', 'view', '00000000-0000-0000-0000-0000000000e1');
+select public.track_event_activity('nov-21-2026', 'view', '00000000-0000-0000-0000-0000000000e1');  -- repeat: ignored
+select public.track_event_activity('nov-21-2026', 'qr_scan', '00000000-0000-0000-0000-0000000000e1');
+select public.track_event_activity('nov-21-2026', 'hack', '00000000-0000-0000-0000-0000000000e1');
+select pg_temp.check('event: visitors get no funnel numbers', not has_function_privilege('anon', 'public.event_funnel(text)', 'execute'));
+reset role;
+select pg_temp.check('event: one registration per WhatsApp number, stored as 91 + 10 digits, name tidied',
+  (select count(*) from public.event_registrations) = 1
+  and (select whatsapp = '919840012345' and name = 'Ravi Kumar' and source = 'qr' from public.event_registrations));
+select pg_temp.check('event: invalid numbers, short names and unknown events are refused', (select count(*) from public.event_registrations) = 1);
+update public.promo_events set closes_at = now() - interval '1 minute' where slug = 'nov-21-2026';
+set role anon; set request.jwt.claims = '{}';
+select public.register_for_event('nov-21-2026', 'Late Comer', null, '9840022222', 'page');
+reset role;
+select pg_temp.check('event: registering after it closes is refused', (select count(*) from public.event_registrations) = 1);
+set role authenticated; set request.jwt.claims = '{"email":"editor@asms.test","sub":"00000000-0000-0000-0000-0000000000a2"}';
+select pg_temp.check('event: staff read registrations and the funnel',
+  (select count(*) from public.event_registrations) = 1
+  and (select views = 1 and qr_scans = 1 and form_starts = 0 and registrations = 1 from public.event_funnel('nov-21-2026')));
+reset role;

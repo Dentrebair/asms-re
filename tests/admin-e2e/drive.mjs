@@ -104,7 +104,7 @@ try {
   await fill("Password", "correct-horse");
   await click("Sign in");
   await waitFor(`!!document.querySelector('.adm-header')`, "admin header");
-  check("owner sees every tab, Enquiries first with 1 new", (await js(tabValues)) === 'enquiries1,submissions,properties,products,sellers,staff', await js(tabValues));
+  check("owner sees every tab, Enquiries first with 1 new", (await js(tabValues)) === 'enquiries1,event offer,submissions,properties,products,sellers,staff', await js(tabValues));
 
   // 1b. enquiries inbox: contact links, status, notes
   await waitFor(`document.body.textContent.includes('Ravi Kumar')`, "enquiry listed");

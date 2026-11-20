@@ -67,7 +67,7 @@ export type TrackedEvent = "property_view" | "whatsapp_click" | "property_shared
 const BOT = /bot|crawl|spider|slurp|lighthouse|pagespeed/i;
 
 /** A random ID for this browser, kept so repeat views can be told apart. Not linked to any person. */
-function visitorId() {
+export function visitorId() {
   try {
     let id = localStorage.getItem("asms-visitor");
     if (!id) { id = crypto.randomUUID(); localStorage.setItem("asms-visitor", id); }

@@ -10,6 +10,7 @@ import { PropertiesAdmin } from "./properties-admin";
 import { StaffAdmin } from "./staff-admin";
 import { SubmissionsAdmin } from "./submissions-admin";
 import { SellersAdmin } from "./sellers-admin";
+import { EventAdmin } from "./event-admin";
 import { Toast } from "./ui";
 import { Badge } from "@astryxdesign/core/Badge";
 import { Card } from "@astryxdesign/core/Card";
@@ -20,13 +21,13 @@ import { TopNav, TopNavHeading } from "@astryxdesign/core/TopNav";
 import { HStack } from "@astryxdesign/core/Layout";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { TextInput } from "@astryxdesign/core/TextInput";
-import { UploadCloud, Building2, ClipboardCheck, ExternalLink, Inbox, LockKeyhole, LogOut, Mail, Package, Store, Users, type LucideIcon } from "lucide-react";
+import { UploadCloud, Building2, ClipboardCheck, ExternalLink, Inbox, LockKeyhole, LogOut, Mail, Package, Store, Ticket, Users, type LucideIcon } from "lucide-react";
 import { Heading, Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/Layout";
 
-type Tab = "enquiries" | "submissions" | "properties" | "products" | "sellers" | "staff";
-const TAB_LABELS: Record<Tab, string> = { enquiries: "Enquiries", submissions: "Submissions", properties: "Properties", products: "Products", sellers: "Sellers", staff: "Staff" };
-const TAB_ICONS: Record<Tab, LucideIcon> = { enquiries: Inbox, submissions: ClipboardCheck, properties: Building2, products: Package, sellers: Store, staff: Users };
+type Tab = "enquiries" | "event" | "submissions" | "properties" | "products" | "sellers" | "staff";
+const TAB_LABELS: Record<Tab, string> = { enquiries: "Enquiries", event: "Event offer", submissions: "Submissions", properties: "Properties", products: "Products", sellers: "Sellers", staff: "Staff" };
+const TAB_ICONS: Record<Tab, LucideIcon> = { enquiries: Inbox, event: Ticket, submissions: ClipboardCheck, properties: Building2, products: Package, sellers: Store, staff: Users };
 type AuthState = "loading" | "signed-out" | "set-password" | "not-staff" | "ready";
 
 export default function AdminApp() {
@@ -140,7 +141,7 @@ export default function AdminApp() {
           <SideNav
             footer={<SideNavItem label="View website" href="/" icon={ExternalLink} />}>
             <SideNavSection title="Manage">
-              {(["enquiries", "submissions", "properties", "products", "sellers", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => {
+              {(["enquiries", "event", "submissions", "properties", "products", "sellers", ...(me.role === "owner" ? ["staff"] : [])] as Tab[]).map((t) => {
                 const n = t === "enquiries" ? newEnquiries : t === "submissions" ? waiting : 0;
                 return (
                   <SideNavItem key={t} label={TAB_LABELS[t]} icon={TAB_ICONS[t]} isSelected={tab === t} onClick={() => setTab(t)}
@@ -152,6 +153,7 @@ export default function AdminApp() {
         }>
         <main className="adm-main" data-section={tab}>
           {tab === "enquiries" && <EnquiriesAdmin me={me} notify={notify} onNewCount={setNewEnquiries} />}
+          {tab === "event" && <EventAdmin notify={notify} />}
           {tab === "submissions" && <SubmissionsAdmin notify={notify} onCount={setWaiting} />}
           {tab === "properties" && <PropertiesAdmin notify={notify} />}
           {tab === "products" && <ProductsAdmin notify={notify} />}

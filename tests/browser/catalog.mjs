@@ -95,7 +95,27 @@ try {
   await go(`${BASE}/`);
   check("home carousel shows at most 8 live properties", (await js(`document.querySelectorAll('.carousel-card').length`)) === 8);
 
+  // Event offer popup (21 Nov 2026): opens once per visit, never on its own page.
+  const popup = `document.querySelector('dialog[open]')?.textContent ?? ''`;
+  await js(`sessionStorage.clear(); localStorage.removeItem('asms-event-nov-21-2026')`);
+  await go(`${BASE}/about`);
+  check("event popup opens on a public page with the offer and the form", (await js(popup)).includes('25% OFF') && await js(`document.querySelectorAll('dialog[open] input').length === 3`), (await js(popup)).slice(0, 80));
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 }); await sleep(400);
+  check("Escape closes the popup", (await js(popup)) === "");
+  await go(`${BASE}/services`);
+  check("a closed popup stays closed for the rest of the visit", (await js(popup)) === "");
+  await js(`sessionStorage.clear()`);
+  await go(`${BASE}/event-offer?src=qr`);
+  check("the event page has the form and terms, and no popup", (await js(popup)) === "" && await js(`document.querySelectorAll('.event-form input').length === 3 && !!document.getElementById('terms')`));
+
   await cdp("Emulation.setDeviceMetricsOverride", { width: 375, height: 800, deviceScaleFactor: 1, mobile: true });
+  await js(`sessionStorage.clear()`);
+  await go(`${BASE}/`);
+  check("phone: the popup fits the screen", (await js(popup)).includes('25% OFF') && await js(`document.querySelector('dialog[open]').getBoundingClientRect().width <= 375`), String(await js(`document.querySelector('dialog[open]')?.getBoundingClientRect().width`)));
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 }); await sleep(300);
+  await go(`${BASE}/event-offer`);
+  check("phone: event page has no sideways scroll", await js(`document.documentElement.scrollWidth <= 375`), String(await js(`document.documentElement.scrollWidth`)));
   await go(`${BASE}/properties`);
   check("phone: sidebar hidden, Filters button shown", await js(`getComputedStyle(document.querySelector('.catalog-side')).display === 'none' && [...document.querySelectorAll('.filters-toggle button')].some(b => b.textContent.startsWith('Filters'))`));
   await js(`[...document.querySelectorAll('.filters-toggle button')].find(b => b.textContent.startsWith('Filters')).click()`); await sleep(500);

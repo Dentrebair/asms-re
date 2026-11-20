@@ -183,3 +183,13 @@ img { max-width: 100%; height: auto; display: block; }
 /* Services: menu links jump to a card; keep its heading clear of the header and mark the card. */
 .service-card h2 { scroll-margin-top: 112px; }
 .service-card:has(h2:target) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* ---------- 21 Nov event offer (popup and /event-offer) ---------- */
+.event-offer-badge { text-align: center; padding: 16px; border-radius: 12px; background: var(--color-surface-accent, #f3ead6); }
+.event-offer-big { margin: 0; font-family: var(--font-albert), sans-serif; font-weight: 600; font-size: clamp(2.75rem, 9vw, 4.5rem); line-height: 1; color: var(--color-accent, #0f3d33); letter-spacing: -0.02em; }
+.event-offer-what { margin: 6px 0 0; font-weight: 700; }
+.event-kicker { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+.event-steps, .event-terms { margin: 0; padding-left: 1.25rem; display: grid; gap: 8px; }
+.event-code { margin: 0; font-size: 1.75rem; font-weight: 700; letter-spacing: 0.04em; }
+.event-done { outline: none; }
+.event-card { align-self: start; }
